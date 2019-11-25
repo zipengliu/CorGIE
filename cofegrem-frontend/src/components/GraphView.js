@@ -11,24 +11,12 @@ class GraphView extends Component {
     // }
 
     render() {
-        const {spec, graph, dataRows, highlightedNodes, highlightedType, showDetailNode} = this.props;
+        const {spec, graph, isNodeHighlighted} = this.props;
         const {width, height, margins} = spec.graph;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
         const {colorScheme, coords, nodes, edges, countsByType} = graph;
         const counts = Object.keys(countsByType).map(t => ({type: t, count: countsByType[t]}));
-
-        // Construct an array of whether each node should be highlighted
-        let highlighted = (new Array(nodes.length)).fill(false);
-        if (highlightedType !== null) {
-            highlighted = nodes.map(n => n.type === highlightedType);
-        } else {
-            if (highlightedNodes.length > 0) {
-                for (let h of highlightedNodes) {
-                    highlighted[h] = true;
-                }
-            }
-        }
 
         return (
             <div id="graph-view">
@@ -62,7 +50,8 @@ class GraphView extends Component {
 
                         <g className="nodes">
                             {coords.map((c, i) =>
-                                <circle key={i} className={cn('node', {'highlighted': highlighted[i]})}
+                                <circle key={i}
+                                        className={cn('node', {'highlighted': isNodeHighlighted !== null && isNodeHighlighted[i]})}
                                         onMouseEnter={this.props.highlightNodes.bind(this, i)}
                                         onMouseLeave={this.props.highlightNodes.bind(this, null)}
                                         cx={c.x} cy={c.y} r={5}
@@ -71,22 +60,9 @@ class GraphView extends Component {
                         </g>
                     </g>
                 </svg>
-
-                <div className="node-detail">
-                    {showDetailNode !== null && renderNodeDetail(nodes[showDetailNode])}
-                </div>
             </div>
         );
     }
-}
-
-function renderNodeDetail(info) {
-    return (
-        <div>
-            <span>Type: {info.type}</span>
-            <span>Label: {info.label}</span>
-        </div>
-    )
 }
 
 const mapStateToProps = state => ({...state});

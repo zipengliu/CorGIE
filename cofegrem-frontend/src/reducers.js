@@ -29,16 +29,16 @@ function countNodesByType(nodes) {
     return counts;
 }
 
-function getNeighbors(edges, targetNodeIdx) {
-    let nei = [];
+function highlightNeighbors(n, edges, targetNodeIdx) {
+    let h = (new Array(n)).fill(false);
     for (let e of edges) {
         if (e.source.index === targetNodeIdx) {
-            nei.push(e.target.index);
+            h[e.target.index] = true;
         } else if (e.target.index === targetNodeIdx) {
-            nei.push(e.source.index);
+            h[e.source.index] = true;
         }
     }
-    return nei;
+    return h;
 }
 
 const reducers = produce((draft, action) => {
@@ -52,28 +52,38 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
-            draft.dataRows = action.data.dataRows;
+            const {graph, emb} = action.data;
             draft.graph = {
-                nodes: action.data.nodes,
-                edges: action.data.edges,
-                coords: computeForceLayout(action.data.nodes, action.data.edges, draft.spec.graph),
-                countsByType: countNodesByType(action.data.nodes),
+                nodes: graph.nodes,
+                edges: graph.links,
+                coords: computeForceLayout(graph.nodes, graph.links, draft.spec.graph),
+                countsByType: countNodesByType(graph.nodes),
             };
             draft.graph.colorScheme = mapColorToNodeType(draft.graph.countsByType);
             draft.latent = {
-                emb: action.data.emb,
-                distMat: getDistanceMatrixFromEmbeddings(action.data.emb),
+                emb,
+                distMat: getDistanceMatrixFromEmbeddings(emb),
             };
             draft.latent.coords = runTSNE(draft.latent.distMat, draft.spec.latent);
             return;
         case ACTION_TYPES.HIGHLIGHT_NODE_TYPE:
-            draft.highlightedType = action.nodeType;
+            if (action.nodeType === null) {
+                draft.highlightTrigger = null;
+                draft.isNodeHighlighted = null;
+            } else {
+                draft.highlightTrigger = {by: 'type', which: action.nodeType};
+                draft.isNodeHighlighted = draft.graph.nodes.map(n => n.type === action.nodeType);
+            }
             return;
         case ACTION_TYPES.HIGHLIGHT_NODES:
-            // TODO: expand the highlight to its neighbors
-            draft.highlightedNodes = action.nodeIdx !== null?
-                [action.nodeIdx, ...getNeighbors(draft.graph.edges, action.nodeIdx)]: [];
             draft.showDetailNode = action.nodeIdx;
+            if (action.nodeIdx === null) {
+                draft.highlightTrigger = null;
+                draft.isNodeHighlighted = null;
+            } else {
+                draft.highlightTrigger = {by: 'node', which: action.nodeIdx};
+                draft.isNodeHighlighted = highlightNeighbors(draft.graph.nodes.length, draft.graph.edges, action.nodeIdx);
+            }
             return;
         default:
             return;

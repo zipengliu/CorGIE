@@ -1,8 +1,8 @@
 export default {
     loaded: false,
 
-    highlightedNodes: [],
-    highlightedType: null,
+    isNodeHighlighted: null,        // Either null or an array of booleans
+    highlightTrigger: null,
     showDetailNode: null,
 
     spec: {

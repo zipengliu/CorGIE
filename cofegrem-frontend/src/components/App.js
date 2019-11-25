@@ -6,6 +6,7 @@ import {fetchGraphData} from '../actions';
 import GraphView from "./GraphView";
 import EmbeddingsView from "./EmbeddingsView";
 import SemanticSpaceView from "./SemanticSpaceView";
+import DetailView from "./DetailView";
 
 class App extends Component {
     // constructor(props) {
@@ -26,10 +27,13 @@ class App extends Component {
             );
         }
         return (
-            <div className="App">
-                <GraphView />
-                <EmbeddingsView />
-                <SemanticSpaceView />
+            <div>
+                <div className="App">
+                    <GraphView />
+                    <EmbeddingsView />
+                    <SemanticSpaceView />
+                </div>
+                <DetailView />
             </div>
         );
     }

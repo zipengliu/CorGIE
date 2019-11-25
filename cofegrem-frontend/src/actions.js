@@ -18,17 +18,19 @@ export function fetchGraphData(whichDataset) {
         dispatch(fetchDataPending());
 
         try {
-            let [dataRows, nodes, edges, emb] = [
-                await fetch(`${where}/dataframe.csv`).then(r => r.text()).then(csvParse),
-                await fetch(`${where}/nodes.csv`).then(r => r.text()).then(csvParse),
-                await fetch(`${where}/edges.csv`).then(r => r.text()).then(csvParse),
+            let [graph, emb] = [
+                // await fetch(`${where}/dataframe.csv`).then(r => r.text()).then(csvParse),
+                // await fetch(`${where}/nodes.csv`).then(r => r.text()).then(csvParse),
+                // await fetch(`${where}/edges.csv`).then(r => r.text()).then(csvParse),
+                await fetch(`${where}/graph.json`).then(r => r.json()),
                 await fetch(`${where}/embeddings.txt`).then(r => r.text()).then(csvParseRows),
             ];
+            console.log(graph);
             // console.log(dataRows);
             // console.log(nodes);
             // console.log(edges);
 
-            dispatch(fetchDataSuccess({dataRows, nodes, edges, emb}));
+            dispatch(fetchDataSuccess({graph, emb}));
         } catch (e) {
             dispatch(fetchDataError(e));
         }

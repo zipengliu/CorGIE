@@ -36,11 +36,3 @@
     border-radius: 6px;
 }
 
-.node-detail {
-    height: 20px;
-    border: 1px solid black;
-}
-.node-detail span {
-    margin-left: 10px;
-    margin-right: 10px;
-}

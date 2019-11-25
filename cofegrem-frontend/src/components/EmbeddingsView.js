@@ -1,7 +1,9 @@
 import React, {Component} from 'react';
 import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
+import cn from 'classnames';
 import './EmbeddingsView.css';
+import {highlightNodes} from '../actions';
 
 
 class EmbeddingsView extends Component {
@@ -10,7 +12,7 @@ class EmbeddingsView extends Component {
     // }
 
     render() {
-        const {spec, latent, graph} = this.props;
+        const {spec, latent, graph, isNodeHighlighted} = this.props;
         const {width, height, margins} = spec.latent;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
@@ -26,7 +28,12 @@ class EmbeddingsView extends Component {
                               style={{stroke: '#ccc', strokeWidth: '1px', fill: 'none'}}/>
                         <g className="points">
                             {coords.map((c, i) =>
-                                <circle key={i} className="point" cx={c.x} cy={c.y} r={3} style={{fill: colorScheme[nodes[i].type]}}/>
+                                <circle key={i}
+                                        className={cn('point', {highlighted: isNodeHighlighted !== null && isNodeHighlighted[i]})}
+                                        cx={c.x} cy={c.y} r={3}
+                                        onMouseEnter={this.props.highlightNodes.bind(this, i)}
+                                        onMouseLeave={this.props.highlightNodes.bind(this, null)}
+                                        style={{fill: colorScheme[nodes[i].type]}}/>
                             )}
                         </g>
                     </g>
@@ -38,6 +45,8 @@ class EmbeddingsView extends Component {
 
 const mapStateToProps = state => ({...state});
 
-const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);
+const mapDispatchToProps = dispatch => bindActionCreators({
+    highlightNodes,
+}, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(EmbeddingsView);

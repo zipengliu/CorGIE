@@ -5,3 +5,8 @@
 .points .point {
     stroke: none;
 }
+
+.point.highlighted {
+    stroke: black;
+    stroke-width: 1px;
+}
