@@ -1,0 +1,46 @@
+#graph-view {
+    margin: 10px;
+    border: 1px solid black;
+}
+
+.nodes .node {
+    stroke: none;
+    fill-opacity: .8;
+}
+.nodes .node.highlighted {
+    stroke: black;
+    stroke-width: 1px;
+    fill-opacity: 1;
+}
+
+.edges line.edge {
+    stroke: #ccc;
+    stroke-width: 1px;
+    stroke-opacity: 0.8;
+}
+
+.graph-info {
+}
+.graph-info .node-type-legend {
+    display: inline-block;
+    margin-left: 8px;
+    margin-right: 8px;
+}
+.graph-info .node-type-legend .emu-circle {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 2px;
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    border-radius: 6px;
+}
+
+.node-detail {
+    height: 20px;
+    border: 1px solid black;
+}
+.node-detail span {
+    margin-left: 10px;
+    margin-right: 10px;
+}

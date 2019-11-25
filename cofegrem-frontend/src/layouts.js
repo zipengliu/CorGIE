@@ -1,4 +1,4 @@
-import {scaleLinear, extent, deviation, forceSimulation, forceCollide} from 'd3';
+import {scaleLinear, extent, deviation, forceSimulation, forceCollide, forceManyBody, forceLink, forceCenter, forceX, forceY} from 'd3';
 import tSNE from './tsne';
 
 
@@ -6,7 +6,7 @@ const EPSILON = 1e-8;
 
 // Input: a distance matrix
 // Output: an array of coordinates (x, y)
-export function runTSNE(dist) {
+export function runTSNE(dist, spec) {
     let opt = {epsilon: 10, perplexity: 30, dim: 2};
     let tsne = new tSNE.tSNE(opt);
     tsne.initDataDist(dist);
@@ -30,25 +30,25 @@ export function runTSNE(dist) {
 
     // Normalize the coordinates to (0, 1) by linear transformation
     // how much do you want to relax the extent of the coordinates so that they don't show up on the border of the dotplot
-    let relaxCoefficient = 0.2;
+    // let relaxCoefficient = 0.2;
     let coords = tsne.getSolution();
     let xArr = coords.map(x => x[0]);
     let yArr = coords.map(x => x[1]);
     let xExtent = extent(xArr);
-    let xDeviation = deviation(xArr);
+    // let xDeviation = deviation(xArr);
     let yExtent = extent(yArr);
-    let yDeviation = deviation(yArr);
-    xExtent[0] -= relaxCoefficient * xDeviation;
-    xExtent[1] += relaxCoefficient * xDeviation;
-    yExtent[0] -= relaxCoefficient * yDeviation;
-    yExtent[1] += relaxCoefficient * yDeviation;
+    // let yDeviation = deviation(yArr);
+    // xExtent[0] -= relaxCoefficient * xDeviation;
+    // xExtent[1] += relaxCoefficient * xDeviation;
+    // yExtent[0] -= relaxCoefficient * yDeviation;
+    // yExtent[1] += relaxCoefficient * yDeviation;
 
-    let xScale = scaleLinear().domain(xExtent);
-    let yScale = scaleLinear().domain(yExtent);
+    let xScale = scaleLinear().domain(xExtent).range([0, spec.width]);
+    let yScale = scaleLinear().domain(yExtent).range([0, spec.height]);
 
     coords = coords.map(d => ({x: xScale(d[0]), y: yScale(d[1])}));
 
-    return coords;
+    return avoidOverlap(coords, 0.1);
 }
 
 function avoidOverlap(coords, r) {
@@ -59,7 +59,6 @@ function avoidOverlap(coords, r) {
     }
     return nodes.map(d => ({x: d.x, y: d.y}));
 }
-
 
 export function getDistanceMatrixFromEmbeddings(emb) {
     let d = [];
@@ -88,4 +87,21 @@ export function getCosineDistance(u, v) {
     let sim = mag > EPSILON? p / mag: 1.0;
     // console.log(sim);
     return 1.0 - sim;
+}
+
+export function computeForceLayout(nodes, edges, spec) {
+    // const constrainCoord = (v, min, max) => Math.max(min, Math.min(v, max));
+    let coords = nodes.map((n, i) => ({index: i}));
+    let simulation = forceSimulation(coords)
+        .force("link", forceLink(edges))
+        .force("charge", forceManyBody().strength(-40))
+        .force("center", forceCenter(spec.width / 2, spec.height / 2))
+        .force("x", forceX(spec.width / 2))
+        .force("y", forceY(spec.height / 2))
+        .stop();
+
+    for (let i = 0; i < 200; i++) {
+        simulation.tick();
+    }
+    return coords.map(d => ({x: d.x, y: d.y}));
 }
