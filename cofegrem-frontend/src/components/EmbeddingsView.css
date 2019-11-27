@@ -10,3 +10,7 @@
     stroke: black;
     stroke-width: 1px;
 }
+.point.selected {
+    stroke: black;
+    stroke-width: 3px;
+}

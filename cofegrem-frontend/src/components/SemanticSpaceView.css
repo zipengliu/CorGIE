@@ -1,0 +1,19 @@
+#semantic-space-view {
+    border: 1px solid black;
+}
+
+.combinations .dot {
+    stroke-width: 1px;
+    stroke: black;
+    fill: none;
+}
+
+.combinations .dot.selected {
+    fill: black;
+}
+
+
+.bar-charts .bar {
+    fill: grey;
+    stroke: none;
+}

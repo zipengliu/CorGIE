@@ -7,9 +7,14 @@
     stroke: none;
     fill-opacity: .8;
 }
-.nodes .node.highlighted {
+.node.highlighted {
     stroke: black;
     stroke-width: 1px;
+}
+
+.node.selected {
+    stroke: black;
+    stroke-width: 3px;
     fill-opacity: 1;
 }
 

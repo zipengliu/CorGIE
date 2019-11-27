@@ -3,7 +3,7 @@ import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import cn from 'classnames';
 import './EmbeddingsView.css';
-import {highlightNodes} from '../actions';
+import {highlightNodes, selectNodes} from '../actions';
 
 
 class EmbeddingsView extends Component {
@@ -12,12 +12,12 @@ class EmbeddingsView extends Component {
     // }
 
     render() {
-        const {spec, latent, graph, isNodeHighlighted} = this.props;
+        const {spec, latent, graph, isNodeHighlighted, isNodeSelected} = this.props;
         const {width, height, margins} = spec.latent;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
         const {coords} = latent;
-        const {colorScheme, nodes} = graph;
+        const {nodes, nodeTypes} = graph;
 
         return (
             <div id="embeddings-view">
@@ -29,11 +29,13 @@ class EmbeddingsView extends Component {
                         <g className="points">
                             {coords.map((c, i) =>
                                 <circle key={i}
-                                        className={cn('point', {highlighted: isNodeHighlighted !== null && isNodeHighlighted[i]})}
+                                        className={cn('point', {highlighted: isNodeHighlighted !== null && isNodeHighlighted[i],
+                                            selected: isNodeSelected[i]})}
                                         cx={c.x} cy={c.y} r={3}
                                         onMouseEnter={this.props.highlightNodes.bind(this, i)}
                                         onMouseLeave={this.props.highlightNodes.bind(this, null)}
-                                        style={{fill: colorScheme[nodes[i].type]}}/>
+                                        onClick={this.props.selectNodes.bind(null, i)}
+                                        style={{fill: nodeTypes[nodes[i].typeId].color}}/>
                             )}
                         </g>
                     </g>
@@ -46,7 +48,7 @@ class EmbeddingsView extends Component {
 const mapStateToProps = state => ({...state});
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-    highlightNodes,
+    highlightNodes, selectNodes,
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(EmbeddingsView);

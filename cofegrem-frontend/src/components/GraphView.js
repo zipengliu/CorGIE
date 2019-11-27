@@ -3,7 +3,7 @@ import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import cn from 'classnames';
 import './GraphView.css';
-import {highlightNodes, highlightNodeType} from '../actions';
+import {highlightNodes, highlightNodeType, selectNodes} from '../actions';
 
 class GraphView extends Component {
     // constructor(props) {
@@ -11,12 +11,11 @@ class GraphView extends Component {
     // }
 
     render() {
-        const {spec, graph, isNodeHighlighted} = this.props;
+        const {spec, graph, isNodeHighlighted, isNodeSelected} = this.props;
         const {width, height, margins} = spec.graph;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
-        const {colorScheme, coords, nodes, edges, countsByType} = graph;
-        const counts = Object.keys(countsByType).map(t => ({type: t, count: countsByType[t]}));
+        const {coords, nodes, edges, nodeTypes} = graph;
 
         return (
             <div id="graph-view">
@@ -27,14 +26,14 @@ class GraphView extends Component {
                     </div>
                     <div>
                         <span style={{marginLeft: '5px'}}>
-                            {counts.length} node types:
+                            {nodeTypes.length} node types:
                         </span>
-                        {counts.map((c, i) =>
+                        {nodeTypes.map((nt, i) =>
                             <div key={i} className="node-type-legend"
-                                 onMouseEnter={this.props.highlightNodeType.bind(this, c.type)}
+                                 onMouseEnter={this.props.highlightNodeType.bind(this, i)}
                                  onMouseLeave={this.props.highlightNodeType.bind(this, null)}>
-                                <div className="emu-circle" style={{backgroundColor: colorScheme[c.type]}} />
-                                {c.type}: {c.count}
+                                <div className="emu-circle" style={{backgroundColor: nt.color}} />
+                                {nt.name}: {nt.count}
                             </div>)}
                     </div>
                 </div>
@@ -51,11 +50,13 @@ class GraphView extends Component {
                         <g className="nodes">
                             {coords.map((c, i) =>
                                 <circle key={i}
-                                        className={cn('node', {'highlighted': isNodeHighlighted !== null && isNodeHighlighted[i]})}
-                                        onMouseEnter={this.props.highlightNodes.bind(this, i)}
-                                        onMouseLeave={this.props.highlightNodes.bind(this, null)}
+                                        className={cn('node', {highlighted: isNodeHighlighted !== null && isNodeHighlighted[i],
+                                            selected: isNodeSelected[i]})}
+                                        onMouseEnter={this.props.highlightNodes.bind(null, i)}
+                                        onMouseLeave={this.props.highlightNodes.bind(null, null)}
+                                        onClick={this.props.selectNodes.bind(null, i)}
                                         cx={c.x} cy={c.y} r={5}
-                                        style={{fill: colorScheme[nodes[i].type]}} />
+                                        style={{fill: nodeTypes[nodes[i].typeId].color}} />
                             )}
                         </g>
                     </g>
@@ -68,7 +69,7 @@ class GraphView extends Component {
 const mapStateToProps = state => ({...state});
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-    highlightNodes, highlightNodeType
+    highlightNodes, highlightNodeType, selectNodes
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(GraphView);

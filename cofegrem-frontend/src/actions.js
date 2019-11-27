@@ -1,5 +1,5 @@
 import 'whatwg-fetch';
-import {csvParse, csvParseRows} from 'd3-dsv';
+import {csvParseRows} from 'd3-dsv';
 
 
 const ACTION_TYPES = {
@@ -8,6 +8,7 @@ const ACTION_TYPES = {
     FETCH_DATA_ERROR: 'FETCH_DATA_ERROR',
     HIGHLIGHT_NODE_TYPE: 'HIGHLIGHT_NODE_TYPE',
     HIGHLIGHT_NODES: 'HIGHLIGHT_NODES',
+    SELECT_NODES: 'SELECT_NODES',
 };
 export default ACTION_TYPES;
 
@@ -49,10 +50,14 @@ function fetchDataError(error) {
     return {type: ACTION_TYPES.FETCH_DATA_ERROR, error: error.toString()};
 }
 
-export function highlightNodeType(nodeType) {
-    return {type: ACTION_TYPES.HIGHLIGHT_NODE_TYPE, nodeType};
+export function highlightNodeType(nodeTypeIdx) {
+    return {type: ACTION_TYPES.HIGHLIGHT_NODE_TYPE, nodeTypeIdx};
 }
 
 export function highlightNodes(nodeIdx) {
     return {type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIdx};
+}
+
+export function selectNodes(nodeIdx) {
+    return {type: ACTION_TYPES.SELECT_NODES, nodeIdx};
 }

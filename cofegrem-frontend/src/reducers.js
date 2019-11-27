@@ -3,30 +3,74 @@ import initialState from "./initialState";
 import ACTION_TYPES from './actions';
 import {getDistanceMatrixFromEmbeddings, runTSNE, computeForceLayout} from './layouts';
 import {schemeTableau10} from 'd3-scale-chromatic';
+import bs from 'bitset';
+
 
 function mapColorToNodeType(nodeTypes) {
     // console.log(schemeTableau10);
-    let colorScheme = {}, colorIdx = 0;
-    for (let t in nodeTypes) {
-        if (colorIdx > schemeTableau10.length - 1) {
-            colorScheme[t] = 'grey';
+    for (let i = 0; i < nodeTypes.length; i++) {
+        if (i > schemeTableau10.length - 1) {
+            nodeTypes[i].color = 'grey';
         } else {
-            colorScheme[t] = schemeTableau10[colorIdx];
-            colorIdx++;
+            nodeTypes[i].color = schemeTableau10[i];
         }
     }
-    return colorScheme;
 }
 
+// count all, only happen in the initialization phase
 function countNodesByType(nodes) {
-    let counts = {};
-    for (let n of nodes) {
+    let counts = {}; for (let n of nodes) {
         if (!counts.hasOwnProperty(n.type)) {
             counts[n.type] = 0;
         }
         counts[n.type]++;
     }
-    return counts;
+    return Object.keys(counts).map((t, i) => ({id: i, name: t, count: counts[t]}));
+}
+
+function countNeighborsByType(neighborMasks, selectedNodes) {
+    // Not including itself
+    let nei = [];
+    for (let i = 0; i < neighborMasks[0].length; i++) {
+        nei.push(bs(0));
+    }
+    for (let i of selectedNodes) {
+        for (let j = 0; j < neighborMasks[i].length; j++) {
+            nei[j] = nei[j].or(neighborMasks[i][j]);
+        }
+    }
+    return nei.map(n => n.cardinality());
+}
+
+// Assign a node type index to each node and return a mapping from type (string) to typeIndex (int)
+// Note: this function changes the nodes
+function populateNodeTypeIndex(nodes, nodeTypes) {
+    let mapping = {}, a = [], i = 0;
+    for (let nt of nodeTypes) {
+        mapping[nt.name] = nt.id;
+    }
+    for (let n of nodes) {
+        n.typeId = mapping[n.type];
+    }
+}
+
+function getNeighborMasks(nodes, edges, numberOfNodeTypes) {
+    // Init the masks for each node: an array of array of zero masks
+    let masks = nodes.map(() => {
+        let m = [];
+        for (let i = 0; i < numberOfNodeTypes; i++) {
+            m.push(bs(0));
+        }
+        return m;
+    });
+
+    for (let e of edges) {
+        const sid = e.source.index, tid = e.target.index;
+        const srcType = nodes[sid].typeId, tgtType = nodes[tid].typeId;
+        masks[sid][tgtType].set(tid, 1);
+        masks[tid][srcType].set(sid, 1);
+    }
+    return masks;
 }
 
 function highlightNeighbors(n, edges, targetNodeIdx) {
@@ -39,6 +83,54 @@ function highlightNeighbors(n, edges, targetNodeIdx) {
         }
     }
     return h;
+}
+
+// Return an array of all combinations of intersection, represented as bitsets of the selectedNodes
+// Total number of combo is 2^n - 1 - n, where n is the number of selected nodes
+// O(2^n)
+function generateIntersectionCombo(n) {
+    let combos = [];
+    for (let i = 2; i <= n; i++) {
+        // Iterate over the number of sets to intersect
+        let cur = bs(0);
+        function search(start, ones) {
+            if (ones === 0) {
+                // save this bs
+                combos.push(cur.clone());
+                return;
+            }
+            for (let j = start; j <= n - ones; j++) {
+                cur.set(j, 1);
+                search(j + 1, ones - 1);
+                cur.set(j, 0);
+            }
+        }
+        search(0, i);
+    }
+    // console.log(combos.map(c => c.toString()));
+    return combos;
+}
+
+function computeIntersections(neighborMasks, selectedNodes) {
+    if (selectedNodes.length < 2) {
+        return null;
+    }
+    const combos = generateIntersectionCombo(selectedNodes.length);
+    let intersections = [];
+    // This is potentially slow due to spatial locality
+    // And the combo bitset is duped
+    for (let i = 0; i < neighborMasks[0].length; i++) {
+        intersections.push(combos.map(c => {
+            const bits = c.toArray();
+            let r = bs(0).flip();
+            for (let b of bits) {
+                const nodeIdx = selectedNodes[b];
+                r = r.and(neighborMasks[nodeIdx][i]);
+            }
+            return {combo: c, res: r, size: r.cardinality()};
+        }));
+    }
+    return intersections;
 }
 
 const reducers = produce((draft, action) => {
@@ -57,22 +149,28 @@ const reducers = produce((draft, action) => {
                 nodes: graph.nodes,
                 edges: graph.links,
                 coords: computeForceLayout(graph.nodes, graph.links, draft.spec.graph),
-                countsByType: countNodesByType(graph.nodes),
+                nodeTypes: countNodesByType(graph.nodes),
             };
-            draft.graph.colorScheme = mapColorToNodeType(draft.graph.countsByType);
+            populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
+            mapColorToNodeType(draft.graph.nodeTypes);
+            draft.graph.neighborMasks = getNeighborMasks(graph.nodes, graph.links, draft.graph.nodeTypes.length);
+
             draft.latent = {
                 emb,
                 distMat: getDistanceMatrixFromEmbeddings(emb),
             };
             draft.latent.coords = runTSNE(draft.latent.distMat, draft.spec.latent);
+
+            draft.isNodeSelected = (new Array(graph.nodes.length)).fill(false);
             return;
+
         case ACTION_TYPES.HIGHLIGHT_NODE_TYPE:
-            if (action.nodeType === null) {
+            if (action.nodeTypeIdx === null) {
                 draft.highlightTrigger = null;
                 draft.isNodeHighlighted = null;
             } else {
-                draft.highlightTrigger = {by: 'type', which: action.nodeType};
-                draft.isNodeHighlighted = draft.graph.nodes.map(n => n.type === action.nodeType);
+                draft.highlightTrigger = {by: 'type', which: action.nodeTypeIdx};
+                draft.isNodeHighlighted = draft.graph.nodes.map(n => n.typeId === action.nodeTypeIdx);
             }
             return;
         case ACTION_TYPES.HIGHLIGHT_NODES:
@@ -83,7 +181,22 @@ const reducers = produce((draft, action) => {
             } else {
                 draft.highlightTrigger = {by: 'node', which: action.nodeIdx};
                 draft.isNodeHighlighted = highlightNeighbors(draft.graph.nodes.length, draft.graph.edges, action.nodeIdx);
+                draft.isNodeHighlighted[action.nodeIdx] = true;
             }
+            return;
+        case ACTION_TYPES.SELECT_NODES:
+            if (draft.isNodeSelected[action.nodeIdx]) {
+                // Deletion
+                const p = draft.selectedNodes.indexOf(action.nodeIdx);
+                draft.selectedNodes.splice(p, 1);
+                draft.isNodeSelected[action.nodeIdx] = false;
+            } else {
+                // Addition
+                draft.selectedNodes.push(action.nodeIdx);
+                draft.isNodeSelected[action.nodeIdx] = true;
+            }
+            draft.selectedCountsByType = countNeighborsByType(draft.graph.neighborMasks, draft.selectedNodes);
+            draft.neighborIntersections = computeIntersections(draft.graph.neighborMasks, draft.selectedNodes);
             return;
         default:
             return;
