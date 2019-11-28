@@ -27,7 +27,7 @@ export default {
             dotMargin: 10,
             verticalMargin: 5,
             cardScaleRange: 50,
-            plotHorizontalMargin: 10,
+            plotHorizontalMargin: 30,
         }
     }
 };

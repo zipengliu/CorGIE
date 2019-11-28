@@ -100,7 +100,7 @@ export function computeForceLayout(nodes, edges, spec) {
         .force("y", forceY(spec.height / 2))
         .stop();
 
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 500; i++) {
         simulation.tick();
     }
     return coords.map(d => ({x: d.x, y: d.y}));

@@ -1,5 +1,7 @@
 #semantic-space-view {
     border: 1px solid black;
+    margin: 10px;
+    padding: 10px;
 }
 
 .combinations .dot {
@@ -13,6 +15,13 @@
 }
 
 
+.bar-charts {
+    font-size: 10px;
+}
+.bar-charts .axis line {
+    stroke: black;
+    stroke-width: 1px;
+}
 .bar-charts .bar {
     fill: grey;
     stroke: none;
