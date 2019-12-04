@@ -28,15 +28,15 @@ function countNodesByType(nodes) {
     return Object.keys(counts).map((t, i) => ({id: i, name: t, count: counts[t]}));
 }
 
-function countNeighborsByType(neighborMasks, selectedNodes) {
+function countNeighborsByType(neighborMasksByType, selectedNodes) {
     // Not including itself
     let nei = [];
-    for (let i = 0; i < neighborMasks[0].length; i++) {
+    for (let i = 0; i < neighborMasksByType[0].length; i++) {
         nei.push(bs(0));
     }
     for (let i of selectedNodes) {
-        for (let j = 0; j < neighborMasks[i].length; j++) {
-            nei[j] = nei[j].or(neighborMasks[i][j]);
+        for (let j = 0; j < neighborMasksByType[i].length; j++) {
+            nei[j] = nei[j].or(neighborMasksByType[i][j]);
         }
     }
     return nei.map(n => n.cardinality());
@@ -73,14 +73,17 @@ function getNeighborMasks(nodes, edges, numberOfNodeTypes) {
     return masks;
 }
 
-function highlightNeighbors(n, edges, targetNodeIdx) {
+function highlightNeighbors(n, neighborMasks, targetNodeIdx) {
     let h = (new Array(n)).fill(false);
-    for (let e of edges) {
-        if (e.source.index === targetNodeIdx) {
-            h[e.target.index] = true;
-        } else if (e.target.index === targetNodeIdx) {
-            h[e.source.index] = true;
-        }
+    // for (let e of edges) {
+    //     if (e.source.index === targetNodeIdx) {
+    //         h[e.target.index] = true;
+    //     } else if (e.target.index === targetNodeIdx) {
+    //         h[e.source.index] = true;
+    //     }
+    // }
+    for (let id of neighborMasks[targetNodeIdx].toArray()) {
+        h[id] = true;
     }
     return h;
 }
@@ -90,7 +93,7 @@ function highlightNeighbors(n, edges, targetNodeIdx) {
 // O(2^n)
 function generateIntersectionCombo(n) {
     let combos = [];
-    for (let i = 2; i <= n; i++) {
+    for (let i = 1; i <= n; i++) {
         // Iterate over the number of sets to intersect
         let cur = bs(0);
         function search(start, ones) {
@@ -111,7 +114,7 @@ function generateIntersectionCombo(n) {
     return combos;
 }
 
-function computeIntersections(neighborMasks, selectedNodes) {
+function computeIntersections(neighborMasksByType, selectedNodes) {
     if (selectedNodes.length < 2) {
         return null;
     }
@@ -119,19 +122,56 @@ function computeIntersections(neighborMasks, selectedNodes) {
     let intersections = [];
     // This is potentially slow due to spatial locality
     // And the combo bitset is duped
-    for (let i = 0; i < neighborMasks[0].length; i++) {
+    for (let i = 0; i < neighborMasksByType[0].length; i++) {
         intersections.push(combos.map(c => {
             const bits = c.toArray();
             let r = bs(0).flip();
             for (let b of bits) {
                 const nodeIdx = selectedNodes[b];
-                r = r.and(neighborMasks[nodeIdx][i]);
+                r = r.and(neighborMasksByType[nodeIdx][i]);
             }
             return {combo: c, res: r, size: r.cardinality()};
         }));
     }
     return intersections;
 }
+
+// Count frequency of of a neighbor presenting in the neighbor sets of the selected nodes
+// Return an array, each item in the array is an object with the node id and frequencies, sorted by node types.
+// Quadratic time to the number of nodes.  Potentially we can apply incremental changes and reduce computation
+function countNeighborSets(neighborMasksByType, selectedNodes) {
+    if (selectedNodes.length === 0) return [];
+
+    // Init
+    let cnts = [];
+    for (let i = 0; i < neighborMasksByType[0].length; i++) {
+        cnts.push({});
+    }
+
+    // Count
+    for (let nid of selectedNodes) {
+        for (let i = 0; i < neighborMasksByType[0].length; i++) {
+            const nei = neighborMasksByType[nid][i].toArray();
+            for (let b of nei) {
+                if (!cnts[i].hasOwnProperty(b)) {
+                    cnts[i][b] = 0;
+                }
+                cnts[i][b]++;
+            }
+        }
+    }
+
+    // Flatten the cnts array
+    let res = [];
+    for (let c of cnts) {
+        const idx = Object.keys(c);
+        for (let i of idx) {
+            res.push({id: i, cnt: c[i]})
+        }
+    }
+    return res;
+}
+
 
 const reducers = produce((draft, action) => {
     switch (action.type) {
@@ -153,7 +193,8 @@ const reducers = produce((draft, action) => {
             };
             populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
             mapColorToNodeType(draft.graph.nodeTypes);
-            draft.graph.neighborMasks = getNeighborMasks(graph.nodes, graph.links, draft.graph.nodeTypes.length);
+            draft.graph.neighborMasksByType = getNeighborMasks(graph.nodes, graph.links, draft.graph.nodeTypes.length);
+            draft.graph.neighborMasks = draft.graph.neighborMasksByType.map(m => m.reduce((acc, x) => acc.or(x), bs(0)));
 
             draft.latent = {
                 emb,
@@ -180,7 +221,7 @@ const reducers = produce((draft, action) => {
                 draft.isNodeHighlighted = null;
             } else {
                 draft.highlightTrigger = {by: 'node', which: action.nodeIdx};
-                draft.isNodeHighlighted = highlightNeighbors(draft.graph.nodes.length, draft.graph.edges, action.nodeIdx);
+                draft.isNodeHighlighted = highlightNeighbors(draft.graph.nodes.length, draft.graph.neighborMasks, action.nodeIdx);
                 draft.isNodeHighlighted[action.nodeIdx] = true;
             }
             return;
@@ -195,8 +236,9 @@ const reducers = produce((draft, action) => {
                 draft.selectedNodes.push(action.nodeIdx);
                 draft.isNodeSelected[action.nodeIdx] = true;
             }
-            draft.selectedCountsByType = countNeighborsByType(draft.graph.neighborMasks, draft.selectedNodes);
-            draft.neighborIntersections = computeIntersections(draft.graph.neighborMasks, draft.selectedNodes);
+            draft.selectedCountsByType = countNeighborsByType(draft.graph.neighborMasksByType, draft.selectedNodes);
+            draft.neighborIntersections = computeIntersections(draft.graph.neighborMasksByType, draft.selectedNodes);
+            draft.neighborCounts = countNeighborSets(draft.graph.neighborMasksByType, draft.selectedNodes);
             return;
         default:
             return;

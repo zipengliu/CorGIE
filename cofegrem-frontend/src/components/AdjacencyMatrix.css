@@ -1,0 +1,12 @@
+#adjacency-matrix-view {
+    border: 1px solid black;
+    margin: 10px;
+    padding: 10px;
+}
+
+#adjacency-matrix-view rect.cell {
+    stroke: none;
+}
+#adjacency-matrix-view text {
+    font-size: 10px;
+}

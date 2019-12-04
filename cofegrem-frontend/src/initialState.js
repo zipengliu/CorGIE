@@ -8,6 +8,7 @@ export default {
     selectedNodes: [],
     isNodeSelected: null,           // Make sure the two data structures are in-sync
     neighborIntersections: null,
+    neighborCounts: null,
 
     spec: {
         graph: {
@@ -28,6 +29,15 @@ export default {
             verticalMargin: 5,
             cardScaleRange: 50,
             plotHorizontalMargin: 30,
+        },
+        adjacencyMatrix: {
+            margins: {top: 10, bottom: 10, left: 10, right: 80},
+            rowHeight: 14,
+            colWidth: 14,
+            gap: 6,
+            labelAreaSize: 100,
+            labelSize: 10,   // Must be <= rowHeight and colWidth
+            countAreaSize: 20,
         }
     }
 };

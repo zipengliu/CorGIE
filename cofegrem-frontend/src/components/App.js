@@ -7,6 +7,7 @@ import GraphView from "./GraphView";
 import EmbeddingsView from "./EmbeddingsView";
 import SemanticSpaceView from "./SemanticSpaceView";
 import DetailView from "./DetailView";
+import AdjacencyMatrix from "./AdjacencyMatrix";
 
 class App extends Component {
     // constructor(props) {
@@ -14,9 +15,9 @@ class App extends Component {
     // }
     //
     componentDidMount() {
-        // this.props.fetchGraphData('small-10-movies');
+        this.props.fetchGraphData('small-10-movies');
         // this.props.fetchGraphData('medium-20-movies');
-        this.props.fetchGraphData('medium-20-movies-with-ratings');
+        // this.props.fetchGraphData('medium-20-movies-with-ratings');
     }
 
     render() {
@@ -28,12 +29,15 @@ class App extends Component {
                 </div>
             );
         }
+
+        const {numSelectedNodes} = this.props;
         return (
             <div>
                 <div className="App">
                     <GraphView />
                     <EmbeddingsView />
-                    <SemanticSpaceView />
+                    {numSelectedNodes > 0 && <AdjacencyMatrix />}
+                    {numSelectedNodes > 1 && <SemanticSpaceView />}
                 </div>
                 <DetailView />
             </div>
@@ -44,6 +48,7 @@ class App extends Component {
 const mapStateToProps = state => ({
     loaded: state.loaded,
     error: state.error,
+    numSelectedNodes: state.selectedNodes.length,
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators({
