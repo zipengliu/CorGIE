@@ -3,7 +3,7 @@ import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import cn from 'classnames';
 import './GraphView.css';
-import {highlightNodes, highlightNodeType, selectNodes} from '../actions';
+import {highlightNodes, highlightNodeType, selectNodes, changeSelectedNodeType} from '../actions';
 
 class GraphView extends Component {
     // constructor(props) {
@@ -11,7 +11,7 @@ class GraphView extends Component {
     // }
 
     render() {
-        const {spec, graph, isNodeHighlighted, isNodeSelected} = this.props;
+        const {spec, graph, isNodeHighlighted, isNodeSelected, selectedNodeType} = this.props;
         const {width, height, margins} = spec.graph;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
@@ -35,6 +35,16 @@ class GraphView extends Component {
                                 <div className="emu-circle" style={{backgroundColor: nt.color}} />
                                 {nt.name}: {nt.count}
                             </div>)}
+                    </div>
+                    <div>
+                        <span>Only select this type of node: </span>
+                        <form style={{display: 'inline-block'}}>
+                            <select value={selectedNodeType}
+                                    onChange={(e) => {this.props.changeSelectedNodeType(e.target.value)}}>
+                                {nodeTypes.map((nt, i) =>
+                                    <option key={i} value={i}>{nt.name}</option>)}
+                            </select>
+                        </form>
                     </div>
                 </div>
 
@@ -69,7 +79,7 @@ class GraphView extends Component {
 const mapStateToProps = state => ({...state});
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-    highlightNodes, highlightNodeType, selectNodes
+    highlightNodes, highlightNodeType, selectNodes, changeSelectedNodeType
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(GraphView);

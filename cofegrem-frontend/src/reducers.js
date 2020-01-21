@@ -4,6 +4,7 @@ import ACTION_TYPES from './actions';
 import {getDistanceMatrixFromEmbeddings, runTSNE, computeForceLayout} from './layouts';
 import {schemeTableau10} from 'd3-scale-chromatic';
 import bs from 'bitset';
+import {histogram} from 'd3';
 
 
 function mapColorToNodeType(nodeTypes) {
@@ -136,14 +137,17 @@ function computeIntersections(neighborMasksByType, selectedNodes) {
     return intersections;
 }
 
-// Count frequency of of a neighbor presenting in the neighbor sets of the selected nodes
+// Count frequency of a neighbor presenting in the neighbor sets of the selected nodes
 // Return an array, each item in the array is an object with the node id and frequencies, sorted by node types.
 // Quadratic time to the number of nodes.  Potentially we can apply incremental changes and reduce computation
+// TODO: use frequency as second sort key?
+// Also compute the bins of histogram
+// Note: return one histogram for each neighbor node type.  The input is already sorted
 function countNeighborSets(neighborMasksByType, selectedNodes) {
     if (selectedNodes.length === 0) return [];
 
     // Init
-    let cnts = [];
+    let cnts = [], histos = [];
     for (let i = 0; i < neighborMasksByType[0].length; i++) {
         cnts.push({});
     }
@@ -161,15 +165,27 @@ function countNeighborSets(neighborMasksByType, selectedNodes) {
         }
     }
 
+    // TODO:  use a smarter thresholds later
+    // const thresholds = [];
+    // for (let i = 1; i < selectedNodes.length + 1; i++) {
+    //    thresholds.push(i - 0.01);
+    // }
+    // console.log(thresholds);
+    const binGen = histogram().thresholds(selectedNodes.length);
+
     // Flatten the cnts array
     let res = [];
     for (let c of cnts) {
         const idx = Object.keys(c);
+        const values = [];
         for (let i of idx) {
-            res.push({id: i, cnt: c[i]})
+            res.push({id: i, cnt: c[i]});
+            values.push(c[i]);
         }
+        // Compute bins of counts
+        histos.push(binGen(values));
     }
-    return res;
+    return {counts: res, bins: histos};
 }
 
 
@@ -226,6 +242,10 @@ const reducers = produce((draft, action) => {
             }
             return;
         case ACTION_TYPES.SELECT_NODES:
+            if (draft.graph.nodes[action.nodeIdx].typeId !== draft.selectedNodeType) {
+                // If user wants to select a node that is not the selected node type, do nothing
+                return;
+            }
             if (draft.isNodeSelected[action.nodeIdx]) {
                 // Deletion
                 const p = draft.selectedNodes.indexOf(action.nodeIdx);
@@ -238,7 +258,17 @@ const reducers = produce((draft, action) => {
             }
             draft.selectedCountsByType = countNeighborsByType(draft.graph.neighborMasksByType, draft.selectedNodes);
             draft.neighborIntersections = computeIntersections(draft.graph.neighborMasksByType, draft.selectedNodes);
-            draft.neighborCounts = countNeighborSets(draft.graph.neighborMasksByType, draft.selectedNodes);
+            const temp = countNeighborSets(draft.graph.neighborMasksByType, draft.selectedNodes);
+            draft.neighborCounts = temp.counts;
+            draft.neighborCountsBins = temp.bins;
+            return;
+        case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
+            if (draft.selectedNodes.length > 0 && draft.graph.nodes[draft.selectedNodes[0]].typeId !== action.idx) {
+                // Remove the current selection
+                draft.selectedNodes = [];
+                draft.isNodeSelected = {};
+            }
+            draft.selectedNodeType = action.idx;
             return;
         default:
             return;

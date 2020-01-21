@@ -4,6 +4,7 @@ import {bindActionCreators} from 'redux';
 import cn from 'classnames';
 import './AdjacencyMatrix.css';
 import {highlightNodes} from '../actions';
+import SharedCountHistogram from "./SharedCountHistogram";
 
 
 class AdjacencyMatrix extends Component {
@@ -22,6 +23,7 @@ class AdjacencyMatrix extends Component {
         return (
             <div id="adjacency-matrix-view">
                 <h5>Adjacency matrix of selected nodes</h5>
+                <div style={{fontSize: '14px'}}>(row: neighbor sets of selected nodes; column: neighbor nodes sorted by node type)</div>
                 <svg width={svgWidth} height={svgHeight}>
                     <g transform={`translate(${margins.left},${margins.top})`}>
                         {/*row labels*/}
@@ -89,6 +91,11 @@ class AdjacencyMatrix extends Component {
                         </g>
                     </g>
                 </svg>
+
+                <h5>Histogram of frequencies of neighbor nodes in selected neighbor sets (counts of counts)</h5>
+                <SharedCountHistogram />
+
+                <h5>Condensed color strips of histogram above (WIP)</h5>
             </div>
         );
     }

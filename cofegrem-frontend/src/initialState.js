@@ -5,6 +5,7 @@ export default {
     highlightTrigger: null,
     showDetailNode: null,
 
+    selectedNodeType: 0,
     selectedNodes: [],
     isNodeSelected: null,           // Make sure the two data structures are in-sync
     neighborIntersections: null,
@@ -38,6 +39,12 @@ export default {
             labelAreaSize: 100,
             labelSize: 10,   // Must be <= rowHeight and colWidth
             countAreaSize: 20,
+        },
+        histogram: {
+            margins: {top: 30, bottom: 30, left: 30, right: 10, betweenHist: 20},
+            height: 100,
+            barWidth: 10,
+            barGap: 2,
         }
     }
 };

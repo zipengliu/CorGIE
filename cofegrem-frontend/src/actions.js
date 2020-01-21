@@ -8,6 +8,7 @@ const ACTION_TYPES = {
     FETCH_DATA_ERROR: 'FETCH_DATA_ERROR',
     HIGHLIGHT_NODE_TYPE: 'HIGHLIGHT_NODE_TYPE',
     HIGHLIGHT_NODES: 'HIGHLIGHT_NODES',
+    CHANGE_SELECTED_NODE_TYPE: 'CHANGE_SELECTED_NODE_TYPE',
     SELECT_NODES: 'SELECT_NODES',
 };
 export default ACTION_TYPES;
@@ -60,4 +61,8 @@ export function highlightNodes(nodeIdx) {
 
 export function selectNodes(nodeIdx) {
     return {type: ACTION_TYPES.SELECT_NODES, nodeIdx};
+}
+
+export function changeSelectedNodeType(idx) {
+    return {type: ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE, idx: parseInt(idx, 10)};
 }
