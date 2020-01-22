@@ -31,24 +31,22 @@ export function runTSNE(dist, spec) {
     // Normalize the coordinates to (0, 1) by linear transformation
     // how much do you want to relax the extent of the coordinates so that they don't show up on the border of the dotplot
     // let relaxCoefficient = 0.2;
-    let coords = tsne.getSolution();
+    let coords = coordsRescale(tsne.getSolution(), spec.width, spec.height);
+
+    return avoidOverlap(coords, 0.1);
+}
+
+// Rescale the coordinates to [0,0]-[w,h]
+export function coordsRescale(coords, w, h) {
     let xArr = coords.map(x => x[0]);
     let yArr = coords.map(x => x[1]);
     let xExtent = extent(xArr);
-    // let xDeviation = deviation(xArr);
     let yExtent = extent(yArr);
-    // let yDeviation = deviation(yArr);
-    // xExtent[0] -= relaxCoefficient * xDeviation;
-    // xExtent[1] += relaxCoefficient * xDeviation;
-    // yExtent[0] -= relaxCoefficient * yDeviation;
-    // yExtent[1] += relaxCoefficient * yDeviation;
 
-    let xScale = scaleLinear().domain(xExtent).range([0, spec.width]);
-    let yScale = scaleLinear().domain(yExtent).range([0, spec.height]);
+    let xScale = scaleLinear().domain(xExtent).range([0, w]);
+    let yScale = scaleLinear().domain(yExtent).range([0, h]);
 
-    coords = coords.map(d => ({x: xScale(d[0]), y: yScale(d[1])}));
-
-    return avoidOverlap(coords, 0.1);
+    return coords.map(d => ({x: xScale(d[0]), y: yScale(d[1])}));
 }
 
 function avoidOverlap(coords, r) {

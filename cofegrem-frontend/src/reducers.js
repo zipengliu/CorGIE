@@ -1,7 +1,7 @@
 import produce from 'immer';
 import initialState from "./initialState";
 import ACTION_TYPES from './actions';
-import {getDistanceMatrixFromEmbeddings, runTSNE, computeForceLayout} from './layouts';
+import {getDistanceMatrixFromEmbeddings, runTSNE, computeForceLayout, coordsRescale} from './layouts';
 import {schemeTableau10} from 'd3-scale-chromatic';
 import bs from 'bitset';
 import {histogram} from 'd3';
@@ -205,7 +205,7 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
-            const {graph, emb} = action.data;
+            const {graph, emb, emb2d} = action.data;
             draft.graph = {
                 nodes: graph.nodes,
                 edges: graph.links,
@@ -219,9 +219,10 @@ const reducers = produce((draft, action) => {
 
             draft.latent = {
                 emb,
-                distMat: getDistanceMatrixFromEmbeddings(emb),
+                coords: coordsRescale(emb2d, draft.spec.latent.width, draft.spec.latent.height),
+                // distMat: getDistanceMatrixFromEmbeddings(emb),
             };
-            draft.latent.coords = runTSNE(draft.latent.distMat, draft.spec.latent);
+            // draft.latent.coords = runTSNE(draft.latent.distMat, draft.spec.latent);
 
             draft.isNodeSelected = (new Array(graph.nodes.length)).fill(false);
             return;
