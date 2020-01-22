@@ -16,7 +16,9 @@ export default ACTION_TYPES;
 
 export function fetchGraphData(whichDataset) {
     return async function(dispatch) {
-        const where = `/data/${whichDataset}`;
+        const homepagePath = '';
+        // const homepagePath = '/~zipeng/private/cofegrem-prototype';
+        const where = `${homepagePath}/data/${whichDataset}`;
         dispatch(fetchDataPending());
 
         try {

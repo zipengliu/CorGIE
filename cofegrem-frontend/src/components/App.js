@@ -15,9 +15,10 @@ class App extends Component {
     // }
     //
     componentDidMount() {
-        this.props.fetchGraphData('small-10-movies');
+        // this.props.fetchGraphData('small-10-movies');
         // this.props.fetchGraphData('medium-20-movies');
-        // this.props.fetchGraphData('medium-20-movies-with-ratings');
+        this.props.fetchGraphData('medium-20-movies-with-ratings');
+        // this.props.fetchGraphData('large-100-movies-with-ratings');
     }
 
     render() {

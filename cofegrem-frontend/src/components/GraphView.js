@@ -64,7 +64,7 @@ class GraphView extends Component {
                                             selected: isNodeSelected[i]})}
                                         onMouseEnter={this.props.highlightNodes.bind(null, i)}
                                         onMouseLeave={this.props.highlightNodes.bind(null, null)}
-                                        onClick={this.props.selectNodes.bind(null, i)}
+                                        onClick={this.props.selectNodes.bind(null, i, null, true)}
                                         cx={c.x} cy={c.y} r={5}
                                         style={{fill: nodeTypes[nodes[i].typeId].color}} />
                             )}
