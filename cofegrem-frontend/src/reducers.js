@@ -188,6 +188,11 @@ function countNeighborSets(neighborMasksByType, selectedNodes) {
     return {counts: res, bins: histos};
 }
 
+function isPointInBox(p, box) {
+    const offX = p.x - box.x, offY = p.y - box.y;
+    return (0 <= offX && offX <= box.width && 0 <= offY && offY <= box.height);
+}
+
 
 const reducers = produce((draft, action) => {
     switch (action.type) {
@@ -242,19 +247,33 @@ const reducers = produce((draft, action) => {
             }
             return;
         case ACTION_TYPES.SELECT_NODES:
-            if (draft.graph.nodes[action.nodeIdx].typeId !== draft.selectedNodeType) {
-                // If user wants to select a node that is not the selected node type, do nothing
-                return;
-            }
-            if (draft.isNodeSelected[action.nodeIdx]) {
-                // Deletion
-                const p = draft.selectedNodes.indexOf(action.nodeIdx);
-                draft.selectedNodes.splice(p, 1);
-                draft.isNodeSelected[action.nodeIdx] = false;
+            if (action.selectionBox != null) {
+                if (!action.appendMode) {
+                    draft.selectedNodes = [];
+                    draft.isNodeSelected = {};
+                }
+                for (let i = 0; i < draft.latent.coords.length; i++) {
+                    const c = draft.latent.coords[i];
+                    if (draft.graph.nodes[i].typeId === draft.selectedNodeType && isPointInBox(c, action.selectionBox)) {
+                        draft.selectedNodes.push(i);
+                        draft.isNodeSelected[i] = true;
+                    }
+                }
             } else {
-                // Addition
-                draft.selectedNodes.push(action.nodeIdx);
-                draft.isNodeSelected[action.nodeIdx] = true;
+                if (draft.graph.nodes[action.nodeIdx].typeId !== draft.selectedNodeType) {
+                    // If user wants to select a node that is not the selected node type, do nothing
+                    return;
+                }
+                if (draft.isNodeSelected[action.nodeIdx]) {
+                    // Deletion
+                    const p = draft.selectedNodes.indexOf(action.nodeIdx);
+                    draft.selectedNodes.splice(p, 1);
+                    draft.isNodeSelected[action.nodeIdx] = false;
+                } else {
+                    // Addition
+                    draft.selectedNodes.push(action.nodeIdx);
+                    draft.isNodeSelected[action.nodeIdx] = true;
+                }
             }
             draft.selectedCountsByType = countNeighborsByType(draft.graph.neighborMasksByType, draft.selectedNodes);
             draft.neighborIntersections = computeIntersections(draft.graph.neighborMasksByType, draft.selectedNodes);

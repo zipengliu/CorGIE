@@ -59,8 +59,8 @@ export function highlightNodes(nodeIdx) {
     return {type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIdx};
 }
 
-export function selectNodes(nodeIdx) {
-    return {type: ACTION_TYPES.SELECT_NODES, nodeIdx};
+export function selectNodes(nodeIdx, selectionBox=null, appendMode=false) {
+    return {type: ACTION_TYPES.SELECT_NODES, nodeIdx, selectionBox, appendMode};
 }
 
 export function changeSelectedNodeType(idx) {
