@@ -9,9 +9,10 @@ export default {
 
     selectedNodeType: 0,
     selectedNodes: [],
-    isNodeSelected: null,           // Make sure the two data structures are in-sync
+    isNodeSelected: {},           // Make sure the two data structures are in-sync
+    isNodeSelectedNeighbor: {},
     neighborIntersections: null,
-    neighborCounts: null,
+    neighborCounts: [],
 
     powerSetLimit: 8,
 
@@ -23,6 +24,7 @@ export default {
             height: 500,
             margins: {top: 30, bottom: 30, left: 30, right: 30},
 
+            neighborMarkerMaxHeight: 30,
             centralNodeSize: 6,
             auxNodeSize: 3,
             innerRingNodeGap: 10,

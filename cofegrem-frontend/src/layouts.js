@@ -132,21 +132,23 @@ export function computeCircularLayout(nodes, edges, spec, centralNodeType) {
     let i = 0, j = 0, coords = [], polarCoords = [];
     for (let n of nodes) {
         if (n.typeId === centralNodeType) {
-            polarCoords.push([i * innerAngle, innerRadius]);
-            coords.push({...polar(innerRadius, i * innerAngle), r: centralNodeSize});
+            polarCoords.push({a: i * innerAngle, r: innerRadius, s: centralNodeSize, x: innerRadius, y: 0});
+            coords.push({...polar(innerRadius, i * innerAngle), s: centralNodeSize});
             i++;
         } else {
-            polarCoords.push([j * outerAngle, outerRadius]);
-            coords.push({...polar(outerRadius, j * outerAngle), r: auxNodeSize});
+            polarCoords.push({a: j * outerAngle, r: outerRadius, s: auxNodeSize, x: outerRadius, y: 0});
+            coords.push({...polar(outerRadius, j * outerAngle), s: auxNodeSize});
             j++;
         }
     }
 
-    const linkGen = linkRadial();
+    const linkGen = linkRadial()
+        .radius(d => d.r)
+        .angle(d => d.a);
 
     for (let e of edges) {
         let sid = e.source, tid = e.target;
-        e.path = linkGen({
+        e.curvePath = linkGen({
             source: polarCoords[sid],
             target: polarCoords[tid],
         });
@@ -164,5 +166,8 @@ export function computeCircularLayout(nodes, edges, spec, centralNodeType) {
     spec.width = 2 * (outerRadius + auxNodeSize);
     spec.height = spec.width;
 
-    return coords;
+    // return coords;
+
+    // Change the angle unit from radian to degree, and prepare for rotation transform in rendering
+    return polarCoords.map(c => ({...c, a: c.a*180/Math.PI}));
 }

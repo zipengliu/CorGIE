@@ -4,6 +4,7 @@ import {bindActionCreators} from 'redux';
 import cn from 'classnames';
 import './GraphView.css';
 import {highlightNodes, highlightNodeType, selectNodes, changeSelectedNodeType} from '../actions';
+import {max, scaleLinear} from "d3";
 
 class GraphView extends Component {
     // constructor(props) {
@@ -11,11 +12,14 @@ class GraphView extends Component {
     // }
 
     render() {
-        const {spec, graph, isNodeHighlighted, isNodeSelected, selectedNodeType} = this.props;
+        const {spec, graph, isNodeHighlighted, isNodeSelected, isNodeSelectedNeighbor, neighborCounts,
+            selectedNodeType, centralNodeType} = this.props;
         const {width, height, margins, layout, edgeType} = spec.graph;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
         const {coords, nodes, edges, nodeTypes} = graph;
+
+        const markerScale = scaleLinear().domain([0, max(neighborCounts.map(c => c.cnt))+1]).range([0, spec.graph.neighborMarkerMaxHeight]);
 
         return (
             <div id="graph-view">
@@ -54,7 +58,7 @@ class GraphView extends Component {
                             <g className="edges">
                                 {edges.map((e, i) =>
                                     edgeType === 'curve'?
-                                        <path key={i} className="edge" d={e.path} />:
+                                        <path key={i} className="edge" d={e.curvePath} />:
                                         <line key={i} className="edge" x1={e.source.x} y1={e.source.y}
                                               x2={e.target.x} y2={e.target.y}/>
                                 )}
@@ -62,14 +66,19 @@ class GraphView extends Component {
 
                             <g className="nodes">
                                 {coords.map((c, i) =>
-                                    <circle key={i}
-                                            className={cn('node', {highlighted: isNodeHighlighted !== null && isNodeHighlighted[i],
-                                                selected: isNodeSelected[i]})}
-                                            onMouseEnter={this.props.highlightNodes.bind(null, i)}
-                                            onMouseLeave={this.props.highlightNodes.bind(null, null)}
-                                            onClick={this.props.selectNodes.bind(null, i, null, true)}
-                                            cx={c.x} cy={c.y} r={c.r || 5}
-                                            style={{fill: nodeTypes[nodes[i].typeId].color}} />
+                                    <g key={i} transform={layout === 'circular'? `rotate(${c.a})`: ''}>
+                                        <circle className={cn('node', {
+                                            highlighted: isNodeHighlighted !== null && isNodeHighlighted[i],
+                                            selected: isNodeSelected[i]})}
+                                                onMouseEnter={this.props.highlightNodes.bind(null, i)}
+                                                onMouseLeave={this.props.highlightNodes.bind(null, null)}
+                                                onClick={this.props.selectNodes.bind(null, i, null, true)}
+                                                cx={c.x} cy={c.y} r={c.s || 5}
+                                                style={{fill: nodeTypes[nodes[i].typeId].color}} />
+                                        {layout === 'circular' && isNodeSelectedNeighbor.hasOwnProperty(i) &&
+                                        <line className="selected-neighbor-glyph"
+                                              x1={c.x} y1={0} x2={c.x + markerScale(isNodeSelectedNeighbor[i])} y2={0}/>}
+                                    </g>
                                 )}
                             </g>
                         </g>

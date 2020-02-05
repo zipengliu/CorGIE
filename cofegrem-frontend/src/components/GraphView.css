@@ -8,15 +8,28 @@
     stroke: none;
     /*fill-opacity: .8;*/
 }
-.node.highlighted {
-    stroke: black;
-    stroke-width: 1px;
+.node.highlighted, .point.highlighted{
+    /*stroke: black;*/
+    /*stroke-width: 1px;*/
+    animation: blinkingEffect 1s infinite;
+}
+
+@keyframes blinkingEffect {
+    0% {fill-opacity: 0.2;}
+    25% {fill-opacity: 0.6;}
+    50% {fill-opacity: 1;}
+    75% {fill-opacity: 0.6;}
+    100% {fill-opacity: 0.2;}
 }
 
 .node.selected {
     stroke: black;
     stroke-width: 3px;
-    fill-opacity: 1;
+}
+
+.nodes .selected-neighbor-glyph {
+    stroke: black;
+    stroke-width: 1px;
 }
 
 .edges line.edge {

@@ -143,7 +143,8 @@ function computeIntersections(neighborMasksByType, selectedNodes) {
 // Also compute the bins of histogram
 // Note: return one histogram for each neighbor node type.  The input is already sorted
 function countNeighborSets(neighborMasksByType, selectedNodes) {
-    if (selectedNodes.length === 0) return [];
+    if (selectedNodes.length === 0)
+        return {allCounts: [], bins: [], countsByType: []};
 
     // Init
     let cnts = [], histos = [];
@@ -287,12 +288,21 @@ const reducers = produce((draft, action) => {
             draft.neighborCounts = temp.allCounts;
             draft.neighborCountsByType = temp.countsByType;
             draft.neighborCountsBins = temp.bins;
+            draft.isNodeSelectedNeighbor = {};
+            if (draft.neighborCounts) {
+                for (let n of draft.neighborCounts) {
+                    if (!draft.isNodeSelected[n.id]) {
+                        draft.isNodeSelectedNeighbor[n.id] = n.cnt;
+                    }
+                }
+            }
             return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
             if (draft.selectedNodes.length > 0 && draft.graph.nodes[draft.selectedNodes[0]].typeId !== action.idx) {
                 // Remove the current selection
                 draft.selectedNodes = [];
                 draft.isNodeSelected = {};
+                draft.isNodeSelectedNeighbor = {};
             }
             draft.selectedNodeType = action.idx;
             return;
