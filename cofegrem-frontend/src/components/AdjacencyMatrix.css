@@ -10,3 +10,7 @@
 #adjacency-matrix-view text {
     font-size: 10px;
 }
+#adjacency-matrix-view rect.bar {
+    stroke: none;
+    fill: #000;
+}

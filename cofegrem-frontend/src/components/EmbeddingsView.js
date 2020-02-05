@@ -14,7 +14,7 @@ class EmbeddingsView extends Component {
     //
 
     render() {
-        console.log('rendering EmbeddingView...');
+        // console.log('rendering EmbeddingView...');
         const {spec, latent, graph, isNodeHighlighted, isNodeSelected} = this.props;
         const {width, height, margins} = spec.latent;
         const svgWidth = width + margins.left + margins.right,
@@ -41,7 +41,7 @@ class EmbeddingsView extends Component {
                                         style={{fill: nodeTypes[nodes[i].typeId].color}}/>
                             )}
                         </g>
-                        <SelectionBox width={width} height={height} selectedFunc={this.props.selectNodes}/>
+                        {/*<SelectionBox width={width} height={height} selectedFunc={this.props.selectNodes}/>*/}
                     </g>
                 </svg>
             </div>

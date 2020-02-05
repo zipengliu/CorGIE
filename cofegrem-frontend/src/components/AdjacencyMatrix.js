@@ -2,6 +2,7 @@ import React, {Component} from 'react';
 import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import cn from 'classnames';
+import {scaleLinear, max} from 'd3';
 import './AdjacencyMatrix.css';
 import {highlightNodes} from '../actions';
 import SharedCountHistogram from "./SharedCountHistogram";
@@ -16,9 +17,11 @@ class AdjacencyMatrix extends Component {
         const {neighborCounts, graph, selectedNodes, isNodeHighlighted, isNodeSelected} = this.props;
         const {nodes, nodeTypes, neighborMasks} = graph;
         const spec = this.props.spec.adjacencyMatrix;
-        const {margins, rowHeight, colWidth, gap, labelAreaSize, labelSize, countAreaSize} = spec;
+        const {margins, rowHeight, colWidth, gap, labelAreaSize, labelSize, countAreaSize, countBarHeight} = spec;
         const svgWidth = neighborCounts.length * (colWidth + gap) + labelAreaSize + countAreaSize  + margins.left + margins.right,
-            svgHeight = selectedNodes.length * (rowHeight + gap) + labelAreaSize + countAreaSize + margins.top + margins.bottom;
+            svgHeight = selectedNodes.length * (rowHeight + gap) + labelAreaSize + countAreaSize + countBarHeight +  margins.top + margins.bottom;
+
+        const cntScale = scaleLinear().domain([0, max(neighborCounts.map(c => c.cnt))+1]).range([0, countBarHeight]);
 
         return (
             <div id="adjacency-matrix-view">
@@ -79,7 +82,11 @@ class AdjacencyMatrix extends Component {
                         {/*last row: total*/}
                         <g transform={`translate(${labelAreaSize},${labelAreaSize+selectedNodes.length*(rowHeight+gap)})`}>
                             {neighborCounts.map((neigh, j) =>
-                                <text key={j} x={j*(colWidth + gap)} y={10}>{neigh.cnt}</text>
+                                <g key={j} transform={`translate(${j*(colWidth+gap)},0)`}>
+                                    <text x={4} y={10}>{neigh.cnt}</text>
+                                    <rect className='bar' x={0} y={15} width={colWidth} height={cntScale(neigh.cnt)}
+                                    style={{fill: nodeTypes[nodes[neigh.id].typeId].color}}/>
+                                </g>
                             )}
                         </g>
 
@@ -94,8 +101,6 @@ class AdjacencyMatrix extends Component {
 
                 <h5>Histogram of frequencies of neighbor nodes in selected neighbor sets (counts of counts)</h5>
                 <SharedCountHistogram />
-
-                <h5>Condensed color strips of histogram above (WIP)</h5>
             </div>
         );
     }

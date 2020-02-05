@@ -5,7 +5,7 @@ import './App.css';
 import {fetchGraphData} from '../actions';
 import GraphView from "./GraphView";
 import EmbeddingsView from "./EmbeddingsView";
-import SemanticSpaceView from "./SemanticSpaceView";
+import PowerSetIntersectionView from "./PowerSetIntersectionView";
 import DetailView from "./DetailView";
 import AdjacencyMatrix from "./AdjacencyMatrix";
 
@@ -38,7 +38,8 @@ class App extends Component {
                     <GraphView />
                     <EmbeddingsView />
                     {numSelectedNodes > 0 && <AdjacencyMatrix />}
-                    {numSelectedNodes > 1 && <SemanticSpaceView />}
+                    {numSelectedNodes > 1 && numSelectedNodes <= this.props.powerSetLimit &&
+                    <PowerSetIntersectionView />}
                 </div>
                 <DetailView />
             </div>
@@ -50,6 +51,7 @@ const mapStateToProps = state => ({
     loaded: state.loaded,
     error: state.error,
     numSelectedNodes: state.selectedNodes.length,
+    powerSetLimit: state.powerSetLimit,
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators({

@@ -1,19 +1,18 @@
 import produce from 'immer';
 import initialState from "./initialState";
 import ACTION_TYPES from './actions';
-import {getDistanceMatrixFromEmbeddings, runTSNE, computeForceLayout, coordsRescale} from './layouts';
-import {schemeTableau10} from 'd3-scale-chromatic';
+import {computeForceLayout, coordsRescale, computeCircularLayout} from './layouts';
+import {schemeCategory10} from 'd3-scale-chromatic';
 import bs from 'bitset';
 import {histogram} from 'd3';
 
 
 function mapColorToNodeType(nodeTypes) {
-    // console.log(schemeTableau10);
     for (let i = 0; i < nodeTypes.length; i++) {
-        if (i > schemeTableau10.length - 1) {
-            nodeTypes[i].color = 'grey';
+        if (i > schemeCategory10.length - 1) {
+            nodeTypes[i].color = 'black';
         } else {
-            nodeTypes[i].color = schemeTableau10[i];
+            nodeTypes[i].color = schemeCategory10[i];
         }
     }
 }
@@ -174,18 +173,21 @@ function countNeighborSets(neighborMasksByType, selectedNodes) {
     const binGen = histogram().thresholds(selectedNodes.length);
 
     // Flatten the cnts array
-    let res = [];
+    let allCounts = [], countsByType = [];
     for (let c of cnts) {
         const idx = Object.keys(c);
-        const values = [];
+        const temp = [];
         for (let i of idx) {
-            res.push({id: i, cnt: c[i]});
-            values.push(c[i]);
+            temp.push({id: i, cnt: c[i]});
         }
+        // Sort
+        temp.sort((a, b) => b.cnt - a.cnt);
+        allCounts = allCounts.concat(temp);
+        countsByType.push(temp);
         // Compute bins of counts
-        histos.push(binGen(values));
+        histos.push(binGen(temp.map(t => t.cnt)));
     }
-    return {counts: res, bins: histos};
+    return {allCounts, bins: histos, countsByType};
 }
 
 function isPointInBox(p, box) {
@@ -209,11 +211,12 @@ const reducers = produce((draft, action) => {
             draft.graph = {
                 nodes: graph.nodes,
                 edges: graph.links,
-                coords: computeForceLayout(graph.nodes, graph.links, draft.spec.graph),
+                // coords: computeForceLayout(graph.nodes, graph.links, draft.spec.graph),
                 nodeTypes: countNodesByType(graph.nodes),
             };
             populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
             mapColorToNodeType(draft.graph.nodeTypes);
+            draft.graph.coords =  computeCircularLayout(graph.nodes, graph.links, draft.spec.graph, draft.centralNodeType);
             draft.graph.neighborMasksByType = getNeighborMasks(graph.nodes, graph.links, draft.graph.nodeTypes.length);
             draft.graph.neighborMasks = draft.graph.neighborMasksByType.map(m => m.reduce((acc, x) => acc.or(x), bs(0)));
 
@@ -277,9 +280,12 @@ const reducers = produce((draft, action) => {
                 }
             }
             draft.selectedCountsByType = countNeighborsByType(draft.graph.neighborMasksByType, draft.selectedNodes);
-            draft.neighborIntersections = computeIntersections(draft.graph.neighborMasksByType, draft.selectedNodes);
+            if (draft.selectedNodes.length <= draft.powerSetLimit) {
+                draft.neighborIntersections = computeIntersections(draft.graph.neighborMasksByType, draft.selectedNodes);
+            }
             const temp = countNeighborSets(draft.graph.neighborMasksByType, draft.selectedNodes);
-            draft.neighborCounts = temp.counts;
+            draft.neighborCounts = temp.allCounts;
+            draft.neighborCountsByType = temp.countsByType;
             draft.neighborCountsBins = temp.bins;
             return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:

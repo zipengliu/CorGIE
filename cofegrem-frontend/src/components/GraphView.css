@@ -6,7 +6,7 @@
 
 .nodes .node {
     stroke: none;
-    fill-opacity: .8;
+    /*fill-opacity: .8;*/
 }
 .node.highlighted {
     stroke: black;

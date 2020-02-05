@@ -1,4 +1,5 @@
-import {scaleLinear, extent, deviation, forceSimulation, forceCollide, forceManyBody, forceLink, forceCenter, forceX, forceY} from 'd3';
+import {scaleLinear, extent, deviation, forceSimulation, forceCollide, forceManyBody, forceLink,
+    forceCenter, forceX, forceY, linkRadial} from 'd3';
 import tSNE from './tsne';
 
 
@@ -102,4 +103,66 @@ export function computeForceLayout(nodes, edges, spec) {
         simulation.tick();
     }
     return coords.map(d => ({x: d.x, y: d.y}));
+}
+
+// Compute a circular layout with an inner ring for one central node type and outer ring for other node types
+// Minimize edge-edge crossing by positioning neighbor nodes closer to the central node and edge bundling (TODO)
+// TODO: host multiple central node types
+export function computeCircularLayout(nodes, edges, spec, centralNodeType) {
+    const centralNodes = nodes.filter(n => n.typeId === centralNodeType);
+    const auxNodes = nodes.filter(n => n.typeId !== centralNodeType);
+    const centralNodesCnt = centralNodes.length, auxNodesCnt = auxNodes.length;
+    console.log({centralNodesCnt, auxNodesCnt});
+
+    const {centralNodeSize, auxNodeSize, innerRingNodeGap, outerRingNodeGap, minRingGap} = spec;
+
+    const innerAngle = 2*Math.PI / centralNodesCnt;
+    const outerAngle = 2*Math.PI / auxNodesCnt;
+    const innerRadius = (centralNodeSize + innerRingNodeGap) / Math.sin(innerAngle);
+    let outerRadius = (auxNodeSize + outerRingNodeGap) / Math.sin(outerAngle);
+    if (outerRadius - innerRadius < minRingGap) {
+        outerRadius = innerRadius + minRingGap;
+    }
+    console.log({innerRadius, outerRadius});
+
+    function polar(r, a) {
+        return {x: r * Math.cos(a), y: r * Math.sin(a)};
+    }
+
+    let i = 0, j = 0, coords = [], polarCoords = [];
+    for (let n of nodes) {
+        if (n.typeId === centralNodeType) {
+            polarCoords.push([i * innerAngle, innerRadius]);
+            coords.push({...polar(innerRadius, i * innerAngle), r: centralNodeSize});
+            i++;
+        } else {
+            polarCoords.push([j * outerAngle, outerRadius]);
+            coords.push({...polar(outerRadius, j * outerAngle), r: auxNodeSize});
+            j++;
+        }
+    }
+
+    const linkGen = linkRadial();
+
+    for (let e of edges) {
+        let sid = e.source, tid = e.target;
+        e.path = linkGen({
+            source: polarCoords[sid],
+            target: polarCoords[tid],
+        });
+        e.source = {
+            index: sid,
+            ...coords[sid],
+        };
+        e.target = {
+            index: tid,
+            ...coords[tid],
+        };
+    }
+
+    // Dirty
+    spec.width = 2 * (outerRadius + auxNodeSize);
+    spec.height = spec.width;
+
+    return coords;
 }

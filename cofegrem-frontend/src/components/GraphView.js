@@ -12,7 +12,7 @@ class GraphView extends Component {
 
     render() {
         const {spec, graph, isNodeHighlighted, isNodeSelected, selectedNodeType} = this.props;
-        const {width, height, margins} = spec.graph;
+        const {width, height, margins, layout, edgeType} = spec.graph;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
         const {coords, nodes, edges, nodeTypes} = graph;
@@ -50,24 +50,28 @@ class GraphView extends Component {
 
                 <svg width={svgWidth} height={svgHeight}>
                     <g transform={`translate(${margins.left},${margins.top})`}>
-                        <g className="edges">
-                            {edges.map((e, i) =>
-                                <line key={i} className="edge" x1={e.source.x} y1={e.source.y}
-                                      x2={e.target.x} y2={e.target.y}/>
-                            )}
-                        </g>
+                        <g transform={layout === 'circular'? `translate(${width/2},${height/2})`: ''}>
+                            <g className="edges">
+                                {edges.map((e, i) =>
+                                    edgeType === 'curve'?
+                                        <path key={i} className="edge" d={e.path} />:
+                                        <line key={i} className="edge" x1={e.source.x} y1={e.source.y}
+                                              x2={e.target.x} y2={e.target.y}/>
+                                )}
+                            </g>
 
-                        <g className="nodes">
-                            {coords.map((c, i) =>
-                                <circle key={i}
-                                        className={cn('node', {highlighted: isNodeHighlighted !== null && isNodeHighlighted[i],
-                                            selected: isNodeSelected[i]})}
-                                        onMouseEnter={this.props.highlightNodes.bind(null, i)}
-                                        onMouseLeave={this.props.highlightNodes.bind(null, null)}
-                                        onClick={this.props.selectNodes.bind(null, i, null, true)}
-                                        cx={c.x} cy={c.y} r={5}
-                                        style={{fill: nodeTypes[nodes[i].typeId].color}} />
-                            )}
+                            <g className="nodes">
+                                {coords.map((c, i) =>
+                                    <circle key={i}
+                                            className={cn('node', {highlighted: isNodeHighlighted !== null && isNodeHighlighted[i],
+                                                selected: isNodeSelected[i]})}
+                                            onMouseEnter={this.props.highlightNodes.bind(null, i)}
+                                            onMouseLeave={this.props.highlightNodes.bind(null, null)}
+                                            onClick={this.props.selectNodes.bind(null, i, null, true)}
+                                            cx={c.x} cy={c.y} r={c.r || 5}
+                                            style={{fill: nodeTypes[nodes[i].typeId].color}} />
+                                )}
+                            </g>
                         </g>
                     </g>
                 </svg>

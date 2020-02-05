@@ -3,10 +3,10 @@ import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import cn from 'classnames';
 import {scaleLinear, max} from 'd3';
-import './SemanticSpaceView.css';
+import './PowerSetIntersectionView.css';
 
 
-class SemanticSpaceView extends Component {
+class PowerSetIntersectionView extends Component {
     render() {
         const {graph, neighborIntersections, selectedNodes, selectedCountsByType} = this.props;
         if (neighborIntersections === null) return <div />;
@@ -28,7 +28,7 @@ class SemanticSpaceView extends Component {
 
         return (
             <div id='semantic-space-view'>
-                <h5>Intersections of neighbor sets of selected nodes</h5>
+                <h5>PowerSet intersections of neighbor sets of selected nodes</h5>
                 <svg width={svgWidth} height={svgHeight}>
                     <g transform={`translate(${margins.left},${margins.top})`}>
                         <g className="combinations">
@@ -87,4 +87,4 @@ const mapStateToProps = state => ({...state});
 
 const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);
 
-export default connect(mapStateToProps, mapDispatchToProps)(SemanticSpaceView);
+export default connect(mapStateToProps, mapDispatchToProps)(PowerSetIntersectionView);
