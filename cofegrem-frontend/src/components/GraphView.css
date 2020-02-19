@@ -11,7 +11,7 @@
 .node.highlighted, .point.highlighted{
     /*stroke: black;*/
     /*stroke-width: 1px;*/
-    animation: blinkingEffect 1s infinite;
+    animation: blinkingEffect 0.5s infinite;
 }
 
 @keyframes blinkingEffect {

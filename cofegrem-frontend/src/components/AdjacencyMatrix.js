@@ -33,7 +33,7 @@ class AdjacencyMatrix extends Component {
                         <g className="labels" transform={`translate(${labelAreaSize - labelSize/2 - 4},${labelAreaSize + labelSize/2})`}>
                             {selectedNodes.map((id, i) =>
                                 <g key={i} transform={`translate(0,${i*(rowHeight+gap)})`}>
-                                    <circle className="node selected"
+                                    <circle className={cn("node selected",{highlighted: isNodeHighlighted[id]})}
                                             onMouseEnter={this.props.highlightNodes.bind(null, id)}
                                             onMouseLeave={this.props.highlightNodes.bind(null, null)}
                                             cx={0} cy={0} r={labelSize / 2}
@@ -51,7 +51,7 @@ class AdjacencyMatrix extends Component {
                         <g className="labels" transform={`translate(${labelAreaSize + labelSize/2},${labelAreaSize - labelSize/2 - 4})`}>
                             {neighborCounts.map((neigh, i) =>
                                 <g key={i} transform={`translate(${i * (colWidth+ gap)},0)`}>
-                                    <circle className={cn('node', {highlighted: isNodeHighlighted !== null && isNodeHighlighted[neigh.id],
+                                    <circle className={cn('node', {highlighted: isNodeHighlighted[neigh.id],
                                         selected: isNodeSelected[neigh.id]})}
                                             onMouseEnter={this.props.highlightNodes.bind(null, neigh.id)}
                                             onMouseLeave={this.props.highlightNodes.bind(null, null)}
@@ -85,7 +85,9 @@ class AdjacencyMatrix extends Component {
                                 <g key={j} transform={`translate(${j*(colWidth+gap)},0)`}>
                                     <text x={4} y={10}>{neigh.cnt}</text>
                                     <rect className='bar' x={0} y={15} width={colWidth} height={cntScale(neigh.cnt)}
-                                    style={{fill: nodeTypes[nodes[neigh.id].typeId].color}}/>
+                                          style={{fill: nodeTypes[nodes[neigh.id].typeId].color}}
+                                          onMouseEnter={this.props.highlightNodes.bind(null, neigh.id)}
+                                          onMouseLeave={this.props.highlightNodes.bind(null, null)} />
                                 </g>
                             )}
                         </g>

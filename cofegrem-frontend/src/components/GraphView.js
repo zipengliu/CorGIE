@@ -68,7 +68,7 @@ class GraphView extends Component {
                                 {coords.map((c, i) =>
                                     <g key={i} transform={layout === 'circular'? `rotate(${c.a})`: ''}>
                                         <circle className={cn('node', {
-                                            highlighted: isNodeHighlighted !== null && isNodeHighlighted[i],
+                                            highlighted: isNodeHighlighted[i],
                                             selected: isNodeSelected[i]})}
                                                 onMouseEnter={this.props.highlightNodes.bind(null, i)}
                                                 onMouseLeave={this.props.highlightNodes.bind(null, null)}

@@ -234,7 +234,7 @@ const reducers = produce((draft, action) => {
         case ACTION_TYPES.HIGHLIGHT_NODE_TYPE:
             if (action.nodeTypeIdx === null) {
                 draft.highlightTrigger = null;
-                draft.isNodeHighlighted = null;
+                draft.isNodeHighlighted = {};
             } else {
                 draft.highlightTrigger = {by: 'type', which: action.nodeTypeIdx};
                 draft.isNodeHighlighted = draft.graph.nodes.map(n => n.typeId === action.nodeTypeIdx);
@@ -244,7 +244,7 @@ const reducers = produce((draft, action) => {
             draft.showDetailNode = action.nodeIdx;
             if (action.nodeIdx === null) {
                 draft.highlightTrigger = null;
-                draft.isNodeHighlighted = null;
+                draft.isNodeHighlighted = {};
             } else {
                 draft.highlightTrigger = {by: 'node', which: action.nodeIdx};
                 draft.isNodeHighlighted = highlightNeighbors(draft.graph.nodes.length, draft.graph.neighborMasks, action.nodeIdx);

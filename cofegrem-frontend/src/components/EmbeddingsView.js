@@ -32,7 +32,7 @@ class EmbeddingsView extends Component {
                         <g className="points">
                             {coords.map((c, i) =>
                                 <circle key={i}
-                                        className={cn('point', {highlighted: isNodeHighlighted !== null && isNodeHighlighted[i],
+                                        className={cn('point', {highlighted: isNodeHighlighted[i],
                                             selected: isNodeSelected[i]})}
                                         cx={c.x} cy={c.y} r={3}
                                         onMouseEnter={this.props.highlightNodes.bind(this, i)}
