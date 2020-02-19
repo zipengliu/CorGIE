@@ -1,5 +1,8 @@
 export default {
     loaded: false,
+    datasetId: null,
+    homePath: '',
+    // homePath: '/~zipeng/private/cofegrem-prototype',
 
     isNodeHighlighted: {},        // Either null or an array of booleans
     highlightTrigger: null,

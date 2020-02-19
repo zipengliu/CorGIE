@@ -14,18 +14,15 @@ const ACTION_TYPES = {
 export default ACTION_TYPES;
 
 
-export function fetchGraphData(whichDataset) {
+export function fetchGraphData(homePath, datasetId) {
     return async function(dispatch) {
-        const homepagePath = '';
-        // const homepagePath = '/~zipeng/private/cofegrem-prototype';
-        const where = `${homepagePath}/data/${whichDataset}`;
+        const where = `${homePath}/data/${datasetId}`;
+        console.log('fetching data from ', where);
+
         dispatch(fetchDataPending());
 
         try {
             let [graph, emb, emb2d] = [
-                // await fetch(`${where}/dataframe.csv`).then(r => r.text()).then(csvParse),
-                // await fetch(`${where}/nodes.csv`).then(r => r.text()).then(csvParse),
-                // await fetch(`${where}/edges.csv`).then(r => r.text()).then(csvParse),
                 await fetch(`${where}/graph.json`).then(r => r.json()),
                 await fetch(`${where}/embeddings.txt`).then(r => r.text()).then(csvParseRows),
                 await fetch(`${where}/embeddings-2d.txt`).then(r => r.text()).then(csvParseRows)
@@ -33,7 +30,7 @@ export function fetchGraphData(whichDataset) {
             ];
             console.log(graph);
 
-            dispatch(fetchDataSuccess({graph, emb, emb2d}));
+            dispatch(fetchDataSuccess({datasetId, graph, emb, emb2d}));
         } catch (e) {
             dispatch(fetchDataError(e));
         }

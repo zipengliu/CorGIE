@@ -209,6 +209,7 @@ const reducers = produce((draft, action) => {
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
             const {graph, emb, emb2d} = action.data;
+            draft.datasetId = action.data.datasetId;
             draft.graph = {
                 nodes: graph.nodes,
                 edges: graph.links,

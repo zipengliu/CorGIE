@@ -1,8 +1,10 @@
 import React, {Component} from 'react';
 import { connect } from 'react-redux';
 import {bindActionCreators} from 'redux';
+import {withRouter} from 'react-router-dom';
 import './App.css';
 import {fetchGraphData} from '../actions';
+import AppNav from './AppNav';
 import GraphView from "./GraphView";
 import EmbeddingsView from "./EmbeddingsView";
 import PowerSetIntersectionView from "./PowerSetIntersectionView";
@@ -10,15 +12,9 @@ import DetailView from "./DetailView";
 import AdjacencyMatrix from "./AdjacencyMatrix";
 
 class App extends Component {
-    // constructor(props) {
-    //     super(props);
-    // }
-    //
     componentDidMount() {
-        // this.props.fetchGraphData('small-10-movies');
-        // this.props.fetchGraphData('medium-20-movies');
-        this.props.fetchGraphData('medium-20-movies-with-ratings');
-        // this.props.fetchGraphData('large-100-movies-with-ratings');
+        const {datasetId} = this.props.match.params;
+        this.props.fetchGraphData(this.props.homePath, datasetId);
     }
 
     render() {
@@ -34,6 +30,8 @@ class App extends Component {
         const {numSelectedNodes} = this.props;
         return (
             <div>
+                <AppNav datasetId={this.props.datasetId} homePath={this.props.homePath} />
+
                 <div className="App">
                     <GraphView />
                     <EmbeddingsView />
@@ -48,6 +46,8 @@ class App extends Component {
 }
 
 const mapStateToProps = state => ({
+    homePath: state.homePath,
+    datasetId: state.datasetId,
     loaded: state.loaded,
     error: state.error,
     numSelectedNodes: state.selectedNodes.length,
@@ -58,4 +58,4 @@ const mapDispatchToProps = dispatch => bindActionCreators({
     fetchGraphData
 }, dispatch);
 
-export default connect(mapStateToProps, mapDispatchToProps)(App);
+export default withRouter(connect(mapStateToProps, mapDispatchToProps)(App));

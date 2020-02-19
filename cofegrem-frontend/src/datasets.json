@@ -1,0 +1,47 @@
+[
+    {
+        "id": "small-10-movies",
+        "name": "small-10",
+        "source": "IMDB Movie",
+        "numNodes": 84,
+        "numEdges": 87,
+        "numTypes": 3,
+        "desc": ""
+    },
+    {
+        "id": "medium-20-movies",
+        "name": "medium-20",
+        "source": "IMDB Movie",
+        "numNodes": 404,
+        "numEdges": 536,
+        "numTypes": 5,
+        "desc": ""
+    },
+    {
+        "id": "medium-20-movies-with-ratings",
+        "name": "medium-20-w-ratings",
+        "source": "IMDB Movie",
+        "numNodes": 298,
+        "numEdges": 379,
+        "numTypes": 5,
+        "desc": ""
+    },
+    {
+        "id": "large-100-movies-with-ratings",
+        "name": "large-100-w-ratings",
+        "source": "IMDB Movie",
+        "numNodes": 1815,
+        "numEdges": 2797,
+        "numTypes": 5,
+        "desc": ""
+    },
+    {
+        "id": "large-500-movies-with-ratings",
+        "name": "large-500-w-ratings",
+        "source": "IMDB Movie",
+        "numNodes": 11415,
+        "numEdges": 22453,
+        "numTypes": 5,
+        "desc": ""
+    }
+]
