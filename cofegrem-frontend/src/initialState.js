@@ -19,6 +19,12 @@ export default {
 
     powerSetLimit: 8,
 
+    filters: {
+        presentEdges: true,
+        absentEdges: true,
+        ascending: true,
+    },
+
     spec: {
         graph: {
             layout: 'circular',
@@ -35,9 +41,10 @@ export default {
             minRingGap: 50,         // Minimum gap between the two rings (along the radius axis)
         },
         latent: {
-            width: 300,
-            height: 300,
-            margins: {top: 10, bottom: 10, left: 10, right: 10}
+            width: 400,
+            height: 400,
+            margins: {top: 10, bottom: 10, left: 10, right: 10},
+            histSize: {width: 200, height: 100},
         },
         intersectionPlot: {
             margins: {top: 10, bottom: 10, left: 10, right: 10},
@@ -59,7 +66,7 @@ export default {
             countBarHeight: 100,
         },
         histogram: {
-            margins: {top: 30, bottom: 30, left: 30, right: 10, betweenHist: 20},
+            margins: {top: 10, bottom: 30, left: 30, right: 10, betweenHist: 20},
             height: 100,
             barWidth: 10,
             barGap: 2,

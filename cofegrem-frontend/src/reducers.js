@@ -1,7 +1,7 @@
 import produce from 'immer';
 import initialState from "./initialState";
 import ACTION_TYPES from './actions';
-import {computeForceLayout, coordsRescale, computeCircularLayout} from './layouts';
+import {computeForceLayout, coordsRescale, computeCircularLayout, getAllNodeDistance} from './layouts';
 import {schemeCategory10} from 'd3-scale-chromatic';
 import bs from 'bitset';
 import {histogram} from 'd3';
@@ -225,8 +225,11 @@ const reducers = produce((draft, action) => {
             draft.latent = {
                 emb,
                 coords: coordsRescale(emb2d, draft.spec.latent.width, draft.spec.latent.height),
-                // distMat: getDistanceMatrixFromEmbeddings(emb),
+                nodeDist: getAllNodeDistance(emb, draft.graph.edges),
             };
+            let binGen = histogram().domain([0, 1]).value(d => d.d).thresholds(50);
+            draft.latent.distBinPresent = binGen(draft.latent.nodeDist.filter(d => d.p));
+            draft.latent.distBinAbsent = binGen(draft.latent.nodeDist.filter(d => !d.p));
             // draft.latent.coords = runTSNE(draft.latent.distMat, draft.spec.latent);
 
             draft.isNodeSelected = (new Array(graph.nodes.length)).fill(false);
@@ -307,6 +310,14 @@ const reducers = produce((draft, action) => {
             }
             draft.selectedNodeType = action.idx;
             return;
+        case ACTION_TYPES.CHANGE_FILTER:
+            if (action.inverse) {
+                draft.filters[action.param] = !draft.filters[action.param];
+            } else {
+                draft.filters[action.param] = action.value;
+            }
+            return;
+
         default:
             return;
     }

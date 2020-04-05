@@ -10,6 +10,7 @@ import EmbeddingsView from "./EmbeddingsView";
 import PowerSetIntersectionView from "./PowerSetIntersectionView";
 import DetailView from "./DetailView";
 import AdjacencyMatrix from "./AdjacencyMatrix";
+import FilterView from './FilterView';
 
 class App extends Component {
     componentDidMount() {
@@ -27,14 +28,15 @@ class App extends Component {
             );
         }
 
-        const {numSelectedNodes} = this.props;
+        const {numSelectedNodes, numNodes} = this.props;
         return (
             <div>
                 <AppNav datasetId={this.props.datasetId} homePath={this.props.homePath} />
 
                 <div className="App">
-                    <GraphView />
+                    <FilterView />
                     <EmbeddingsView />
+                    <GraphView />
                     {numSelectedNodes > 0 && <AdjacencyMatrix />}
                     {numSelectedNodes > 1 && numSelectedNodes <= this.props.powerSetLimit &&
                     <PowerSetIntersectionView />}

@@ -10,6 +10,7 @@ const ACTION_TYPES = {
     HIGHLIGHT_NODES: 'HIGHLIGHT_NODES',
     CHANGE_SELECTED_NODE_TYPE: 'CHANGE_SELECTED_NODE_TYPE',
     SELECT_NODES: 'SELECT_NODES',
+    CHANGE_FILTER: 'CHANGE_FILTER',
 };
 export default ACTION_TYPES;
 
@@ -21,19 +22,21 @@ export function fetchGraphData(homePath, datasetId) {
 
         dispatch(fetchDataPending());
 
-        try {
+        // try {
             let [graph, emb, emb2d] = [
                 await fetch(`${where}/graph.json`).then(r => r.json()),
-                await fetch(`${where}/embeddings.txt`).then(r => r.text()).then(csvParseRows),
-                await fetch(`${where}/embeddings-2d.txt`).then(r => r.text()).then(csvParseRows)
+                await fetch(`${where}/node-embedding.csv`).then(r => r.text()).then(csvParseRows),
+                await fetch(`${where}/umap.csv`).then(r => r.text()).then(csvParseRows)
                     .then(d => d.map(x => ([parseFloat(x[0]), parseFloat(x[1])]))),
             ];
             console.log(graph);
+            console.log(emb);
+            console.log(emb2d);
 
             dispatch(fetchDataSuccess({datasetId, graph, emb, emb2d}));
-        } catch (e) {
-            dispatch(fetchDataError(e));
-        }
+        // } catch (e) {
+        //     dispatch(fetchDataError(e));
+        // }
     }
 }
 
@@ -63,4 +66,8 @@ export function selectNodes(nodeIdx, selectionBox=null, appendMode=false) {
 
 export function changeSelectedNodeType(idx) {
     return {type: ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE, idx: parseInt(idx, 10)};
+}
+
+export function changeFilter(param, value, inverse=false) {
+    return {type: ACTION_TYPES.CHANGE_FILTER, param, value, inverse};
 }

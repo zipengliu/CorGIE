@@ -1,5 +1,50 @@
 [
     {
+        "id": "bipartite-user-movie-medium-1",
+        "name": "bipartite network (user-movie) medium 1",
+        "source": "IMDB Movie",
+        "numNodes": 259,
+        "numEdges": 800,
+        "numTypes": 2,
+        "desc": ""
+    },
+    {
+        "id": "bipartite-user-movie-medium-2",
+        "name": "bipartite network (user-movie) medium 2",
+        "source": "IMDB Movie",
+        "numNodes": 780,
+        "numEdges": 3200,
+        "numTypes": 2,
+        "desc": ""
+    },
+    {
+        "id": "tripartite-user-movie-genre-medium-1",
+        "name": "tripartite network (user-movie) medium 1",
+        "source": "IMDB Movie",
+        "numNodes": 7407,
+        "numEdges": 50000,
+        "numTypes": 3,
+        "desc": ""
+    },
+    {
+        "id": "toronto-rest-20-user-50",
+        "name": "bipartite network (user-restaurant) medium 1",
+        "source": "Yelp",
+        "numNodes": 637,
+        "numEdges": 680,
+        "numTypes": 2,
+        "desc": ""
+    },
+    {
+        "id": "toronto-rest-50-user-50",
+        "name": "bipartite network (user-restaurant) medium 2",
+        "source": "Yelp",
+        "numNodes": 1225,
+        "numEdges": 1401,
+        "numTypes": 2,
+        "desc": ""
+    },
+    {
         "id": "small-10-movies",
         "name": "small-10",
         "source": "IMDB Movie",

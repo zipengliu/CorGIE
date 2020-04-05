@@ -75,6 +75,26 @@ export function getDistanceMatrixFromEmbeddings(emb) {
     return d;
 }
 
+export function getAllNodeDistance(emb, edges) {
+    let f = [];
+    for (let i = 0; i < emb.length; i++) {
+        f.push((new Array(emb.length)).fill(false));
+    }
+    for (let e of edges) {
+        f[e.source.index][e.target.index] = true;
+        f[e.target.index][e.source.index] = true;
+    }
+
+    let d = [];
+    for (let i = 0; i < emb.length; i++) {
+        // Make sure i < j to avoid duplicate computation
+        for (let j = i + 1; j < emb.length; j++) {
+            d.push({i, j, d: getCosineDistance(emb[i], emb[j]), p: f[i][j]});
+        }
+    }
+    return d;
+}
+
 export function getCosineDistance(u, v) {
     let p = 0, magU = 0, magV = 0;
     for (let i = 0; i < u.length; i++) {
