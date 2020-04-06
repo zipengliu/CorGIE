@@ -2,7 +2,6 @@ import React, {Component} from 'react';
 import { connect } from 'react-redux';
 import {bindActionCreators} from 'redux';
 import {withRouter} from 'react-router-dom';
-import './App.css';
 import {fetchGraphData} from '../actions';
 import AppNav from './AppNav';
 import GraphView from "./GraphView";
@@ -11,6 +10,9 @@ import PowerSetIntersectionView from "./PowerSetIntersectionView";
 import DetailView from "./DetailView";
 import AdjacencyMatrix from "./AdjacencyMatrix";
 import FilterView from './FilterView';
+import GlobalControls from './GlobalControls';
+import './App.css';
+
 
 class App extends Component {
     componentDidMount() {
@@ -33,6 +35,7 @@ class App extends Component {
             <div>
                 <AppNav datasetId={this.props.datasetId} homePath={this.props.homePath} />
 
+                <GlobalControls />
                 <div className="App">
                     <FilterView />
                     <EmbeddingsView />

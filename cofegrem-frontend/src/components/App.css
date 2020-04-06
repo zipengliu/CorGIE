@@ -6,6 +6,155 @@
     flex-wrap: wrap;
 }
 
+.App .view {
+    border: 1px dotted grey;
+    border-radius: 10px;
+    margin: 5px;
+    padding: 10px;
+}
+
 .table td.cell-num {
     text-align: right;
+}
+
+/* Adjacency matrix view */
+
+#adjacency-matrix-view rect.cell {
+    stroke: none;
+}
+#adjacency-matrix-view text {
+    font-size: 10px;
+}
+#adjacency-matrix-view rect.bar {
+    stroke: none;
+    fill: #000;
+}
+
+/* Detail view */
+
+#detail-view {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    z-index: 9999;
+    background-color: aquamarine;
+    width: 99vw;
+    padding: 10px;
+}
+
+/* Graph view */
+
+.points .point {
+    stroke: none;
+}
+
+.point.highlighted {
+    stroke: black;
+    stroke-width: 1px;
+}
+.point.selected {
+    stroke: black;
+    stroke-width: 3px;
+}
+
+.nodes .node {
+    stroke: none;
+    /*fill-opacity: .8;*/
+}
+.node.highlighted,
+.point.highlighted {
+    /*stroke: black;*/
+    /*stroke-width: 1px;*/
+    animation: blinkingEffect 0.5s infinite;
+}
+
+@keyframes blinkingEffect {
+    0% {
+        fill-opacity: 0.2;
+    }
+    25% {
+        fill-opacity: 0.6;
+    }
+    50% {
+        fill-opacity: 1;
+    }
+    75% {
+        fill-opacity: 0.6;
+    }
+    100% {
+        fill-opacity: 0.2;
+    }
+}
+
+.node.selected {
+    stroke: black;
+    stroke-width: 3px;
+}
+
+.nodes .selected-neighbor-glyph {
+    stroke: black;
+    stroke-width: 1px;
+}
+
+.edges line.edge {
+    stroke: #ccc;
+    stroke-width: 1px;
+    stroke-opacity: 0.8;
+}
+
+.graph-info {
+}
+.graph-info .node-type-legend {
+    display: inline-block;
+    margin-left: 8px;
+    margin-right: 8px;
+}
+.graph-info .node-type-legend .emu-circle {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 2px;
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    border-radius: 6px;
+}
+
+/* Semantics space view */
+
+.combinations .dot {
+    stroke-width: 1px;
+    stroke: black;
+    fill: none;
+}
+
+.combinations .dot.selected {
+    fill: black;
+}
+
+.bar-charts {
+    font-size: 10px;
+}
+.bar-charts .axis line {
+    stroke: black;
+    stroke-width: 1px;
+}
+.bar-charts .bar {
+    fill: grey;
+    stroke: none;
+}
+
+/* Filter view */
+
+.histogram rect.bar {
+    stroke: none;
+    fill: grey;
+}
+
+.histogram .axis line {
+    stroke: black;
+    stroke-width: 1px;
+}
+
+.histogram .axis text {
+    font-size: 10px;
 }

@@ -25,3 +25,5 @@ yarn-error.log*
 .idea/
 yarn.lock
 public/data/
+
+publish.sh

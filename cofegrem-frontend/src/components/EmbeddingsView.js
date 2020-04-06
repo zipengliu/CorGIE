@@ -2,7 +2,6 @@ import React, {Component} from 'react';
 import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import cn from 'classnames';
-import './EmbeddingsView.css';
 import {highlightNodes, selectNodes} from '../actions';
 import SelectionBox from "./SelectionBox";
 
@@ -23,7 +22,7 @@ class EmbeddingsView extends Component {
         const {nodes, nodeTypes} = graph;
 
         return (
-            <div id="embeddings-view">
+            <div id="embeddings-view" className="view">
                 <svg width={svgWidth} height={svgHeight}>
                     <g transform={`translate(${margins.left},${margins.top})`}>
                         <rect x={-margins.left / 2} y={-margins.top / 2} width={width + (margins.left + margins.right) / 2}
@@ -41,7 +40,7 @@ class EmbeddingsView extends Component {
                                         style={{fill: nodeTypes[nodes[i].typeId].color}}/>
                             )}
                         </g>
-                        {/*<SelectionBox width={width} height={height} selectedFunc={this.props.selectNodes}/>*/}
+                        <SelectionBox width={width} height={height} selectedFunc={this.props.selectNodes}/>
                     </g>
                 </svg>
             </div>

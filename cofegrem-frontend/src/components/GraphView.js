@@ -2,7 +2,6 @@ import React, {Component} from 'react';
 import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import cn from 'classnames';
-import './GraphView.css';
 import {highlightNodes, highlightNodeType, selectNodes, changeSelectedNodeType} from '../actions';
 import {max, scaleLinear} from "d3";
 
@@ -22,7 +21,7 @@ class GraphView extends Component {
         const markerScale = scaleLinear().domain([0, max(neighborCounts.map(c => c.cnt))+1]).range([0, spec.graph.neighborMarkerMaxHeight]);
 
         return (
-            <div id="graph-view">
+            <div id="graph-view" className="view">
                 <div className="graph-info">
                     <div>
                         Number of nodes: {nodes.length},
@@ -52,6 +51,7 @@ class GraphView extends Component {
                     </div>
                 </div>
 
+                {nodes.length <= 1000 &&
                 <svg width={svgWidth} height={svgHeight}>
                     <g transform={`translate(${margins.left},${margins.top})`}>
                         <g transform={layout === 'circular'? `translate(${width/2},${height/2})`: ''}>
@@ -84,6 +84,7 @@ class GraphView extends Component {
                         </g>
                     </g>
                 </svg>
+                }
             </div>
         );
     }

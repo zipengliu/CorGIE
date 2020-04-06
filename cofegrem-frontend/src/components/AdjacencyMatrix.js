@@ -3,7 +3,6 @@ import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import cn from 'classnames';
 import {scaleLinear, max} from 'd3';
-import './AdjacencyMatrix.css';
 import {highlightNodes} from '../actions';
 import SharedCountHistogram from "./SharedCountHistogram";
 

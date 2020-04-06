@@ -3,7 +3,6 @@ import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import cn from 'classnames';
 import {scaleLinear, max} from 'd3';
-import './PowerSetIntersectionView.css';
 
 
 class PowerSetIntersectionView extends Component {
@@ -27,7 +26,7 @@ class PowerSetIntersectionView extends Component {
             scaleLinear().domain([0, max(inter, x => x.size) + 1]).range([0, cardScaleRange]));
 
         return (
-            <div id='semantic-space-view'>
+            <div id='semantic-space-view' className="view">
                 <h5>PowerSet intersections of neighbor sets of selected nodes</h5>
                 <svg width={svgWidth} height={svgHeight}>
                     <g transform={`translate(${margins.left},${margins.top})`}>
