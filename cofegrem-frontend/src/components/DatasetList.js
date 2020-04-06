@@ -14,11 +14,11 @@ export class DatasetList extends Component {
                     <thead>
                         <tr>
                             <th> # </th>
-                            <th> Name </th> 
+                            <th> Name </th>
                             <th> Source </th>
-                            <th> #Nodes </th> 
+                            <th> #Nodes </th>
                             <th> #Edges </th>
-                            <th> #Node types </th> 
+                            <th> #Node types </th>
                             <th> Description </th>
                         </tr>
                     </thead>
