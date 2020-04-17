@@ -1,7 +1,7 @@
 .App {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    /* align-items: center; */
     /*justify-content: center;*/
     flex-wrap: wrap;
 }
@@ -44,25 +44,37 @@
 
 /* Graph view */
 
-.points .point {
+.point,
+.node {
+    stroke: none;
+    fill: grey;
+    /* fill-opacity: 0.6; */
+}
+
+.point text,
+.node text {
+    fill: black;
     stroke: none;
 }
 
-.point.highlighted {
+.point.hop-2,
+.node.hop-2 {
+    fill: #fcae91;
+}
+.point.hop-1,
+.node.hop-1 {
+    fill: #fb6a4a;
+}
+
+.point.selected,
+.node.selected {
     stroke: black;
     stroke-width: 1px;
-}
-.point.selected {
-    stroke: black;
-    stroke-width: 3px;
+    fill: #cb181d;
 }
 
-.nodes .node {
-    stroke: none;
-    /*fill-opacity: .8;*/
-}
-.node.highlighted,
-.point.highlighted {
+.point.highlighted,
+.node.highlighted {
     /*stroke: black;*/
     /*stroke-width: 1px;*/
     animation: blinkingEffect 0.5s infinite;
@@ -86,11 +98,6 @@
     }
 }
 
-.node.selected {
-    stroke: black;
-    stroke-width: 3px;
-}
-
 .nodes .selected-neighbor-glyph {
     stroke: black;
     stroke-width: 1px;
@@ -99,10 +106,20 @@
 .edges line.edge {
     stroke: #ccc;
     stroke-width: 1px;
-    stroke-opacity: 0.8;
+    stroke-opacity: 0.5;
 }
 
+#global-controls {
+    width: 100%;
+    margin: 5px 0;
+}
 .graph-info {
+    padding: 0 10px;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    flex-wrap: wrap;
 }
 .graph-info .node-type-legend {
     display: inline-block;

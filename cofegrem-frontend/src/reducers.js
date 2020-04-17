@@ -1,7 +1,13 @@
 import produce from "immer";
 import initialState from "./initialState";
 import ACTION_TYPES from "./actions";
-import { computeForceLayout, coordsRescale, computeCircularLayout, getAllNodeDistance } from "./layouts";
+import {
+    computeForceLayoutWithD3,
+    coordsRescale,
+    computeCircularLayout,
+    getAllNodeDistance,
+    computeForceLayoutWithCola,
+} from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
 import { histogram } from "d3";
@@ -67,14 +73,45 @@ function getNeighborMasks(nodes, edges, numberOfNodeTypes) {
     });
 
     for (let e of edges) {
-        const sid = e.source.index,
-            tid = e.target.index;
+        const sid = e.source,
+            tid = e.target;
         const srcType = nodes[sid].typeId,
             tgtType = nodes[tid].typeId;
         masks[sid][tgtType].set(tid, 1);
         masks[tid][srcType].set(sid, 1);
     }
     return masks;
+}
+
+function getNeighborMasksByHops(nodes, edges, hops) {
+    let masksByHops = [],
+        last;
+    for (let h = 0; h < hops; h++) {
+        let cur = nodes.map(() => bs(0));
+        for (let e of edges) {
+            const sid = e.source,
+                tid = e.target;
+            if (h === 0) {
+                cur[sid].set(tid, 1);
+                cur[tid].set(sid, 1);
+            } else {
+                for (let i = 0; i < last.length; i++) {
+                    const m = last[i];
+                    if (m.get(sid) === 1) {
+                        cur[i].set(tid, 1);
+                    }
+                    if (m.get(tid) === 1) {
+                        cur[i].set(sid, 1);
+                    }
+                }
+            }
+        }
+        masksByHops.push(cur);
+        last = cur;
+        console.log({ h });
+        console.log(cur.map(m => m.toArray()));
+    }
+    return masksByHops;
 }
 
 function highlightNeighbors(n, neighborMasks, targetNodeIdx) {
@@ -86,8 +123,14 @@ function highlightNeighbors(n, neighborMasks, targetNodeIdx) {
     //         h[e.source.index] = true;
     //     }
     // }
-    for (let id of neighborMasks[targetNodeIdx].toArray()) {
-        h[id] = true;
+    // for (let id of neighborMasks[targetNodeIdx].toArray()) {
+    //     h[id] = true;
+    // }
+    for (let m of neighborMasks) {
+        // Flatten all hops / treating all hops the same
+        for (let id of m[targetNodeIdx].toArray()) {
+            h[id] = true;
+        }
     }
     return h;
 }
@@ -181,12 +224,14 @@ function countNeighborSets(neighborMasksByType, selectedNodes) {
 
     // Flatten the cnts array
     let allCounts = [],
+        allCountsMapping = {},
         countsByType = [];
     for (let c of cnts) {
         const idx = Object.keys(c);
         const temp = [];
         for (let i of idx) {
             temp.push({ id: i, cnt: c[i] });
+            allCountsMapping[i] = c[i];
         }
         // Sort
         temp.sort((a, b) => b.cnt - a.cnt);
@@ -195,13 +240,31 @@ function countNeighborSets(neighborMasksByType, selectedNodes) {
         // Compute bins of counts
         histos.push(binGen(temp.map(t => t.cnt)));
     }
-    return { allCounts, bins: histos, countsByType };
+    return { allCounts, allCountsMapping, bins: histos, countsByType };
 }
 
 function isPointInBox(p, box) {
     const offX = p.x - box.x,
         offY = p.y - box.y;
     return 0 <= offX && offX <= box.width && 0 <= offY && offY <= box.height;
+}
+
+function callLayoutFunc(state) {
+    const { graph } = state;
+    const copiedEdges = graph.edges.map((e) => ({ ...e }));
+    let layoutRes;
+    if (state.param.graph.layout === "force-directed-d3") {
+        // Make a copy of the edges to prevent them from changes by the force simulation
+        layoutRes = computeForceLayoutWithD3(graph.nodes, copiedEdges);
+    } else if (state.param.graph.layout === "force-directed-cola") {
+        layoutRes = computeForceLayoutWithCola(graph.nodes, copiedEdges);
+    } else {
+        layoutRes = computeCircularLayout(graph.nodes, copiedEdges, state.spec.graph, state.centralNodeType);
+    }
+    state.spec.graph.width = layoutRes.width;
+    state.spec.graph.height = layoutRes.height;
+
+    return layoutRes.coords;
 }
 
 const reducers = produce((draft, action) => {
@@ -220,21 +283,17 @@ const reducers = produce((draft, action) => {
             draft.graph = {
                 nodes: graph.nodes,
                 edges: graph.links,
-                // coords: computeForceLayout(graph.nodes, graph.links, draft.spec.graph),
                 nodeTypes: countNodesByType(graph.nodes)
             };
             populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
             mapColorToNodeType(draft.graph.nodeTypes);
-            draft.graph.coords = computeCircularLayout(
-                graph.nodes,
-                graph.links,
-                draft.spec.graph,
-                draft.centralNodeType
-            );
+            draft.graph.coords = callLayoutFunc(draft);
+            draft.graph.neigh = getNeighborMasksByHops(graph.nodes, graph.links, draft.param.hops);
             draft.graph.neighborMasksByType = getNeighborMasks(
                 graph.nodes,
                 graph.links,
-                draft.graph.nodeTypes.length
+                draft.graph.nodeTypes.length,
+                draft.param.hops
             );
             draft.graph.neighborMasks = draft.graph.neighborMasksByType.map(m =>
                 m.reduce((acc, x) => acc.or(x), bs(0))
@@ -274,7 +333,7 @@ const reducers = produce((draft, action) => {
                 draft.highlightTrigger = { by: "node", which: action.nodeIdx };
                 draft.isNodeHighlighted = highlightNeighbors(
                     draft.graph.nodes.length,
-                    draft.graph.neighborMasks,
+                    draft.graph.neigh,
                     action.nodeIdx
                 );
                 draft.isNodeHighlighted[action.nodeIdx] = true;
@@ -324,16 +383,33 @@ const reducers = produce((draft, action) => {
             }
             const temp = countNeighborSets(draft.graph.neighborMasksByType, draft.selectedNodes);
             draft.neighborCounts = temp.allCounts;
+            draft.neighborCountsMapping = temp.allCountsMapping;
             draft.neighborCountsByType = temp.countsByType;
             draft.neighborCountsBins = temp.bins;
+
+            // draft.isNodeSelectedNeighbor = {};
+            // if (draft.neighborCounts) {
+            //     for (let n of draft.neighborCounts) {
+            //         if (!draft.isNodeSelected[n.id]) {
+            //             draft.isNodeSelectedNeighbor[n.id] = n.cnt;
+            //         }
+            //     }
+            // }
+
+            // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
+            // The closest / smallest hop wins if it is neighbor of multiple selected nodes
             draft.isNodeSelectedNeighbor = {};
-            if (draft.neighborCounts) {
-                for (let n of draft.neighborCounts) {
-                    if (!draft.isNodeSelected[n.id]) {
-                        draft.isNodeSelectedNeighbor[n.id] = n.cnt;
+            for (let nodeIdx of draft.selectedNodes) {
+                for (let h = draft.param.hops - 1; h >= 0; h--) {
+                    const curNeigh = draft.graph.neigh[h][nodeIdx];
+                    for (let neighIdx of curNeigh.toArray()) {
+                        if (neighIdx !== nodeIdx) {
+                            draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+                        }
                     }
                 }
             }
+
             return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
             if (
@@ -347,11 +423,46 @@ const reducers = produce((draft, action) => {
             }
             draft.selectedNodeType = action.idx;
             return;
-        case ACTION_TYPES.CHANGE_FILTER:
+        case ACTION_TYPES.CHANGE_PARAM:
+            const paramPath = action.param.split(".");
+            const lastParam = paramPath[paramPath.length - 1];
+            let cur = draft.param;
+            for (let i = 0; i < paramPath.length - 1; i++) {
+                cur = cur[paramPath[i]];
+            }
             if (action.inverse) {
-                draft.filters[action.param] = !draft.filters[action.param];
+                cur[lastParam] = !cur[lastParam];
             } else {
-                draft.filters[action.param] = action.value;
+                cur[lastParam] = action.value;
+            }
+
+            if (action.param === "graph.layout") {
+                draft.graph.coords = callLayoutFunc(draft);
+            }
+            return;
+        case ACTION_TYPES.CHANGE_HOPS:
+            if (draft.param.hops !== action.hops) {
+                draft.param.hops = action.hops;
+                // Re-calculate the neighbor masks
+                draft.graph.neigh = getNeighborMasksByHops(
+                    draft.graph.nodes,
+                    draft.graph.edges,
+                    draft.param.hops
+                );
+                // draft.graph.neighborMasksByType = getNeighborMasks(
+                //     draft.graph.nodes,
+                //     draft.graph.edges,
+                //     draft.graph.nodeTypes.length,
+                //     action.hops
+                // );
+                // draft.graph.neighborMasks = draft.graph.neighborMasksByType.map(m =>
+                //     m.reduce((acc, x) => acc.or(x), bs(0))
+                // );
+
+                // Clear the selection
+                draft.selectedNodes = [];
+                draft.isNodeSelected = {};
+                draft.isNodeSelectedNeighbor = {};
             }
             return;
 

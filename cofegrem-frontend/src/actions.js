@@ -9,7 +9,8 @@ const ACTION_TYPES = {
     HIGHLIGHT_NODES: "HIGHLIGHT_NODES",
     CHANGE_SELECTED_NODE_TYPE: "CHANGE_SELECTED_NODE_TYPE",
     SELECT_NODES: "SELECT_NODES",
-    CHANGE_FILTER: "CHANGE_FILTER"
+    CHANGE_PARAM: "CHANGE_PARAM",
+    CHANGE_HOPS: "CHANGE_HOPS"
 };
 export default ACTION_TYPES;
 
@@ -20,25 +21,22 @@ export function fetchGraphData(homePath, datasetId) {
 
         dispatch(fetchDataPending());
 
-        // try {
-        let [graph, emb, emb2d] = [
-            await fetch(`${where}/graph.json`).then(r => r.json()),
-            await fetch(`${where}/node-embedding.csv`)
-                .then(r => r.text())
-                .then(csvParseRows),
-            await fetch(`${where}/umap.csv`)
-                .then(r => r.text())
-                .then(csvParseRows)
-                .then(d => d.map(x => [parseFloat(x[0]), parseFloat(x[1])]))
-        ];
-        console.log(graph);
-        console.log(emb);
-        console.log(emb2d);
+        try {
+            let [graph, emb, emb2d] = [
+                await fetch(`${where}/graph.json`).then(r => r.json()),
+                await fetch(`${where}/node-embedding.csv`)
+                    .then(r => r.text())
+                    .then(csvParseRows),
+                await fetch(`${where}/umap.csv`)
+                    .then(r => r.text())
+                    .then(csvParseRows)
+                    .then(d => d.map(x => [parseFloat(x[0]), parseFloat(x[1])]))
+            ];
 
-        dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d }));
-        // } catch (e) {
-        //     dispatch(fetchDataError(e));
-        // }
+            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d }));
+        } catch (e) {
+            dispatch(fetchDataError(e));
+        }
     };
 }
 
@@ -70,6 +68,10 @@ export function changeSelectedNodeType(idx) {
     return { type: ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE, idx: parseInt(idx, 10) };
 }
 
-export function changeFilter(param, value, inverse = false) {
-    return { type: ACTION_TYPES.CHANGE_FILTER, param, value, inverse };
+export function changeParam(param, value, inverse = false) {
+    return { type: ACTION_TYPES.CHANGE_PARAM, param, value, inverse };
+}
+
+export function changeHops(hops) {
+    return { type: ACTION_TYPES.CHANGE_HOPS, hops };
 }

@@ -2,8 +2,10 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
-import { highlightNodes, selectNodes } from "../actions";
+import { Form } from "react-bootstrap";
+import { highlightNodes, selectNodes, changeParam } from "../actions";
 import { max, scaleLinear } from "d3";
+import NodeRep from "./NodeRep";
 
 class GraphView extends Component {
     // constructor(props) {
@@ -13,13 +15,16 @@ class GraphView extends Component {
     render() {
         const {
             spec,
+            param,
             graph,
             isNodeHighlighted,
             isNodeSelected,
             isNodeSelectedNeighbor,
-            neighborCounts
+            neighborCounts,
+            neighborCountsMapping
         } = this.props;
-        const { width, height, margins, layout, edgeType } = spec.graph;
+        const layout = param.graph.layout;
+        const { width, height, margins, edgeType } = spec.graph;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
         const { coords, nodes, edges, nodeTypes } = graph;
@@ -30,6 +35,26 @@ class GraphView extends Component {
 
         return (
             <div id="graph-view" className="view">
+                <h5 className="text-center">Graph space</h5>
+                <div>
+                    <Form inline>
+                        <Form.Group controlId="graph-layout-alg">
+                            <Form.Label column="sm">Graph layout:</Form.Label>
+                            <Form.Control
+                                as="select"
+                                size="sm"
+                                value={layout}
+                                onChange={e => {
+                                    this.props.changeParam("graph.layout", e.target.value);
+                                }}
+                            >
+                                <option value="force-directed-d3">force-directed (D3)</option>
+                                <option value="force-directed-cola">force-directed (WebCola)</option>
+                                <option value="circular">circular</option>
+                            </Form.Control>
+                        </Form.Group>
+                    </Form>
+                </div>
                 {nodes.length <= 1000 && (
                     <svg width={svgWidth} height={svgHeight}>
                         <g transform={`translate(${margins.left},${margins.top})`}>
@@ -46,10 +71,10 @@ class GraphView extends Component {
                                             <line
                                                 key={i}
                                                 className="edge"
-                                                x1={e.source.x}
-                                                y1={e.source.y}
-                                                x2={e.target.x}
-                                                y2={e.target.y}
+                                                x1={coords[e.source].x}
+                                                y1={coords[e.source].y}
+                                                x2={coords[e.target].x}
+                                                y2={coords[e.target].y}
                                             />
                                         )
                                     )}
@@ -57,27 +82,34 @@ class GraphView extends Component {
 
                                 <g className="nodes">
                                     {coords.map((c, i) => (
-                                        <g key={i} transform={layout === "circular" ? `rotate(${c.a})` : ""}>
-                                            <circle
-                                                className={cn("node", {
-                                                    highlighted: isNodeHighlighted[i],
-                                                    selected: isNodeSelected[i]
-                                                })}
-                                                onMouseEnter={this.props.highlightNodes.bind(null, i)}
-                                                onMouseLeave={this.props.highlightNodes.bind(null, null)}
-                                                onClick={this.props.selectNodes.bind(null, i, null, true)}
-                                                cx={c.x}
-                                                cy={c.y}
-                                                r={c.s || 5}
-                                                style={{ fill: nodeTypes[nodes[i].typeId].color }}
+                                        <g
+                                            key={i}
+                                            transform={
+                                                (layout === "circular" ? `rotate(${c.a})` : "") +
+                                                `translate(${c.x},${c.y})`
+                                            }
+                                            className={cn("node", {
+                                                highlighted: isNodeHighlighted[i],
+                                                selected: isNodeSelected[i],
+                                                "hop-1": isNodeSelectedNeighbor[i] === 1,
+                                                "hop-2": isNodeSelectedNeighbor[i] === 2
+                                            })}
+                                            onMouseEnter={this.props.highlightNodes.bind(null, i)}
+                                            onMouseLeave={this.props.highlightNodes.bind(null, null)}
+                                            onClick={this.props.selectNodes.bind(null, i, null, true)}
+                                        >
+                                            <NodeRep
+                                                shape={nodes[i].typeId === 0 ? "triangle" : "circle"}
+                                                r={nodes[i].typeId === 0? 4: 3}
                                             />
                                             {layout === "circular" &&
-                                                isNodeSelectedNeighbor.hasOwnProperty(i) && (
+                                                neighborCountsMapping &&
+                                                neighborCountsMapping.hasOwnProperty(i) && (
                                                     <line
                                                         className="selected-neighbor-glyph"
-                                                        x1={c.x}
+                                                        x1={0}
                                                         y1={0}
-                                                        x2={c.x + markerScale(isNodeSelectedNeighbor[i])}
+                                                        x2={markerScale(neighborCountsMapping[i])}
                                                         y2={0}
                                                     />
                                                 )}
@@ -99,7 +131,8 @@ const mapDispatchToProps = dispatch =>
     bindActionCreators(
         {
             highlightNodes,
-            selectNodes
+            selectNodes,
+            changeParam
         },
         dispatch
     );

@@ -34,8 +34,8 @@ class App extends Component {
             <div>
                 <AppNav datasetId={this.props.datasetId} homePath={this.props.homePath} />
 
-                <GlobalControls />
                 <div className="App">
+                    <GlobalControls />
                     <FilterView />
                     <EmbeddingsView />
                     <GraphView />

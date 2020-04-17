@@ -11,6 +11,7 @@ import {
     forceY,
     linkRadial
 } from "d3";
+import {Layout as cola} from 'webcola';
 import tSNE from "./tsne";
 
 const EPSILON = 1e-8;
@@ -97,8 +98,8 @@ export function getAllNodeDistance(emb, edges) {
         f.push(new Array(emb.length).fill(false));
     }
     for (let e of edges) {
-        f[e.source.index][e.target.index] = true;
-        f[e.target.index][e.source.index] = true;
+        f[e.source][e.target] = true;
+        f[e.target][e.source] = true;
     }
 
     let d = [];
@@ -126,21 +127,44 @@ export function getCosineDistance(u, v) {
     return 1.0 - sim;
 }
 
-export function computeForceLayout(nodes, edges, spec) {
+export function computeForceLayoutWithD3(nodes, edges) {
     // const constrainCoord = (v, min, max) => Math.max(min, Math.min(v, max));
     let coords = nodes.map((n, i) => ({ index: i }));
+
+    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 800));
+
     let simulation = forceSimulation(coords)
         .force("link", forceLink(edges))
         .force("charge", forceManyBody().strength(-40))
-        .force("center", forceCenter(spec.width / 2, spec.height / 2))
-        .force("x", forceX(spec.width / 2))
-        .force("y", forceY(spec.height / 2))
+        .force("x", forceX(canvasSize / 2))
+        .force("y", forceY(canvasSize / 2))
         .stop();
 
-    for (let i = 0; i < 500; i++) {
+    for (let i = 0; i < 300; i++) {
         simulation.tick();
     }
-    return coords.map(d => ({ x: d.x, y: d.y }));
+
+    return { coords: coords.map((d) => ({ x: d.x, y: d.y })), width: canvasSize, height: canvasSize };
+}
+
+export function computeForceLayoutWithCola(nodes, edges) {
+    let coords = nodes.map((n, i) => ({ index: i }));
+    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 800));
+
+    let simulation = (new cola())
+        .size([canvasSize, canvasSize])
+        .nodes(coords)
+        .links(edges)
+        // .avoidoverlaps(true)
+        .symmetricDiffLinkLengths(2, 1)
+        // .jaccardLinkLengths(15, 2)
+        .start(10, 15, 20);
+
+    for (let i = 0; i < 300; i++) {
+        simulation.tick();
+    }
+
+    return { coords: coords.map((d) => ({ x: d.x, y: d.y })), width: canvasSize, height: canvasSize };
 }
 
 // Compute a circular layout with an inner ring for one central node type and outer ring for other node types
@@ -162,7 +186,8 @@ export function computeCircularLayout(nodes, edges, spec, centralNodeType) {
     if (outerRadius - innerRadius < minRingGap) {
         outerRadius = innerRadius + minRingGap;
     }
-    console.log({ innerRadius, outerRadius });
+    const canvasSize = 2 * (outerRadius + auxNodeSize);
+    // console.log({ innerRadius, outerRadius });
 
     function polar(r, a) {
         return { x: r * Math.cos(a), y: r * Math.sin(a) };
@@ -184,33 +209,30 @@ export function computeCircularLayout(nodes, edges, spec, centralNodeType) {
         }
     }
 
-    const linkGen = linkRadial()
-        .radius(d => d.r)
-        .angle(d => d.a);
+    // const linkGen = linkRadial()
+    //     .radius(d => d.r)
+    //     .angle(d => d.a);
 
-    for (let e of edges) {
-        let sid = e.source,
-            tid = e.target;
-        e.curvePath = linkGen({
-            source: polarCoords[sid],
-            target: polarCoords[tid]
-        });
-        e.source = {
-            index: sid,
-            ...coords[sid]
-        };
-        e.target = {
-            index: tid,
-            ...coords[tid]
-        };
-    }
-
-    // Dirty
-    spec.width = 2 * (outerRadius + auxNodeSize);
-    spec.height = spec.width;
-
-    // return coords;
+    // for (let e of edges) {
+    //     let sid = e.source, tid = e.target;
+    //     e.curvePath = linkGen({
+    //         source: polarCoords[sid],
+    //         target: polarCoords[tid]
+    //     });
+    //     e.source = {
+    //         index: sid,
+    //         ...coords[sid]
+    //     };
+    //     e.target = {
+    //         index: tid,
+    //         ...coords[tid]
+    //     };
+    // }
 
     // Change the angle unit from radian to degree, and prepare for rotation transform in rendering
-    return polarCoords.map(c => ({ ...c, a: (c.a * 180) / Math.PI }));
+    return {
+        coords: polarCoords.map((c) => ({ ...c, a: (c.a * 180) / Math.PI })),
+        width: canvasSize,
+        height: canvasSize,
+    };
 }

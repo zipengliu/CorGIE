@@ -16,21 +16,29 @@ export default {
     isNodeSelectedNeighbor: {},
     neighborIntersections: null,
     neighborCounts: [],
+    neighborCountsMapping: {},
 
     powerSetLimit: 8,
 
-    filters: {
-        presentEdges: true,
-        absentEdges: true,
-        ascending: true
+    param: {
+        hops: 2,
+
+        graph: {
+            layout: "force-directed-d3",
+        },
+
+        filter: {
+            presentEdges: true,
+            absentEdges: true,
+            ascending: true
+        }
     },
 
     spec: {
         graph: {
-            layout: "circular",
             edgeType: "line",
-            width: 500,
-            height: 500,
+            width: 1000,
+            height: 1000,
             margins: { top: 30, bottom: 30, left: 30, right: 30 },
 
             neighborMarkerMaxHeight: 30,
