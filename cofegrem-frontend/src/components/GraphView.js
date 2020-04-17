@@ -21,17 +21,20 @@ class GraphView extends Component {
             isNodeSelected,
             isNodeSelectedNeighbor,
             neighborCounts,
-            neighborCountsMapping
+            neighborCountsMapping,
+            focalGraphLayout,
         } = this.props;
         const layout = param.graph.layout;
-        const { width, height, margins, edgeType } = spec.graph;
+        const { width, height, margins, edgeType, centralNodeSize, auxNodeSize } = spec.graph;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
-        const { coords, nodes, edges, nodeTypes } = graph;
+        const { coords, nodes, edges } = graph;
 
         const markerScale = scaleLinear()
-            .domain([0, max(neighborCounts.map(c => c.cnt)) + 1])
+            .domain([0, max(neighborCounts.map((c) => c.cnt)) + 1])
             .range([0, spec.graph.neighborMarkerMaxHeight]);
+        
+            console.log("rendering graphs...");
 
         return (
             <div id="graph-view" className="view">
@@ -44,7 +47,7 @@ class GraphView extends Component {
                                 as="select"
                                 size="sm"
                                 value={layout}
-                                onChange={e => {
+                                onChange={(e) => {
                                     this.props.changeParam("graph.layout", e.target.value);
                                 }}
                             >
@@ -55,7 +58,7 @@ class GraphView extends Component {
                         </Form.Group>
                     </Form>
                 </div>
-                {nodes.length <= 1000 && (
+                <div style={{ display: "flex", flexDirection: "row" }}>
                     <svg width={svgWidth} height={svgHeight}>
                         <g transform={`translate(${margins.left},${margins.top})`}>
                             <g
@@ -70,7 +73,11 @@ class GraphView extends Component {
                                         ) : (
                                             <line
                                                 key={i}
-                                                className="edge"
+                                                className={cn("edge", {
+                                                    highlighted:
+                                                        isNodeHighlighted[e.source] &&
+                                                        isNodeHighlighted[e.target],
+                                                })}
                                                 x1={coords[e.source].x}
                                                 y1={coords[e.source].y}
                                                 x2={coords[e.target].x}
@@ -92,7 +99,7 @@ class GraphView extends Component {
                                                 highlighted: isNodeHighlighted[i],
                                                 selected: isNodeSelected[i],
                                                 "hop-1": isNodeSelectedNeighbor[i] === 1,
-                                                "hop-2": isNodeSelectedNeighbor[i] === 2
+                                                "hop-2": isNodeSelectedNeighbor[i] === 2,
                                             })}
                                             onMouseEnter={this.props.highlightNodes.bind(null, i)}
                                             onMouseLeave={this.props.highlightNodes.bind(null, null)}
@@ -100,7 +107,7 @@ class GraphView extends Component {
                                         >
                                             <NodeRep
                                                 shape={nodes[i].typeId === 0 ? "triangle" : "circle"}
-                                                r={nodes[i].typeId === 0? 4: 3}
+                                                r={nodes[i].typeId === 0 ? centralNodeSize : auxNodeSize}
                                             />
                                             {layout === "circular" &&
                                                 neighborCountsMapping &&
@@ -119,20 +126,81 @@ class GraphView extends Component {
                             </g>
                         </g>
                     </svg>
-                )}
+                    {focalGraphLayout.coords && (
+                        <svg
+                            width={focalGraphLayout.width + margins.left + margins.right}
+                            height={focalGraphLayout.height + margins.top + margins.bottom}
+                        >
+                            <g transform={`translate(${margins.left},${margins.top})`}>
+                                <g className="edges">
+                                    {edges.map((e, i) => (
+                                        <line
+                                            key={i}
+                                            className={cn("edge", {
+                                                highlighted:
+                                                    isNodeHighlighted[e.source] &&
+                                                    isNodeHighlighted[e.target],
+                                            })}
+                                            x1={focalGraphLayout.coords[e.source].x}
+                                            y1={focalGraphLayout.coords[e.source].y}
+                                            x2={focalGraphLayout.coords[e.target].x}
+                                            y2={focalGraphLayout.coords[e.target].y}
+                                        />
+                                    ))}
+                                </g>
+                                <g className="groups">
+                                    {focalGraphLayout.groups.map((g, i) => (
+                                        <rect
+                                            key={i}
+                                            className="node-group"
+                                            rx={5}
+                                            ry={5}
+                                            x={g.bounds.x}
+                                            y={g.bounds.y}
+                                            width={g.bounds.width()}
+                                            height={g.bounds.height()}
+                                        />
+                                    ))}
+                                </g>
+                                <g className="nodes">
+                                    {focalGraphLayout.coords.map((c, i) => (
+                                        <g
+                                            key={i}
+                                            transform={`translate(${c.x},${c.y})`}
+                                            className={cn("node", {
+                                                highlighted: isNodeHighlighted[i],
+                                                selected: isNodeSelected[i],
+                                                "hop-1": isNodeSelectedNeighbor[i] === 1,
+                                                "hop-2": isNodeSelectedNeighbor[i] === 2,
+                                            })}
+                                            onMouseEnter={this.props.highlightNodes.bind(null, i)}
+                                            onMouseLeave={this.props.highlightNodes.bind(null, null)}
+                                            // onClick={this.props.selectNodes.bind(null, i, null, true)}
+                                        >
+                                            <NodeRep
+                                                shape={nodes[i].typeId === 0 ? "triangle" : "circle"}
+                                                r={nodes[i].typeId === 0 ? centralNodeSize : auxNodeSize}
+                                            />
+                                        </g>
+                                    ))}
+                                </g>
+                            </g>
+                        </svg>
+                    )}
+                </div>
             </div>
         );
     }
 }
 
-const mapStateToProps = state => ({ ...state });
+const mapStateToProps = (state) => ({ ...state });
 
-const mapDispatchToProps = dispatch =>
+const mapDispatchToProps = (dispatch) =>
     bindActionCreators(
         {
             highlightNodes,
             selectNodes,
-            changeParam
+            changeParam,
         },
         dispatch
     );

@@ -7,6 +7,7 @@ import {
     computeCircularLayout,
     getAllNodeDistance,
     computeForceLayoutWithCola,
+    computeConstraintForceLayout,
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
@@ -45,7 +46,7 @@ function countNeighborsByType(neighborMasksByType, selectedNodes) {
             nei[j] = nei[j].or(neighborMasksByType[i][j]);
         }
     }
-    return nei.map(n => n.cardinality());
+    return nei.map((n) => n.cardinality());
 }
 
 // Assign a node type index to each node and return a mapping from type (string) to typeIndex (int)
@@ -109,7 +110,7 @@ function getNeighborMasksByHops(nodes, edges, hops) {
         masksByHops.push(cur);
         last = cur;
         console.log({ h });
-        console.log(cur.map(m => m.toArray()));
+        console.log(cur.map((m) => m.toArray()));
     }
     return masksByHops;
 }
@@ -171,7 +172,7 @@ function computeIntersections(neighborMasksByType, selectedNodes) {
     // And the combo bitset is duped
     for (let i = 0; i < neighborMasksByType[0].length; i++) {
         intersections.push(
-            combos.map(c => {
+            combos.map((c) => {
                 const bits = c.toArray();
                 let r = bs(0).flip();
                 for (let b of bits) {
@@ -238,7 +239,7 @@ function countNeighborSets(neighborMasksByType, selectedNodes) {
         allCounts = allCounts.concat(temp);
         countsByType.push(temp);
         // Compute bins of counts
-        histos.push(binGen(temp.map(t => t.cnt)));
+        histos.push(binGen(temp.map((t) => t.cnt)));
     }
     return { allCounts, allCountsMapping, bins: histos, countsByType };
 }
@@ -257,7 +258,7 @@ function callLayoutFunc(state) {
         // Make a copy of the edges to prevent them from changes by the force simulation
         layoutRes = computeForceLayoutWithD3(graph.nodes, copiedEdges);
     } else if (state.param.graph.layout === "force-directed-cola") {
-        layoutRes = computeForceLayoutWithCola(graph.nodes, copiedEdges);
+        layoutRes = computeForceLayoutWithCola(graph.nodes, copiedEdges, state.spec.graph);
     } else {
         layoutRes = computeCircularLayout(graph.nodes, copiedEdges, state.spec.graph, state.centralNodeType);
     }
@@ -283,8 +284,9 @@ const reducers = produce((draft, action) => {
             draft.graph = {
                 nodes: graph.nodes,
                 edges: graph.links,
-                nodeTypes: countNodesByType(graph.nodes)
+                nodeTypes: countNodesByType(graph.nodes),
             };
+            draft.focalGraphLayout = {};
             populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
             mapColorToNodeType(draft.graph.nodeTypes);
             draft.graph.coords = callLayoutFunc(draft);
@@ -295,21 +297,21 @@ const reducers = produce((draft, action) => {
                 draft.graph.nodeTypes.length,
                 draft.param.hops
             );
-            draft.graph.neighborMasks = draft.graph.neighborMasksByType.map(m =>
+            draft.graph.neighborMasks = draft.graph.neighborMasksByType.map((m) =>
                 m.reduce((acc, x) => acc.or(x), bs(0))
             );
 
             draft.latent = {
                 emb,
                 coords: coordsRescale(emb2d, draft.spec.latent.width, draft.spec.latent.height),
-                nodeDist: getAllNodeDistance(emb, draft.graph.edges)
+                nodeDist: getAllNodeDistance(emb, draft.graph.edges),
             };
             let binGen = histogram()
                 .domain([0, 1])
-                .value(d => d.d)
+                .value((d) => d.d)
                 .thresholds(50);
-            draft.latent.distBinPresent = binGen(draft.latent.nodeDist.filter(d => d.p));
-            draft.latent.distBinAbsent = binGen(draft.latent.nodeDist.filter(d => !d.p));
+            draft.latent.distBinPresent = binGen(draft.latent.nodeDist.filter((d) => d.p));
+            draft.latent.distBinAbsent = binGen(draft.latent.nodeDist.filter((d) => !d.p));
             // draft.latent.coords = runTSNE(draft.latent.distMat, draft.spec.latent);
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
@@ -321,7 +323,7 @@ const reducers = produce((draft, action) => {
                 draft.isNodeHighlighted = {};
             } else {
                 draft.highlightTrigger = { by: "type", which: action.nodeTypeIdx };
-                draft.isNodeHighlighted = draft.graph.nodes.map(n => n.typeId === action.nodeTypeIdx);
+                draft.isNodeHighlighted = draft.graph.nodes.map((n) => n.typeId === action.nodeTypeIdx);
             }
             return;
         case ACTION_TYPES.HIGHLIGHT_NODES:
@@ -387,15 +389,6 @@ const reducers = produce((draft, action) => {
             draft.neighborCountsByType = temp.countsByType;
             draft.neighborCountsBins = temp.bins;
 
-            // draft.isNodeSelectedNeighbor = {};
-            // if (draft.neighborCounts) {
-            //     for (let n of draft.neighborCounts) {
-            //         if (!draft.isNodeSelected[n.id]) {
-            //             draft.isNodeSelectedNeighbor[n.id] = n.cnt;
-            //         }
-            //     }
-            // }
-
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
             draft.isNodeSelectedNeighbor = {};
@@ -410,6 +403,21 @@ const reducers = produce((draft, action) => {
                 }
             }
 
+            // Compute the force layout for focal nodes (selected + k-hop neighbors)
+            if (draft.selectedNodes.length === 0) {
+                draft.focalGraphLayout = {};
+            } else {
+                draft.focalGraphLayout = computeConstraintForceLayout(
+                    draft.graph.nodes,
+                    draft.graph.edges,
+                    draft.param.hops,
+                    draft.isNodeSelected,
+                    draft.isNodeSelectedNeighbor,
+                    draft.spec.graph
+                );
+                console.log(draft.focalGraphLayout)
+            }
+
             return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
             if (
@@ -420,6 +428,7 @@ const reducers = produce((draft, action) => {
                 draft.selectedNodes = [];
                 draft.isNodeSelected = {};
                 draft.isNodeSelectedNeighbor = {};
+                draft.focalGraphLayout = {};
             }
             draft.selectedNodeType = action.idx;
             return;
@@ -463,6 +472,7 @@ const reducers = produce((draft, action) => {
                 draft.selectedNodes = [];
                 draft.isNodeSelected = {};
                 draft.isNodeSelectedNeighbor = {};
+                draft.focalGraphLayout = {};
             }
             return;
 

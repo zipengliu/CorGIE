@@ -39,14 +39,18 @@ export default {
             edgeType: "line",
             width: 1000,
             height: 1000,
-            margins: { top: 30, bottom: 30, left: 30, right: 30 },
+            margins: { top: 10, bottom: 10, left: 10, right: 10 },
 
             neighborMarkerMaxHeight: 30,
-            centralNodeSize: 6,
+            centralNodeSize: 4,
             auxNodeSize: 3,
             innerRingNodeGap: 10,
             outerRingNodeGap: 2,
             minRingGap: 50 // Minimum gap between the two rings (along the radius axis)
+        },
+        focalGraph: {
+            width: 300,
+            height: 300,
         },
         latent: {
             width: 400,

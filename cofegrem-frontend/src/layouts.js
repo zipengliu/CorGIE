@@ -9,9 +9,9 @@ import {
     forceCenter,
     forceX,
     forceY,
-    linkRadial
+    linkRadial,
 } from "d3";
-import {Layout as cola} from 'webcola';
+import { Layout as cola } from "webcola";
 import tSNE from "./tsne";
 
 const EPSILON = 1e-8;
@@ -50,30 +50,24 @@ export function runTSNE(dist, spec) {
 
 // Rescale the coordinates to [0,0]-[w,h]
 export function coordsRescale(coords, w, h) {
-    let xArr = coords.map(x => x[0]);
-    let yArr = coords.map(x => x[1]);
+    let xArr = coords.map((x) => x[0]);
+    let yArr = coords.map((x) => x[1]);
     let xExtent = extent(xArr);
     let yExtent = extent(yArr);
 
-    let xScale = scaleLinear()
-        .domain(xExtent)
-        .range([0, w]);
-    let yScale = scaleLinear()
-        .domain(yExtent)
-        .range([0, h]);
+    let xScale = scaleLinear().domain(xExtent).range([0, w]);
+    let yScale = scaleLinear().domain(yExtent).range([0, h]);
 
-    return coords.map(d => ({ x: xScale(d[0]), y: yScale(d[1]) }));
+    return coords.map((d) => ({ x: xScale(d[0]), y: yScale(d[1]) }));
 }
 
 function avoidOverlap(coords, r) {
     let nodes = coords.map((d, i) => ({ ...d, index: i }));
-    let simulation = forceSimulation(nodes)
-        .force("collide", forceCollide(r))
-        .stop();
+    let simulation = forceSimulation(nodes).force("collide", forceCollide(r)).stop();
     for (let i = 0; i < 100; i++) {
         simulation.tick();
     }
-    return nodes.map(d => ({ x: d.x, y: d.y }));
+    return nodes.map((d) => ({ x: d.x, y: d.y }));
 }
 
 export function getDistanceMatrixFromEmbeddings(emb) {
@@ -139,24 +133,26 @@ export function computeForceLayoutWithD3(nodes, edges) {
         .force("x", forceX(canvasSize / 2))
         .force("y", forceY(canvasSize / 2))
         .stop();
-
-    for (let i = 0; i < 300; i++) {
-        simulation.tick();
-    }
+    simulation.tick(300);
 
     return { coords: coords.map((d) => ({ x: d.x, y: d.y })), width: canvasSize, height: canvasSize };
 }
 
-export function computeForceLayoutWithCola(nodes, edges) {
-    let coords = nodes.map((n, i) => ({ index: i }));
+export function computeForceLayoutWithCola(nodes, edges, spec) {
+    let coords = nodes.map((n, i) => ({
+        index: i,
+        width: (n.typeId === 0 ? spec.centralNodeSize : spec.auxNodeSize) * 2,
+        height: (n.typeId === 0 ? spec.centralNodeSize : spec.auxNodeSize) * 2,
+    }));
     const canvasSize = Math.ceil(Math.sqrt(nodes.length * 800));
 
-    let simulation = (new cola())
+    let simulation = new cola()
         .size([canvasSize, canvasSize])
         .nodes(coords)
         .links(edges)
-        // .avoidoverlaps(true)
-        .symmetricDiffLinkLengths(2, 1)
+        .linkDistance(10)
+        // .avoidOverlaps(true)
+        // .symmetricDiffLinkLengths(2, 1)
         // .jaccardLinkLengths(15, 2)
         .start(10, 15, 20);
 
@@ -171,8 +167,8 @@ export function computeForceLayoutWithCola(nodes, edges) {
 // Minimize edge-edge crossing by positioning neighbor nodes closer to the central node and edge bundling (TODO)
 // TODO: host multiple central node types
 export function computeCircularLayout(nodes, edges, spec, centralNodeType) {
-    const centralNodes = nodes.filter(n => n.typeId === centralNodeType);
-    const auxNodes = nodes.filter(n => n.typeId !== centralNodeType);
+    const centralNodes = nodes.filter((n) => n.typeId === centralNodeType);
+    const auxNodes = nodes.filter((n) => n.typeId !== centralNodeType);
     const centralNodesCnt = centralNodes.length,
         auxNodesCnt = auxNodes.length;
     console.log({ centralNodesCnt, auxNodesCnt });
@@ -232,6 +228,67 @@ export function computeCircularLayout(nodes, edges, spec, centralNodeType) {
     // Change the angle unit from radian to degree, and prepare for rotation transform in rendering
     return {
         coords: polarCoords.map((c) => ({ ...c, a: (c.a * 180) / Math.PI })),
+        width: canvasSize,
+        height: canvasSize,
+    };
+}
+
+export function computeConstraintForceLayout(
+    nodes,
+    edges,
+    hops,
+    isNodeSelected,
+    isNodeSelectedNeighbor,
+    spec
+) {
+    let coords = nodes.map((n, i) => ({
+        index: i,
+        // temporily assign group hops+1 to all other nodes
+        width: (n.typeId === 0 ? spec.centralNodeSize : spec.auxNodeSize) * 2,
+        height: (n.typeId === 0 ? spec.centralNodeSize : spec.auxNodeSize) * 2,
+        group: isNodeSelected[i] ? 0 : isNodeSelectedNeighbor[i] ? isNodeSelectedNeighbor[i] : hops + 1,
+    }));
+    // Filter the nodes and edges
+    let groups = [];
+    let n = 0;
+    for (let h = 0; h <= hops + 1; h++) {
+        groups.push({ id: h, leaves: [], padding: 5 });
+    }
+    for (let i = 0; i < coords.length; i++) {
+        groups[coords[i].group].leaves.push(i);
+        n += coords[i].group <= hops ? 1 : 0;
+    }
+    console.log(groups);
+
+    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 1000));
+
+    // Copy edges to prevent contanimation
+    const copiedEdges = edges.map((e) => ({ ...e }));
+
+    let simulation = new cola()
+        .size([canvasSize, canvasSize])
+        .nodes(coords)
+        .links(copiedEdges)
+        .groups(groups)
+        .linkDistance(10)
+        .avoidOverlaps(true)
+        // .symmetricDiffLinkLengths(2, 1)
+        // .jaccardLinkLengths(5, 0.7)
+        .start(20, 0, 10, 0, false);
+
+    // let iter = 0;
+    // while (!simulation.tick()) {
+    //     iter++;
+    // }
+    // console.log({iter});
+    for (let i = 0; i < 500; i++) {
+        simulation.tick();
+    }
+    console.log(coords);
+
+    return {
+        coords: coords.map((d) => ({ x: d.x, y: d.y, g: d.group })),
+        groups: groups.map((g) => ({ id: g.id, bounds: g.bounds })),
         width: canvasSize,
         height: canvasSize,
     };
