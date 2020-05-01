@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form } from "react-bootstrap";
-import { highlightNodeType, changeSelectedNodeType, changeHops } from "../actions";
+import { highlightNodeType, changeSelectedNodeType, changeHops, changeParam } from "../actions";
 import NodeRep from "./NodeRep";
 
 export class GlobalControls extends Component {
@@ -107,6 +107,22 @@ export class GlobalControls extends Component {
                                     <option value={3}>3</option>
                                 </Form.Control>
                             </Form.Group>
+
+                            <Form.Group controlId="highlight-neighbor-hop">
+                                <Form.Label column="sm"># hops to highlight</Form.Label>
+                                <Form.Control
+                                    as="select"
+                                    size="sm"
+                                    value={param.hopsHighlight}
+                                    onChange={e => {
+                                        this.props.changeParam('hopsHighlight', parseInt(e.target.value));
+                                    }}
+                                >
+                                    <option value={1}>1</option>
+                                    <option value={2}>2</option>
+                                    <option value={3}>3</option>
+                                </Form.Control>
+                            </Form.Group>
                         </Form>
                     </div>
                 </div>
@@ -124,7 +140,8 @@ const mapDispatchToProps = dispatch =>
         {
             highlightNodeType,
             changeSelectedNodeType,
-            changeHops
+            changeHops,
+            changeParam,
         },
         dispatch
     );

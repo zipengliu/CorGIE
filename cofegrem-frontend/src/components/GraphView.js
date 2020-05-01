@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
 import { Form } from "react-bootstrap";
-import { highlightNodes, selectNodes, changeParam } from "../actions";
+import { highlightNodes, selectNodes, changeParam, layoutTick } from "../actions";
 import { max, scaleLinear } from "d3";
 import NodeRep from "./NodeRep";
 
@@ -11,6 +11,15 @@ class GraphView extends Component {
     // constructor(props) {
     //     super(props);
     // }
+    componentDidUpdate() {
+        const {focalGraphLayout} = this.props;
+
+        if (focalGraphLayout.running) {
+            setTimeout(() => {
+                this.props.layoutTick();
+            }, 100);
+        }
+    }
 
     render() {
         const {
@@ -184,6 +193,7 @@ class GraphView extends Component {
                                         </g>
                                     ))}
                                 </g>
+                                <text y={5}>#iterations: {focalGraphLayout.simulationTickNumber}</text>
                             </g>
                         </svg>
                     )}
@@ -201,6 +211,7 @@ const mapDispatchToProps = (dispatch) =>
             highlightNodes,
             selectNodes,
             changeParam,
+            layoutTick,
         },
         dispatch
     );

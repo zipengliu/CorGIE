@@ -250,17 +250,26 @@ export function computeConstraintForceLayout(
     }));
     // Filter the nodes and edges
     let groups = [];
-    let n = 0;
+    // let n = 0;
     for (let h = 0; h <= hops + 1; h++) {
         groups.push({ id: h, leaves: [], padding: 5 });
     }
     for (let i = 0; i < coords.length; i++) {
         groups[coords[i].group].leaves.push(i);
-        n += coords[i].group <= hops ? 1 : 0;
+        // n += coords[i].group <= hops ? 1 : 0;
     }
-    console.log(groups);
 
-    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 1000));
+    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 2000));
+
+    const constraints = [];
+    for (let i = 1; i < groups.length; i++) {
+        for (let nodeA of groups[i - 1].leaves) {
+            for (let nodeB of groups[i].leaves) {
+                constraints.push({ axis: "x", left: nodeA, right: nodeB, gap: 40 });
+            }
+        }
+    }
+    console.log("layout constraints: ", constraints);
 
     // Copy edges to prevent contanimation
     const copiedEdges = edges.map((e) => ({ ...e }));
@@ -270,26 +279,35 @@ export function computeConstraintForceLayout(
         .nodes(coords)
         .links(copiedEdges)
         .groups(groups)
-        .linkDistance(10)
+        .defaultNodeSize(3)
+        .linkDistance(15)
         .avoidOverlaps(true)
+        .constraints(constraints)
         // .symmetricDiffLinkLengths(2, 1)
         // .jaccardLinkLengths(5, 0.7)
-        .start(20, 0, 10, 0, false);
+        .convergenceThreshold(1)
+        .start(0, 0, 10, 0, false);
 
     // let iter = 0;
     // while (!simulation.tick()) {
     //     iter++;
     // }
     // console.log({iter});
-    for (let i = 0; i < 500; i++) {
-        simulation.tick();
-    }
-    console.log(coords);
+
+    // for (let i = 0; i < 0; i++) {
+    //     simulation.tick();
+    // }
+    // console.log(coords);
+
+    simulation.constraints([]);
 
     return {
         coords: coords.map((d) => ({ x: d.x, y: d.y, g: d.group })),
         groups: groups.map((g) => ({ id: g.id, bounds: g.bounds })),
         width: canvasSize,
         height: canvasSize,
+        simulation,
+        simulationTickNumber: 10,
+        running: true,
     };
 }

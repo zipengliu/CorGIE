@@ -22,6 +22,7 @@ export default {
 
     param: {
         hops: 2,
+        hopsHighlight: 2,
 
         graph: {
             layout: "force-directed-d3",

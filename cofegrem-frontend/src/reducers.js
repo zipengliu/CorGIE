@@ -115,7 +115,7 @@ function getNeighborMasksByHops(nodes, edges, hops) {
     return masksByHops;
 }
 
-function highlightNeighbors(n, neighborMasks, targetNodeIdx) {
+function highlightNeighbors(n, neighborMasks, hops, targetNodeIdx) {
     let h = new Array(n).fill(false);
     // for (let e of edges) {
     //     if (e.source.index === targetNodeIdx) {
@@ -127,9 +127,10 @@ function highlightNeighbors(n, neighborMasks, targetNodeIdx) {
     // for (let id of neighborMasks[targetNodeIdx].toArray()) {
     //     h[id] = true;
     // }
-    for (let m of neighborMasks) {
+
+    for (let i = 0; i < hops; i++) {      // Iterate the hops
         // Flatten all hops / treating all hops the same
-        for (let id of m[targetNodeIdx].toArray()) {
+        for (let id of neighborMasks[i][targetNodeIdx].toArray()) {
             h[id] = true;
         }
     }
@@ -336,6 +337,7 @@ const reducers = produce((draft, action) => {
                 draft.isNodeHighlighted = highlightNeighbors(
                     draft.graph.nodes.length,
                     draft.graph.neigh,
+                    draft.param.hopsHighlight,
                     action.nodeIdx
                 );
                 draft.isNodeHighlighted[action.nodeIdx] = true;
@@ -415,7 +417,7 @@ const reducers = produce((draft, action) => {
                     draft.isNodeSelectedNeighbor,
                     draft.spec.graph
                 );
-                console.log(draft.focalGraphLayout)
+                // console.log(draft.focalGraphLayout)
             }
 
             return;
@@ -473,6 +475,16 @@ const reducers = produce((draft, action) => {
                 draft.isNodeSelected = {};
                 draft.isNodeSelectedNeighbor = {};
                 draft.focalGraphLayout = {};
+            }
+            return;
+        case ACTION_TYPES.LAYOUT_TICK:
+            const converged = draft.focalGraphLayout.simulation.tick();
+            // This is only a dirty way for quick check
+            draft.focalGraphLayout.coords = draft.focalGraphLayout.simulation._nodes.map((d) => ({ x: d.x, y: d.y, g: d.group }));
+            draft.focalGraphLayout.groups = draft.focalGraphLayout.simulation._groups.map((g) => ({ id: g.id, bounds: g.bounds }));
+            draft.focalGraphLayout.simulationTickNumber += 1;
+            if (converged) {
+                draft.focalGraphLayout.running = false;
             }
             return;
 

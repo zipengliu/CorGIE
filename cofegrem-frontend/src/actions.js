@@ -10,7 +10,8 @@ const ACTION_TYPES = {
     CHANGE_SELECTED_NODE_TYPE: "CHANGE_SELECTED_NODE_TYPE",
     SELECT_NODES: "SELECT_NODES",
     CHANGE_PARAM: "CHANGE_PARAM",
-    CHANGE_HOPS: "CHANGE_HOPS"
+    CHANGE_HOPS: "CHANGE_HOPS",
+    LAYOUT_TICK: "LAYOUT_TICK",
 };
 export default ACTION_TYPES;
 
@@ -74,4 +75,8 @@ export function changeParam(param, value, inverse = false) {
 
 export function changeHops(hops) {
     return { type: ACTION_TYPES.CHANGE_HOPS, hops };
+}
+
+export function layoutTick() {
+    return { type: ACTION_TYPES.LAYOUT_TICK };
 }
