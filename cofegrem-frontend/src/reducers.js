@@ -11,7 +11,7 @@ import {
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
-import { histogram } from "d3";
+import { histogram, select } from "d3";
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -109,8 +109,8 @@ function getNeighborMasksByHops(nodes, edges, hops) {
         }
         masksByHops.push(cur);
         last = cur;
-        console.log({ h });
-        console.log(cur.map((m) => m.toArray()));
+        // console.log({ h });
+        // console.log(cur.map((m) => m.toArray()));
     }
     return masksByHops;
 }
@@ -128,7 +128,8 @@ function highlightNeighbors(n, neighborMasks, hops, targetNodeIdx) {
     //     h[id] = true;
     // }
 
-    for (let i = 0; i < hops; i++) {      // Iterate the hops
+    for (let i = 0; i < hops; i++) {
+        // Iterate the hops
         // Flatten all hops / treating all hops the same
         for (let id of neighborMasks[i][targetNodeIdx].toArray()) {
             h[id] = true;
@@ -243,6 +244,93 @@ function countNeighborSets(neighborMasksByType, selectedNodes) {
         histos.push(binGen(temp.map((t) => t.cnt)));
     }
     return { allCounts, allCountsMapping, bins: histos, countsByType };
+}
+
+function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
+    if (selectedNodes.length === 0) return {};
+
+    // compute a mask for the selected nodes
+    let selMask = bs(0);
+    for (let selectedId of selectedNodes) {
+        selMask.set(selectedId, 1);
+    }
+    console.log('counting...');
+    console.log(selectedNodes, selMask);
+
+    let res = [];
+    for (let curMasks of neighborMasks) {
+        // iterate the masks for each hop
+        let curGroups = [];
+
+        // Find out the frequency of each neighbor in that hop
+        let cnts = {};
+        for (let selectedId of selectedNodes) {
+            const m = curMasks[selectedId].toArray();
+            for (let neighId of m) {
+                if (!cnts.hasOwnProperty(neighId)) {
+                    cnts[neighId] = 0;
+                }
+                cnts[neighId]++;
+            }
+        }
+
+        // Group the neighbors by frequency
+        // 1. convert mapping to array
+        let cntArray = [];
+        for (let neighId in cnts)
+            if (cnts.hasOwnProperty(neighId)) {
+                cntArray.push({ id: neighId, cnt: cnts[neighId], mask: curMasks[neighId].and(selMask) });
+            }
+        // 2. sort array by freq
+        cntArray.sort((a, b) => b.cnt - a.cnt);
+        // 3. group
+        let idx = 0;
+        while (idx < cntArray.length) {
+            let curG = {
+                freq: cntArray[idx].cnt,
+                prevTotal: idx,       // Number of neighbors previous to this group, used for computing layout
+                nodes: [],
+                expanded: false,
+                cntsPerSelected: {},
+                subgroups: [],
+                isBoundary: {},
+            };
+            for (let selectedId of selectedNodes) {
+                curG.cntsPerSelected[selectedId] = 0;
+            }
+
+            let j = idx;
+            while (j < cntArray.length && cntArray[j].cnt === curG.freq) {
+                curG.nodes.push(cntArray[j].id);
+
+                // Compute the counts per selected node
+                for (let selectedId of selectedNodes) {
+                    const m = curMasks[selectedId];
+                    if (m.get(cntArray[j].id)) {
+                        curG.cntsPerSelected[selectedId]++;
+                    }
+                }
+
+                // Compute the subgroups by comparing neighbor j with j-1
+                if (j === idx || !cntArray[j].mask.equals(cntArray[j - 1].mask)) {
+                    // add a new subgroup
+                    curG.subgroups.push([cntArray[j].id]);
+                    curG.isBoundary[cntArray[j].id] = true;
+                } else {
+                    curG.subgroups[curG.subgroups.length - 1].push(cntArray[j].id);
+                }
+
+                j++;
+            }
+            curGroups.push(curG);
+            idx = j;
+        }
+
+        res.push(curGroups);
+        break;      // TODO only work for the 1-hop now
+    }
+
+    return res;
 }
 
 function isPointInBox(p, box) {
@@ -391,6 +479,8 @@ const reducers = produce((draft, action) => {
             draft.neighborCountsByType = temp.countsByType;
             draft.neighborCountsBins = temp.bins;
 
+            draft.selectedNeighByHop = countSelectedNeighborsByHop(draft.graph.neigh, draft.selectedNodes);
+
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
             draft.isNodeSelectedNeighbor = {};
@@ -480,9 +570,17 @@ const reducers = produce((draft, action) => {
         case ACTION_TYPES.LAYOUT_TICK:
             const converged = draft.focalGraphLayout.simulation.tick();
             // This is only a dirty way for quick check
-            draft.focalGraphLayout.coords = draft.focalGraphLayout.simulation._nodes.map((d) => ({ x: d.x, y: d.y, g: d.group }));
-            draft.focalGraphLayout.groups = draft.focalGraphLayout.simulation._groups.map((g) => ({ id: g.id, bounds: g.bounds }));
+            draft.focalGraphLayout.coords = draft.focalGraphLayout.simulation._nodes.map((d) => ({
+                x: d.x,
+                y: d.y,
+                g: d.group,
+            }));
+            draft.focalGraphLayout.groups = draft.focalGraphLayout.simulation._groups.map((g) => ({
+                id: g.id,
+                bounds: g.bounds,
+            }));
             draft.focalGraphLayout.simulationTickNumber += 1;
+            // if (converged || draft.focalGraphLayout.simulationTickNumber > 20) {
             if (converged) {
                 draft.focalGraphLayout.running = false;
             }

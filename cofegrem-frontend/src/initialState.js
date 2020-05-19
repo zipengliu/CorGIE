@@ -73,6 +73,10 @@ export default {
             rowHeight: 14,
             colWidth: 14,
             gap: 6,
+            histogramAreaHeight: 120,
+            histogramHeight: 100,
+            labelHeight: 10,
+
             labelAreaSize: 100,
             labelSize: 10, // Must be <= rowHeight and colWidth
             countAreaSize: 20,
