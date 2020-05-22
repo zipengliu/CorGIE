@@ -233,43 +233,66 @@ export function computeCircularLayout(nodes, edges, spec, centralNodeType) {
     };
 }
 
-export function computeConstraintForceLayout(
+export function computeLocalLayoutWithCola(
     nodes,
     edges,
     hops,
     isNodeSelected,
     isNodeSelectedNeighbor,
+    neighGrpByHop,
     spec
 ) {
+    // Construct group info for webcola
     let coords = nodes.map((n, i) => ({
         index: i,
         // temporily assign group hops+1 to all other nodes
-        width: (n.typeId === 0 ? spec.centralNodeSize : spec.auxNodeSize) * 2,
-        height: (n.typeId === 0 ? spec.centralNodeSize : spec.auxNodeSize) * 2,
+        width: (n.typeId === 0 ? spec.centralNodeSize : spec.auxNodeSize) * 3,
+        height: (n.typeId === 0 ? spec.centralNodeSize : spec.auxNodeSize) * 3,
         group: isNodeSelected[i] ? 0 : isNodeSelectedNeighbor[i] ? isNodeSelectedNeighbor[i] : hops + 1,
     }));
-    // Filter the nodes and edges
+
     let groups = [];
     // let n = 0;
     for (let h = 0; h <= hops + 1; h++) {
         groups.push({ id: h, leaves: [], padding: 5 });
     }
-    for (let i = 0; i < coords.length; i++) {
-        groups[coords[i].group].leaves.push(i);
-        // n += coords[i].group <= hops ? 1 : 0;
+    groups[1].groups = [];
+    for (let g of neighGrpByHop[0]) {
+        const curGrp = { id: groups.length, leaves: [], groups: [], padding: 5 };
+        groups[1].groups.push(curGrp.id);
+        groups.push(curGrp);
+        for (let g2 of g.subgroups) {
+            const curGrp2 = { id: groups.length, leaves: g2.slice(), padding: 5 };
+            groups.push(curGrp2);
+            curGrp.groups.push(curGrp2.id);
+        }
     }
+    for (let i = 0; i < coords.length; i++) {
+        if (coords[i].group !== 1) {
+            groups[coords[i].group].leaves.push(i);
+        }
+    }
+    console.log(groups);
 
-    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 2000));
+    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 3000));
 
     const constraints = [];
-    for (let i = 1; i < groups.length; i++) {
-        for (let nodeA of groups[i - 1].leaves) {
-            for (let nodeB of groups[i].leaves) {
-                constraints.push({ axis: "x", left: nodeA, right: nodeB, gap: 40 });
+    for (let grp of neighGrpByHop[0]) {
+        for (let nodeA of grp.nodes) {
+            for (let nodeB of groups[0].leaves) {
+                constraints.push({ axis: "y", left: nodeB, right: nodeA, gap: 40 });
+            }
+            for (let nodeB of groups[2].leaves) {
+                constraints.push({ axis: "y", left: nodeA, right: nodeB, gap: 40 });
             }
         }
     }
-    console.log("layout constraints: ", constraints);
+    for (let nodeA of groups[2].leaves) {
+        for (let nodeB of groups[3].leaves) {
+            constraints.push({ axis: "y", left: nodeA, right: nodeB, gap: 40 });
+        }
+    }
+    // console.log("layout constraints: ", constraints);
 
     // Copy edges to prevent contanimation
     const copiedEdges = edges.map((e) => ({ ...e }));
@@ -299,7 +322,7 @@ export function computeConstraintForceLayout(
     // }
     // console.log(coords);
 
-    simulation.constraints([]);
+    // simulation.constraints([]);
 
     return {
         coords: coords.map((d) => ({ x: d.x, y: d.y, g: d.group })),

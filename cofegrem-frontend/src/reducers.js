@@ -7,7 +7,7 @@ import {
     computeCircularLayout,
     getAllNodeDistance,
     computeForceLayoutWithCola,
-    computeConstraintForceLayout,
+    computeLocalLayoutWithCola,
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
@@ -254,23 +254,24 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
     for (let selectedId of selectedNodes) {
         selMask.set(selectedId, 1);
     }
-    console.log('counting...');
+    console.log("counting...");
     console.log(selectedNodes, selMask);
 
-    let res = [];
+    let res = [],
+        cnts;
     for (let curMasks of neighborMasks) {
         // iterate the masks for each hop
         let curGroups = [];
 
         // Find out the frequency of each neighbor in that hop
-        let cnts = {};
+        cnts = {};
         for (let selectedId of selectedNodes) {
             const m = curMasks[selectedId].toArray();
             for (let neighId of m) {
                 if (!cnts.hasOwnProperty(neighId)) {
-                    cnts[neighId] = 0;
+                    cnts[neighId] = { cnt: 0, mask: curMasks[neighId].and(selMask) };
                 }
-                cnts[neighId]++;
+                cnts[neighId].cnt++;
             }
         }
 
@@ -279,7 +280,7 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
         let cntArray = [];
         for (let neighId in cnts)
             if (cnts.hasOwnProperty(neighId)) {
-                cntArray.push({ id: neighId, cnt: cnts[neighId], mask: curMasks[neighId].and(selMask) });
+                cntArray.push({ id: parseInt(neighId), cnt: cnts[neighId].cnt, mask: cnts[neighId].mask });
             }
         // 2. sort array by freq
         cntArray.sort((a, b) => b.cnt - a.cnt);
@@ -288,7 +289,7 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
         while (idx < cntArray.length) {
             let curG = {
                 freq: cntArray[idx].cnt,
-                prevTotal: idx,       // Number of neighbors previous to this group, used for computing layout
+                prevTotal: idx, // Number of neighbors previous to this group, used for computing layout
                 nodes: [],
                 expanded: false,
                 cntsPerSelected: {},
@@ -327,10 +328,11 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
         }
 
         res.push(curGroups);
-        break;      // TODO only work for the 1-hop now
+        break; // TODO only work for the 1-hop now
     }
 
-    return res;
+    // Note that cnts does not have info about hop
+    return { neighGrpByHop: res, neighMapping: cnts };
 }
 
 function isPointInBox(p, box) {
@@ -473,13 +475,17 @@ const reducers = produce((draft, action) => {
                     draft.selectedNodes
                 );
             }
-            const temp = countNeighborSets(draft.graph.neighborMasksByType, draft.selectedNodes);
-            draft.neighborCounts = temp.allCounts;
-            draft.neighborCountsMapping = temp.allCountsMapping;
-            draft.neighborCountsByType = temp.countsByType;
-            draft.neighborCountsBins = temp.bins;
 
-            draft.selectedNeighByHop = countSelectedNeighborsByHop(draft.graph.neigh, draft.selectedNodes);
+            // Deprecated
+            // const temp = countNeighborSets(draft.graph.neighborMasksByType, draft.selectedNodes);
+            // draft.neighborCounts = temp.allCounts;
+            // draft.neighborCountsMapping = temp.allCountsMapping;
+            // draft.neighborCountsByType = temp.countsByType;
+            // draft.neighborCountsBins = temp.bins;
+
+            const temp = countSelectedNeighborsByHop(draft.graph.neigh, draft.selectedNodes);
+            draft.selectedNeighByHop = temp.neighGrpByHop;
+            draft.neighMapping = temp.neighMapping;
 
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
@@ -499,14 +505,18 @@ const reducers = produce((draft, action) => {
             if (draft.selectedNodes.length === 0) {
                 draft.focalGraphLayout = {};
             } else {
-                draft.focalGraphLayout = computeConstraintForceLayout(
-                    draft.graph.nodes,
-                    draft.graph.edges,
-                    draft.param.hops,
-                    draft.isNodeSelected,
-                    draft.isNodeSelectedNeighbor,
-                    draft.spec.graph
-                );
+                if (draft.param.focalGraph.layout === "group-constraint-cola") {
+                    draft.focalGraphLayout = computeLocalLayoutWithCola(
+                        draft.graph.nodes,
+                        draft.graph.edges,
+                        draft.param.hops,
+                        draft.isNodeSelected,
+                        draft.isNodeSelectedNeighbor,
+                        draft.selectedNeighByHop,
+                        draft.spec.graph
+                    );
+                } else {
+                }
                 // console.log(draft.focalGraphLayout)
             }
 

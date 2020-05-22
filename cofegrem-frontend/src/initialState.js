@@ -15,17 +15,20 @@ export default {
     isNodeSelected: {}, // Make sure the two data structures are in-sync
     isNodeSelectedNeighbor: {},
     neighborIntersections: null,
-    neighborCounts: [],
-    neighborCountsMapping: {},
 
     powerSetLimit: 8,
 
     param: {
         hops: 2,
-        hopsHighlight: 2,
+        hopsHighlight: 1,
 
         graph: {
             layout: "force-directed-d3",
+        },
+
+        focalGraph: {
+            // layout: 'force-directed-d3',
+            layout: 'group-constraint-cola',
         },
 
         filter: {
