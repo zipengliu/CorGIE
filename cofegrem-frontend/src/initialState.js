@@ -27,8 +27,8 @@ export default {
         },
 
         focalGraph: {
-            // layout: 'force-directed-d3',
-            layout: 'group-constraint-cola',
+            layout: 'force-directed-d3',
+            // layout: 'group-constraint-cola',
         },
 
         filter: {

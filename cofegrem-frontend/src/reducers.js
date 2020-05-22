@@ -8,6 +8,7 @@ import {
     getAllNodeDistance,
     computeForceLayoutWithCola,
     computeLocalLayoutWithCola,
+    computeLocalLayoutWithD3,
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
@@ -359,6 +360,35 @@ function callLayoutFunc(state) {
     return layoutRes.coords;
 }
 
+function callLocalLayoutFunc(state) {
+    // Compute the force layout for focal nodes (selected + k-hop neighbors)
+    if (state.selectedNodes.length === 0) {
+        return {};
+    } else {
+        if (state.param.focalGraph.layout === "group-constraint-cola") {
+            return computeLocalLayoutWithCola(
+                state.graph.nodes,
+                state.graph.edges,
+                state.param.hops,
+                state.isNodeSelected,
+                state.isNodeSelectedNeighbor,
+                state.selectedNeighByHop,
+                state.spec.graph
+            );
+        } else {
+            return computeLocalLayoutWithD3(
+                state.graph.nodes,
+                state.graph.edges,
+                state.param.hops,
+                state.isNodeSelected,
+                state.isNodeSelectedNeighbor,
+                state.neighMapping,
+                state.spec.graph
+            );
+        }
+    }
+}
+
 const reducers = produce((draft, action) => {
     switch (action.type) {
         case ACTION_TYPES.FETCH_DATA_PENDING:
@@ -500,26 +530,7 @@ const reducers = produce((draft, action) => {
                     }
                 }
             }
-
-            // Compute the force layout for focal nodes (selected + k-hop neighbors)
-            if (draft.selectedNodes.length === 0) {
-                draft.focalGraphLayout = {};
-            } else {
-                if (draft.param.focalGraph.layout === "group-constraint-cola") {
-                    draft.focalGraphLayout = computeLocalLayoutWithCola(
-                        draft.graph.nodes,
-                        draft.graph.edges,
-                        draft.param.hops,
-                        draft.isNodeSelected,
-                        draft.isNodeSelectedNeighbor,
-                        draft.selectedNeighByHop,
-                        draft.spec.graph
-                    );
-                } else {
-                }
-                // console.log(draft.focalGraphLayout)
-            }
-
+            draft.focalGraphLayout = callLocalLayoutFunc(draft);
             return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
             if (
@@ -549,6 +560,8 @@ const reducers = produce((draft, action) => {
 
             if (action.param === "graph.layout") {
                 draft.graph.coords = callLayoutFunc(draft);
+            } else if (action.param === "focalGraph.layout") {
+                draft.focalGraphLayout = callLocalLayoutFunc(draft);
             }
             return;
         case ACTION_TYPES.CHANGE_HOPS:
@@ -578,22 +591,30 @@ const reducers = produce((draft, action) => {
             }
             return;
         case ACTION_TYPES.LAYOUT_TICK:
+            // Note that in D3, the tick function returns the simulation object itself
+            // In web-cola, the tick function returns whether the simulation has converged
             const converged = draft.focalGraphLayout.simulation.tick();
-            // This is only a dirty way for quick check
-            draft.focalGraphLayout.coords = draft.focalGraphLayout.simulation._nodes.map((d) => ({
+            draft.focalGraphLayout.coords = draft.focalGraphLayout.simulation.nodes().map((d) => ({
                 x: d.x,
                 y: d.y,
                 g: d.group,
             }));
-            draft.focalGraphLayout.groups = draft.focalGraphLayout.simulation._groups.map((g) => ({
-                id: g.id,
-                bounds: g.bounds,
-            }));
-            draft.focalGraphLayout.simulationTickNumber += 1;
-            // if (converged || draft.focalGraphLayout.simulationTickNumber > 20) {
-            if (converged) {
-                draft.focalGraphLayout.running = false;
+            if (draft.param.focalGraph.layout === "group-constraint-cola") {
+                // This is only a dirty way for quick check
+                draft.focalGraphLayout.groups = draft.focalGraphLayout.simulation._groups.map((g) => ({
+                    id: g.id,
+                    bounds: g.bounds,
+                }));
+                // if (converged || draft.focalGraphLayout.simulationTickNumber > 20) {
+                if (converged) {
+                    draft.focalGraphLayout.running = false;
+                }
+            } else {
+                if (draft.focalGraphLayout.simulationTickNumber === 300) {
+                    draft.focalGraphLayout.running = false;
+                }
             }
+            draft.focalGraphLayout.simulationTickNumber += 1;
             return;
 
         default:

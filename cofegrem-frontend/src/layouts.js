@@ -334,3 +334,73 @@ export function computeLocalLayoutWithCola(
         running: true,
     };
 }
+
+export function computeLocalLayoutWithD3(
+    nodes,
+    edges,
+    hops,
+    isNodeSelected,
+    isNodeSelectedNeighbor,
+    neighMapping,
+    spec
+) {
+    const getHopGroup = (i) =>
+        isNodeSelected[i] ? 0 : isNodeSelectedNeighbor[i] ? isNodeSelectedNeighbor[i] : hops + 1;
+    let coords = nodes.map((n, i) => ({ index: i, group: getHopGroup(i) }));
+    const copiedEdges = edges.map((e) => ({ ...e }));
+
+    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 1000));
+
+    const groupCounts = [0, 0, 0, 0];
+    for (let c of coords) {
+        groupCounts[c.group]++;
+    }
+    let curTot = 0,
+        groupPos = [];
+    for (let g of groupCounts) {
+        groupPos.push(((curTot + g / 2) / nodes.length) * canvasSize);
+        curTot += g;
+    }
+    console.log({ groupCounts, groupPos });
+
+    // Construct virtual links for group of neighbor nodes using Hamming distance
+    const groupLinks = [];
+    for (let neighId1 in neighMapping)
+        if (neighMapping.hasOwnProperty(neighId1)) {
+            for (let neighId2 in neighMapping)
+                if (neighId1 !== neighId2 && neighMapping.hasOwnProperty(neighId2)) {
+                    groupLinks.push({
+                        source: parseInt(neighId1),
+                        target: parseInt(neighId2),
+                        dist: neighMapping[neighId1].mask.xor(neighMapping[neighId2].mask).cardinality(),
+                    });
+                }
+        }
+    console.log(groupLinks);
+    const n = Object.keys(neighMapping).length;
+
+    let simulation = forceSimulation(coords)
+        .force("link", forceLink(copiedEdges))
+        .force('neighGroup', forceLink(groupLinks).distance(d => d.dist * 20).strength(5 / n))
+        .force("charge", forceManyBody().strength(-40))
+        .force("centerX", forceX(canvasSize / 2).strength(0.2))
+        .force("centerY", forceY(canvasSize / 2).strength(0.1))
+        .force(
+            "hopGroup",
+            forceY()
+                .y((d) => groupPos[d.group])
+                .strength(0.4)
+        )
+        .stop();
+    // simulation.tick(300);
+
+    return {
+        coords: coords.map((d) => ({ x: d.x, y: d.y })),
+        // groups: groups.map((g) => ({ id: g.id, bounds: g.bounds })),
+        width: canvasSize,
+        height: canvasSize,
+        simulation,
+        simulationTickNumber: 0,
+        running: true,
+    };
+}

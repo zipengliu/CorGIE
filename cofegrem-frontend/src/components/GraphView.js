@@ -185,20 +185,22 @@ class GraphView extends Component {
                                             />
                                         ))}
                                     </g>
-                                    <g className="groups">
-                                        {focalGraphLayout.groups.map((g, i) => (
-                                            <rect
-                                                key={i}
-                                                className="node-group"
-                                                rx={5}
-                                                ry={5}
-                                                x={g.bounds.x}
-                                                y={g.bounds.y}
-                                                width={g.bounds.width()}
-                                                height={g.bounds.height()}
-                                            />
-                                        ))}
-                                    </g>
+                                    {focalGraphLayout.groups && (
+                                        <g className="groups">
+                                            {focalGraphLayout.groups.map((g, i) => (
+                                                <rect
+                                                    key={i}
+                                                    className="node-group"
+                                                    rx={5}
+                                                    ry={5}
+                                                    x={g.bounds.x}
+                                                    y={g.bounds.y}
+                                                    width={g.bounds.width()}
+                                                    height={g.bounds.height()}
+                                                />
+                                            ))}
+                                        </g>
+                                    )}
                                     <g className="nodes">
                                         {focalGraphLayout.coords.map((c, i) => (
                                             <g
