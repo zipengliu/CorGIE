@@ -176,6 +176,16 @@
     stroke: none;
 }
 
+.group-line {
+    stroke-width: 8px;
+    stroke: black;
+}
+
+.subgroup-line {
+    stroke-width: 4px;
+    stroke: grey;
+}
+
 /* Filter view */
 
 .histogram rect.bar {

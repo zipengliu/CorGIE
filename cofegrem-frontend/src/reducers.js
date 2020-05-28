@@ -293,12 +293,15 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
                 prevTotal: idx, // Number of neighbors previous to this group, used for computing layout
                 nodes: [],
                 expanded: false,
-                cntsPerSelected: {},
+                cntsPerSelected: {},        // For roll-up matrix
+                nodesPerSelected: {},       // For highlighting in the roll-up matrix
                 subgroups: [],
-                isBoundary: {},
+                subGroupPrevTotal: [],      // Number of neighbors previous to this subgroup (count within this group)
+                isBoundary: {},     // For drawing visual boundary lines
             };
             for (let selectedId of selectedNodes) {
                 curG.cntsPerSelected[selectedId] = 0;
+                curG.nodesPerSelected[selectedId] = [];
             }
 
             let j = idx;
@@ -310,6 +313,7 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
                     const m = curMasks[selectedId];
                     if (m.get(cntArray[j].id)) {
                         curG.cntsPerSelected[selectedId]++;
+                        curG.nodesPerSelected[selectedId].push(cntArray[j].id);
                     }
                 }
 
@@ -317,6 +321,7 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
                 if (j === idx || !cntArray[j].mask.equals(cntArray[j - 1].mask)) {
                     // add a new subgroup
                     curG.subgroups.push([cntArray[j].id]);
+                    curG.subGroupPrevTotal.push(j - idx);        // count within this group
                     curG.isBoundary[cntArray[j].id] = true;
                 } else {
                     curG.subgroups[curG.subgroups.length - 1].push(cntArray[j].id);
@@ -463,6 +468,14 @@ const reducers = produce((draft, action) => {
                 draft.isNodeHighlighted[action.nodeIdx] = true;
             }
             return;
+        case ACTION_TYPES.HIGHLIGHT_NEIGHBORS:
+            draft.isNodeHighlighted = {};
+            if (action.nodes) {
+                for (let i of action.nodes) {
+                    draft.isNodeHighlighted[i] = true;
+                }
+            }
+            return;
         case ACTION_TYPES.SELECT_NODES:
             if (action.selectionBox != null) {
                 if (!action.appendMode) {
@@ -593,28 +606,30 @@ const reducers = produce((draft, action) => {
         case ACTION_TYPES.LAYOUT_TICK:
             // Note that in D3, the tick function returns the simulation object itself
             // In web-cola, the tick function returns whether the simulation has converged
-            const converged = draft.focalGraphLayout.simulation.tick();
-            draft.focalGraphLayout.coords = draft.focalGraphLayout.simulation.nodes().map((d) => ({
-                x: d.x,
-                y: d.y,
-                g: d.group,
-            }));
-            if (draft.param.focalGraph.layout === "group-constraint-cola") {
-                // This is only a dirty way for quick check
-                draft.focalGraphLayout.groups = draft.focalGraphLayout.simulation._groups.map((g) => ({
-                    id: g.id,
-                    bounds: g.bounds,
+            if (draft.focalGraphLayout && draft.focalGraphLayout.simulation) {
+                const converged = draft.focalGraphLayout.simulation.tick();
+                draft.focalGraphLayout.coords = draft.focalGraphLayout.simulation.nodes().map((d) => ({
+                    x: d.x,
+                    y: d.y,
+                    g: d.group,
                 }));
-                // if (converged || draft.focalGraphLayout.simulationTickNumber > 20) {
-                if (converged) {
-                    draft.focalGraphLayout.running = false;
+                if (draft.param.focalGraph.layout === "group-constraint-cola") {
+                    // This is only a dirty way for quick check
+                    draft.focalGraphLayout.groups = draft.focalGraphLayout.simulation._groups.map((g) => ({
+                        id: g.id,
+                        bounds: g.bounds,
+                    }));
+                    // if (converged || draft.focalGraphLayout.simulationTickNumber > 20) {
+                    if (converged) {
+                        draft.focalGraphLayout.running = false;
+                    }
+                } else {
+                    if (draft.focalGraphLayout.simulationTickNumber === 300) {
+                        draft.focalGraphLayout.running = false;
+                    }
                 }
-            } else {
-                if (draft.focalGraphLayout.simulationTickNumber === 300) {
-                    draft.focalGraphLayout.running = false;
-                }
+                draft.focalGraphLayout.simulationTickNumber += 1;
             }
-            draft.focalGraphLayout.simulationTickNumber += 1;
             return;
 
         default:

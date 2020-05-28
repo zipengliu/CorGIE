@@ -372,7 +372,7 @@ export function computeLocalLayoutWithD3(
                     groupLinks.push({
                         source: parseInt(neighId1),
                         target: parseInt(neighId2),
-                        dist: neighMapping[neighId1].mask.xor(neighMapping[neighId2].mask).cardinality(),
+                        dist: neighMapping[neighId1].mask.xor(neighMapping[neighId2].mask).cardinality() + 1,
                     });
                 }
         }
@@ -381,7 +381,7 @@ export function computeLocalLayoutWithD3(
 
     let simulation = forceSimulation(coords)
         .force("link", forceLink(copiedEdges))
-        .force('neighGroup', forceLink(groupLinks).distance(d => d.dist * 20).strength(5 / n))
+        .force('neighGroup', forceLink(groupLinks).distance(d => d.dist * 20).strength(10 / n))
         .force("charge", forceManyBody().strength(-40))
         .force("centerX", forceX(canvasSize / 2).strength(0.2))
         .force("centerY", forceY(canvasSize / 2).strength(0.1))

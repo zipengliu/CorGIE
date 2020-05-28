@@ -7,6 +7,7 @@ const ACTION_TYPES = {
     FETCH_DATA_ERROR: "FETCH_DATA_ERROR",
     HIGHLIGHT_NODE_TYPE: "HIGHLIGHT_NODE_TYPE",
     HIGHLIGHT_NODES: "HIGHLIGHT_NODES",
+    HIGHLIGHT_NEIGHBORS: "HIGHLIGHT_NEIGHBORS",
     CHANGE_SELECTED_NODE_TYPE: "CHANGE_SELECTED_NODE_TYPE",
     SELECT_NODES: "SELECT_NODES",
     CHANGE_PARAM: "CHANGE_PARAM",
@@ -16,7 +17,7 @@ const ACTION_TYPES = {
 export default ACTION_TYPES;
 
 export function fetchGraphData(homePath, datasetId) {
-    return async function(dispatch) {
+    return async function (dispatch) {
         const where = `${homePath}/data/${datasetId}`;
         console.log("fetching data from ", where);
 
@@ -24,14 +25,14 @@ export function fetchGraphData(homePath, datasetId) {
 
         try {
             let [graph, emb, emb2d] = [
-                await fetch(`${where}/graph.json`).then(r => r.json()),
+                await fetch(`${where}/graph.json`).then((r) => r.json()),
                 await fetch(`${where}/node-embedding.csv`)
-                    .then(r => r.text())
+                    .then((r) => r.text())
                     .then(csvParseRows),
                 await fetch(`${where}/umap.csv`)
-                    .then(r => r.text())
+                    .then((r) => r.text())
                     .then(csvParseRows)
-                    .then(d => d.map(x => [parseFloat(x[0]), parseFloat(x[1])]))
+                    .then((d) => d.map((x) => [parseFloat(x[0]), parseFloat(x[1])])),
             ];
 
             dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d }));
@@ -59,6 +60,10 @@ export function highlightNodeType(nodeTypeIdx) {
 
 export function highlightNodes(nodeIdx) {
     return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIdx };
+}
+
+export function highlightNeighbors(nodes) {
+    return { type: ACTION_TYPES.HIGHLIGHT_NEIGHBORS, nodes };
 }
 
 export function selectNodes(nodeIdx, selectionBox = null, appendMode = false) {
