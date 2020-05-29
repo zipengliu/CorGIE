@@ -38,6 +38,10 @@ class AdjacencyMatrix extends Component {
             selectedNodes.length + 1,
         ]);
 
+        const highlightStrips = Object.keys(isNodeHighlighted).filter((neighId) =>
+            neighMap.hasOwnProperty(neighId)
+        );
+
         return (
             <div id="adjacency-matrix-view" className="view">
                 <h5>Adjacency matrix of selected nodes</h5>
@@ -83,13 +87,38 @@ class AdjacencyMatrix extends Component {
                             ))}
                         </g>
 
-                        {/*column labels */}
+                        {/*columns */}
                         <g
                             className="labels"
                             transform={`translate(${labelAreaSize + labelSize / 2},${
                                 labelAreaSize - labelSize / 2 - 4
                             })`}
                         >
+                            {/* highlight strips */}
+                            {highlightStrips.map((neighId, i) => (
+                                <g key={i}>
+                                    <rect
+                                        className="highlight-strip"
+                                        x={-20}
+                                        y={
+                                            (selectedNodes.length + neighMap[neighId].order) *
+                                                (rowHeight + gap) +
+                                            20 -
+                                            2
+                                        }
+                                        width={numNeighbors * (colWidth + gap) + 40}
+                                        height={rowHeight + 4}
+                                    />
+                                    <rect
+                                        className="highlight-strip"
+                                        x={neighMap[neighId].order * (colWidth + gap) - 2}
+                                        y={-20}
+                                        width={rowHeight + 4}
+                                        height={(selectedNodes.length + numNeighbors) * (colWidth + gap) + 40}
+                                    />
+                                </g>
+                            ))}
+                            {/* visual encoding for grouping */}
                             {neighGrp[0].map((grp, grpIdx) => (
                                 <g
                                     key={grpIdx}
@@ -99,9 +128,11 @@ class AdjacencyMatrix extends Component {
                                         <line
                                             className="group-line"
                                             x1={0}
-                                            y1={-40}
+                                            y1={-50}
                                             x2={grp.nodes.length * (colWidth + gap) - gap}
-                                            y2={-40}
+                                            y2={-50}
+                                            onMouseEnter={this.props.highlightNeighbors.bind(null, grp.nodes)}
+                                            onMouseLeave={this.props.highlightNeighbors.bind(null, null)}
                                         />
 
                                         {grp.subgroups.map((subgrp, subgrpIdx) => (
@@ -116,42 +147,40 @@ class AdjacencyMatrix extends Component {
                                                     gap
                                                 }
                                                 y2={-30}
+                                                onMouseEnter={this.props.highlightNeighbors.bind(
+                                                    null,
+                                                    subgrp
+                                                )}
+                                                onMouseLeave={this.props.highlightNeighbors.bind(null, null)}
                                             />
                                         ))}
                                     </g>
+                                </g>
+                            ))}
 
-                                    {grp.nodes.map((neighId, i) => (
-                                        <g key={i} transform={`translate(${i * (colWidth + gap)},0)`}>
-                                            <g
-                                                transform={`translate(${colWidth / 2},0)`}
-                                                className={cn("node", {
-                                                    highlighted: isNodeHighlighted[neighId],
-                                                    selected: isNodeSelected[neighId],
-                                                    "hop-1": isNodeSelectedNeighbor[neighId] === 1,
-                                                    "hop-2": isNodeSelectedNeighbor[neighId] === 2,
-                                                })}
-                                                onMouseEnter={this.props.highlightNodes.bind(null, neighId)}
-                                                onMouseLeave={this.props.highlightNodes.bind(null, null)}
-                                            >
-                                                <NodeRep
-                                                    shape={
-                                                        nodes[neighId].typeId === 0 ? "triangle" : "circle"
-                                                    }
-                                                    r={
-                                                        nodes[neighId].typeId === 0
-                                                            ? centralNodeSize
-                                                            : auxNodeSize
-                                                    }
-                                                />
-                                                <text
-                                                    x={2}
-                                                    y={-labelSize}
-                                                    transform={`rotate(-30,2,${-labelSize})`}
-                                                >
-                                                    {nodes[neighId].label}
-                                                    {/* (node idx: {neighId}) */}
-                                                </text>
-                                                {/* {grp.isBoundary[neighId] && (
+                            {neighArr[0].map((neighId, i) => (
+                                <g key={i} transform={`translate(${i * (colWidth + gap)},0)`}>
+                                    {/* column labels */}
+                                    <g
+                                        transform={`translate(${colWidth / 2},0)`}
+                                        className={cn("node", {
+                                            highlighted: isNodeHighlighted[neighId],
+                                            selected: isNodeSelected[neighId],
+                                            "hop-1": isNodeSelectedNeighbor[neighId] === 1,
+                                            "hop-2": isNodeSelectedNeighbor[neighId] === 2,
+                                        })}
+                                        onMouseEnter={this.props.highlightNodes.bind(null, neighId)}
+                                        onMouseLeave={this.props.highlightNodes.bind(null, null)}
+                                    >
+                                        <NodeRep
+                                            shape={nodes[neighId].typeId === 0 ? "triangle" : "circle"}
+                                            r={nodes[neighId].typeId === 0 ? centralNodeSize : auxNodeSize}
+                                        />
+                                        <text x={2} y={-labelSize} transform={`rotate(-30,2,${-labelSize})`}>
+                                            {nodes[neighId].label}
+                                            {/* (node idx: {neighId}) */}
+                                        </text>
+                                        {/* {grp.isBoundary[neighId] && (
                                                     <line
                                                         x1={-(colWidth + gap) / 2}
                                                         y1={-30 - (i === 0 ? 50 : 0)}
@@ -164,59 +193,63 @@ class AdjacencyMatrix extends Component {
                                                         style={{ stroke: i === 0 ? "black" : "grey" }}
                                                     />
                                                 )} */}
-                                            </g>
+                                    </g>
 
-                                            {/* cells */}
-                                            <g transform={`translate(0,${labelSize / 2})`}>
-                                                {selectedNodes.map((selectedId, j) => (
-                                                    <rect
-                                                        key={j}
-                                                        className="cell"
-                                                        x={0}
-                                                        y={j * (rowHeight + gap)}
-                                                        width={colWidth}
-                                                        height={rowHeight}
-                                                        style={{
-                                                            fill: neighborMasks[selectedId].get(neighId)
-                                                                ? "#000"
-                                                                : "#ccc",
-                                                        }}
-                                                    />
-                                                ))}
-                                            </g>
+                                    {/* cells for adjacency matrix */}
+                                    <g transform={`translate(0,${labelSize / 2})`}>
+                                        {selectedNodes.map((selectedId, j) => (
+                                            <rect
+                                                key={j}
+                                                className="cell"
+                                                x={0}
+                                                y={j * (rowHeight + gap)}
+                                                width={colWidth}
+                                                height={rowHeight}
+                                                style={{
+                                                    fill: neighborMasks[selectedId].get(neighId)
+                                                        ? "#000"
+                                                        : "#ccc",
+                                                }}
+                                                onMouseEnter={this.props.highlightNeighbors.bind(
+                                                    null,
+                                                    [neighId]
+                                                )}
+                                                onMouseLeave={this.props.highlightNeighbors.bind(null, null)}
+                                            />
+                                        ))}
+                                    </g>
 
-                                            {/* Hamming distance cells */}
-                                            <g
-                                                transform={`translate(0,${
-                                                    selectedNodes.length * (rowHeight + gap) + 20
-                                                })`}
-                                            >
-                                                {neighGrp[0].map((grp2, grp2idx) => (
-                                                    <g key={grp2idx}>
-                                                        {grp2.nodes.map((neighId2, i2) => (
-                                                            <rect
-                                                                key={i2}
-                                                                className="cell"
-                                                                x={0}
-                                                                y={(grp2.prevTotal + i2) * (rowHeight + gap)}
-                                                                width={colWidth}
-                                                                height={rowHeight}
-                                                                style={{
-                                                                    fill: hammingDistColorScale(
-                                                                        selectedNodes.length -
-                                                                            neighMap[neighId].mask
-                                                                                .xor(neighMap[neighId2].mask)
-                                                                                .cardinality() +
-                                                                            1
-                                                                    ),
-                                                                }}
-                                                            />
-                                                        ))}
-                                                    </g>
-                                                ))}
-                                            </g>
-                                        </g>
-                                    ))}
+                                    {/* cells of distance matrix */}
+                                    <g
+                                        transform={`translate(0,${
+                                            selectedNodes.length * (rowHeight + gap) + 20
+                                        })`}
+                                    >
+                                        {neighArr[0].map((neighId2, i2) => (
+                                            <rect
+                                                key={i2}
+                                                className="cell"
+                                                x={0}
+                                                y={i2 * (rowHeight + gap)}
+                                                width={colWidth}
+                                                height={rowHeight}
+                                                style={{
+                                                    fill: hammingDistColorScale(
+                                                        selectedNodes.length -
+                                                            neighMap[neighId].mask
+                                                                .xor(neighMap[neighId2].mask)
+                                                                .cardinality() +
+                                                            1
+                                                    ),
+                                                }}
+                                                onMouseEnter={this.props.highlightNeighbors.bind(
+                                                    null,
+                                                    [neighId]
+                                                )}
+                                                onMouseLeave={this.props.highlightNeighbors.bind(null, null)}
+                                            />
+                                        ))}
+                                    </g>
                                 </g>
                             ))}
                         </g>

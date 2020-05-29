@@ -177,13 +177,19 @@
 }
 
 .group-line {
-    stroke-width: 8px;
+    stroke-width: 20px;
     stroke: black;
 }
 
 .subgroup-line {
-    stroke-width: 4px;
+    stroke-width: 10px;
     stroke: grey;
+}
+
+rect.highlight-strip {
+    fill: grey;
+    fill-opacity: .4;;
+    stroke: none;
 }
 
 /* Filter view */

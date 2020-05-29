@@ -628,7 +628,7 @@ const reducers = produce((draft, action) => {
                         draft.focalGraphLayout.running = false;
                     }
                 } else {
-                    if (draft.focalGraphLayout.simulationTickNumber === 300) {
+                    if (draft.focalGraphLayout.simulationTickNumber === 50) {
                         draft.focalGraphLayout.running = false;
                     }
                 }
