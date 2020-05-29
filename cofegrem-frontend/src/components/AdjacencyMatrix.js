@@ -2,10 +2,11 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
-import { scaleSequential, interpolateGreens } from "d3";
+import { scaleSequential, interpolateGreens, interpolateReds } from "d3";
 import { highlightNodes, highlightNeighbors } from "../actions";
 import NodeRep from "./NodeRep";
 import RollupMatrix from "./RollupMatrix";
+import { getNeighborDistance } from "../layouts";
 
 class AdjacencyMatrix extends Component {
     render() {
@@ -20,6 +21,7 @@ class AdjacencyMatrix extends Component {
             neighArr,
         } = this.props;
         const { nodes, neighborMasks } = graph;
+        const { neighborDistanceMetric } = this.props.param;
         const spec = this.props.spec.adjacencyMatrix;
         const { margins, rowHeight, colWidth, gap, labelAreaSize, labelSize } = spec;
         const { centralNodeSize, auxNodeSize } = this.props.spec.graph;
@@ -33,10 +35,13 @@ class AdjacencyMatrix extends Component {
                 margins.top +
                 margins.bottom;
 
-        const hammingDistColorScale = scaleSequential(interpolateGreens).domain([
-            0,
-            selectedNodes.length + 1,
-        ]);
+        const distColorScale = scaleSequential(interpolateGreens).domain(
+            neighborDistanceMetric === "hamming" ? [selectedNodes.length, 0] : [1, 0]
+        );
+        const colorLegendTicks =
+            neighborDistanceMetric === "hamming"
+                ? selectedNodes.map((_, i) => i)
+                : [0, 0.2, 0.4, 0.6, 0.8, 1.0];
 
         const highlightStrips = Object.keys(isNodeHighlighted).filter((neighId) =>
             neighMap.hasOwnProperty(neighId)
@@ -210,10 +215,9 @@ class AdjacencyMatrix extends Component {
                                                         ? "#000"
                                                         : "#ccc",
                                                 }}
-                                                onMouseEnter={this.props.highlightNeighbors.bind(
-                                                    null,
-                                                    [neighId]
-                                                )}
+                                                onMouseEnter={this.props.highlightNeighbors.bind(null, [
+                                                    neighId,
+                                                ])}
                                                 onMouseLeave={this.props.highlightNeighbors.bind(null, null)}
                                             />
                                         ))}
@@ -234,18 +238,31 @@ class AdjacencyMatrix extends Component {
                                                 width={colWidth}
                                                 height={rowHeight}
                                                 style={{
-                                                    fill: hammingDistColorScale(
-                                                        selectedNodes.length -
-                                                            neighMap[neighId].mask
-                                                                .xor(neighMap[neighId2].mask)
-                                                                .cardinality() +
-                                                            1
+                                                    fill: distColorScale(
+                                                        getNeighborDistance(
+                                                            neighMap[neighId].mask,
+                                                            neighMap[neighId2].mask,
+                                                            neighborDistanceMetric
+                                                        )
+                                                        // 1 - Math.abs(
+                                                        //     getNeighborDistance(
+                                                        //         neighMap[neighId].mask,
+                                                        //         neighMap[neighId2].mask,
+                                                        //         "hamming"
+                                                        //     ) /
+                                                        //         selectedNodes.length -
+                                                        //         getNeighborDistance(
+                                                        //             neighMap[neighId].mask,
+                                                        //             neighMap[neighId2].mask,
+                                                        //             "jaccard"
+                                                        //         )
+                                                        // )
                                                     ),
                                                 }}
-                                                onMouseEnter={this.props.highlightNeighbors.bind(
-                                                    null,
-                                                    [neighId]
-                                                )}
+                                                onMouseEnter={this.props.highlightNeighbors.bind(null, [
+                                                    neighId,
+                                                    neighId2,
+                                                ])}
                                                 onMouseLeave={this.props.highlightNeighbors.bind(null, null)}
                                             />
                                         ))}
@@ -257,7 +274,7 @@ class AdjacencyMatrix extends Component {
                         {/* legends */}
                         <g>
                             <text x={0} y={labelAreaSize + selectedNodes.length * (rowHeight + gap) + 10}>
-                                Hamming distances:
+                                {neighborDistanceMetric} distances:
                             </text>
                         </g>
 
@@ -266,18 +283,18 @@ class AdjacencyMatrix extends Component {
                                 (selectedNodes.length + numNeighbors) * (rowHeight + gap) + 40 + labelAreaSize
                             })`}
                         >
-                            <text x={-labelAreaSize}>Hamming dist. legends:</text>
-                            {selectedNodes.map((_, i) => (
+                            <text x={-labelAreaSize}>Distance legends:</text>
+                            {colorLegendTicks.map((val, i) => (
                                 <g key={i} transform={`translate(${i * (colWidth + gap)},0)`}>
                                     <rect
                                         x={0}
                                         y={0}
                                         width={colWidth}
                                         height={rowHeight}
-                                        style={{ fill: hammingDistColorScale(selectedNodes.length - i + 1) }}
+                                        style={{ fill: distColorScale(val) }}
                                     />
                                     <text x={2} y={10}>
-                                        {i}
+                                        {val}
                                     </text>
                                 </g>
                             ))}

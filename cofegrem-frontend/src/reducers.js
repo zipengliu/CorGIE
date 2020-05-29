@@ -381,6 +381,7 @@ function callLocalLayoutFunc(state) {
                 state.isNodeSelected,
                 state.isNodeSelectedNeighbor,
                 state.neighGrp,
+                state.param.neighborDistanceMetric,
                 state.spec.graph
             );
         } else {
@@ -391,6 +392,7 @@ function callLocalLayoutFunc(state) {
                 state.isNodeSelected,
                 state.isNodeSelectedNeighbor,
                 state.neighMap,
+                state.param.neighborDistanceMetric,
                 state.spec.graph
             );
         }

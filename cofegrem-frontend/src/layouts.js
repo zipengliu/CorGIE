@@ -240,6 +240,7 @@ export function computeLocalLayoutWithCola(
     isNodeSelected,
     isNodeSelectedNeighbor,
     neighGrpByHop,
+    distMetric,
     spec
 ) {
     // Construct group info for webcola
@@ -342,6 +343,7 @@ export function computeLocalLayoutWithD3(
     isNodeSelected,
     isNodeSelectedNeighbor,
     neighMap,
+    distMetric,
     spec
 ) {
     const getHopGroup = (i) =>
@@ -372,7 +374,12 @@ export function computeLocalLayoutWithD3(
                     groupLinks.push({
                         source: parseInt(neighId1),
                         target: parseInt(neighId2),
-                        dist: neighMap[neighId1].mask.xor(neighMap[neighId2].mask).cardinality() + 1,
+                        dist:
+                            getNeighborDistance(
+                                neighMap[neighId1].mask,
+                                neighMap[neighId2].mask,
+                                distMetric
+                            ) + 1,
                     });
                 }
         }
@@ -381,7 +388,12 @@ export function computeLocalLayoutWithD3(
 
     let simulation = forceSimulation(coords)
         .force("link", forceLink(copiedEdges))
-        .force('neighGroup', forceLink(groupLinks).distance(d => d.dist * 20).strength(10 / n))
+        .force(
+            "neighGroup",
+            forceLink(groupLinks)
+                .distance((d) => d.dist * 20)
+                .strength(10 / n)
+        )
         .force("charge", forceManyBody().strength(-40))
         .force("centerX", forceX(canvasSize / 2).strength(0.2))
         .force("centerY", forceY(canvasSize / 2).strength(0.1))
@@ -403,4 +415,18 @@ export function computeLocalLayoutWithD3(
         simulationTickNumber: 0,
         running: true,
     };
+}
+
+export function getNeighborDistance(mask1, mask2, metric) {
+    if (metric === "hamming") {
+        // Hamming distance
+        return mask1.xor(mask2).cardinality();
+    } else if (metric === "jaccard") {
+        // Jaccard distance
+        const intersection = mask1.and(mask2).cardinality();
+        const union = mask1.or(mask2).cardinality();
+        return union === 0 ? 0 : 1 - intersection / union;
+    } else {
+        return 0;
+    }
 }

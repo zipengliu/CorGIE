@@ -22,6 +22,9 @@ export default {
         hops: 2,
         hopsHighlight: 1,
 
+        // neighborDistanceMetric: 'hamming',
+        neighborDistanceMetric: 'jaccard',
+
         graph: {
             layout: "force-directed-d3",
         },
