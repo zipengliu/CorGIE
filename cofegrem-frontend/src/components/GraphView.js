@@ -30,7 +30,7 @@ class GraphView extends Component {
             isNodeSelected,
             selectedNodes,
             isNodeSelectedNeighbor,
-            neighMapping,
+            neighMap,
             focalGraphLayout,
         } = this.props;
         const layout = param.graph.layout;
@@ -123,13 +123,13 @@ class GraphView extends Component {
                                                     r={nodes[i].typeId === 0 ? centralNodeSize : auxNodeSize}
                                                 />
                                                 {layout === "circular" &&
-                                                    neighMapping &&
-                                                    neighMapping.hasOwnProperty(i) && (
+                                                    neighMap &&
+                                                    neighMap.hasOwnProperty(i) && (
                                                         <line
                                                             className="selected-neighbor-glyph"
                                                             x1={0}
                                                             y1={0}
-                                                            x2={markerScale(neighMapping[i])}
+                                                            x2={markerScale(neighMap[i])}
                                                             y2={0}
                                                         />
                                                     )}

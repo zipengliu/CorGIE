@@ -8,6 +8,7 @@ const ACTION_TYPES = {
     HIGHLIGHT_NODE_TYPE: "HIGHLIGHT_NODE_TYPE",
     HIGHLIGHT_NODES: "HIGHLIGHT_NODES",
     HIGHLIGHT_NEIGHBORS: "HIGHLIGHT_NEIGHBORS",
+    HIGHLIGHT_MATRIX_CELL: "HIGHLIGHT_MATRIX_CELL",
     CHANGE_SELECTED_NODE_TYPE: "CHANGE_SELECTED_NODE_TYPE",
     SELECT_NODES: "SELECT_NODES",
     CHANGE_PARAM: "CHANGE_PARAM",
@@ -63,6 +64,10 @@ export function highlightNodes(nodeIdx) {
 }
 
 export function highlightNeighbors(nodes) {
+    return { type: ACTION_TYPES.HIGHLIGHT_NEIGHBORS, nodes };
+}
+
+export function highlightMatrixCell(nodes) {
     return { type: ACTION_TYPES.HIGHLIGHT_NEIGHBORS, nodes };
 }
 

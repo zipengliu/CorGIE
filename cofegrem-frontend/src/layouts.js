@@ -341,7 +341,7 @@ export function computeLocalLayoutWithD3(
     hops,
     isNodeSelected,
     isNodeSelectedNeighbor,
-    neighMapping,
+    neighMap,
     spec
 ) {
     const getHopGroup = (i) =>
@@ -365,19 +365,19 @@ export function computeLocalLayoutWithD3(
 
     // Construct virtual links for group of neighbor nodes using Hamming distance
     const groupLinks = [];
-    for (let neighId1 in neighMapping)
-        if (neighMapping.hasOwnProperty(neighId1)) {
-            for (let neighId2 in neighMapping)
-                if (neighId1 !== neighId2 && neighMapping.hasOwnProperty(neighId2)) {
+    for (let neighId1 in neighMap)
+        if (neighMap.hasOwnProperty(neighId1)) {
+            for (let neighId2 in neighMap)
+                if (neighId1 !== neighId2 && neighMap.hasOwnProperty(neighId2)) {
                     groupLinks.push({
                         source: parseInt(neighId1),
                         target: parseInt(neighId2),
-                        dist: neighMapping[neighId1].mask.xor(neighMapping[neighId2].mask).cardinality() + 1,
+                        dist: neighMap[neighId1].mask.xor(neighMap[neighId2].mask).cardinality() + 1,
                     });
                 }
         }
     console.log(groupLinks);
-    const n = Object.keys(neighMapping).length;
+    const n = Object.keys(neighMap).length;
 
     let simulation = forceSimulation(coords)
         .force("link", forceLink(copiedEdges))

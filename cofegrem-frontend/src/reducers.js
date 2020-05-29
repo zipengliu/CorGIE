@@ -259,7 +259,7 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
     console.log(selectedNodes, selMask);
 
     let res = [],
-        cnts;
+        cnts, cntArray;
     for (let curMasks of neighborMasks) {
         // iterate the masks for each hop
         let curGroups = [];
@@ -278,13 +278,16 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
 
         // Group the neighbors by frequency
         // 1. convert mapping to array
-        let cntArray = [];
+        cntArray = [];
         for (let neighId in cnts)
             if (cnts.hasOwnProperty(neighId)) {
                 cntArray.push({ id: parseInt(neighId), cnt: cnts[neighId].cnt, mask: cnts[neighId].mask });
             }
         // 2. sort array by freq
         cntArray.sort((a, b) => b.cnt - a.cnt);
+        for (let i = 0; i < cntArray.length; i++) {
+            cnts[cntArray[i].id].order = i;
+        }
         // 3. group
         let idx = 0;
         while (idx < cntArray.length) {
@@ -338,7 +341,7 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
     }
 
     // Note that cnts does not have info about hop
-    return { neighGrpByHop: res, neighMapping: cnts };
+    return { neighGrp: res, neighMap: cnts, neighArr: [cntArray.map(x => x.id)] };
 }
 
 function isPointInBox(p, box) {
@@ -377,7 +380,7 @@ function callLocalLayoutFunc(state) {
                 state.param.hops,
                 state.isNodeSelected,
                 state.isNodeSelectedNeighbor,
-                state.selectedNeighByHop,
+                state.neighGrp,
                 state.spec.graph
             );
         } else {
@@ -387,7 +390,7 @@ function callLocalLayoutFunc(state) {
                 state.param.hops,
                 state.isNodeSelected,
                 state.isNodeSelectedNeighbor,
-                state.neighMapping,
+                state.neighMap,
                 state.spec.graph
             );
         }
@@ -527,8 +530,9 @@ const reducers = produce((draft, action) => {
             // draft.neighborCountsBins = temp.bins;
 
             const temp = countSelectedNeighborsByHop(draft.graph.neigh, draft.selectedNodes);
-            draft.selectedNeighByHop = temp.neighGrpByHop;
-            draft.neighMapping = temp.neighMapping;
+            draft.neighGrp = temp.neighGrp;
+            draft.neighMap = temp.neighMap;
+            draft.neighArr = temp.neighArr;
 
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
