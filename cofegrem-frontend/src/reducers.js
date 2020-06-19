@@ -1,6 +1,6 @@
 import produce from "immer";
 import initialState from "./initialState";
-import ACTION_TYPES from "./actions";
+import ACTION_TYPES, { highlightNodeType } from "./actions";
 import {
     computeForceLayoutWithD3,
     coordsRescale,
@@ -10,6 +10,7 @@ import {
     computeLocalLayoutWithCola,
     computeLocalLayoutWithD3,
     computeLocalLayoutWithUMAP,
+    computeSpaceFillingCurveLayout
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
@@ -117,24 +118,18 @@ function getNeighborMasksByHops(nodes, edges, hops) {
     return masksByHops;
 }
 
-function highlightNeighbors(n, neighborMasks, hops, targetNodeIdx) {
+// Two mode: either highlight neighbors of a single node, or the neighbors of multiple nodes
+function highlightNeighbors(n, neighborMasks, hops, targetNodeIdx, targetNodeArr) {
     let h = new Array(n).fill(false);
-    // for (let e of edges) {
-    //     if (e.source.index === targetNodeIdx) {
-    //         h[e.target.index] = true;
-    //     } else if (e.target.index === targetNodeIdx) {
-    //         h[e.source.index] = true;
-    //     }
-    // }
-    // for (let id of neighborMasks[targetNodeIdx].toArray()) {
-    //     h[id] = true;
-    // }
+    const targetNodes = targetNodeIdx === null ? targetNodeArr : [targetNodeIdx];
 
     for (let i = 0; i < hops; i++) {
         // Iterate the hops
         // Flatten all hops / treating all hops the same
-        for (let id of neighborMasks[i][targetNodeIdx].toArray()) {
-            h[id] = true;
+        for (let tar of targetNodes) {
+            for (let id of neighborMasks[i][tar].toArray()) {
+                h[id] = true;
+            }
         }
     }
     return h;
@@ -428,6 +423,16 @@ function callLocalLayoutFunc(state) {
                 state.param.neighborDistanceMetric,
                 state.spec.graph
             );
+        } else if (state.param.focalGraph.layout === "spiral") {
+            return computeSpaceFillingCurveLayout(
+                state.graph.nodes,
+                state.param.hops,
+                state.isNodeSelected,
+                state.isNodeSelectedNeighbor,
+                state.neighArr,
+                state.neighMap,
+                state.param.neighborDistanceMetric,
+            );
         } else {
             return computeLocalLayoutWithD3(
                 state.graph.nodes,
@@ -503,18 +508,48 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.HIGHLIGHT_NODES:
             draft.showDetailNode = action.nodeIdx;
-            if (action.nodeIdx === null) {
-                draft.highlightTrigger = null;
-                draft.isNodeHighlighted = {};
-            } else {
-                draft.highlightTrigger = { by: "node", which: action.nodeIdx };
-                draft.isNodeHighlighted = highlightNeighbors(
+            if (action.selectionBox !== null && action.selectionBoxView !== null) {
+                if (!action.appendMode) {
+                    draft.isNodeHighlighted = {};
+                }
+                const coords =
+                    action.selectionBoxView === "embedding-view"
+                        ? draft.latent.coords
+                        : draft.focalGraphLayout.coords;
+                const nodesToHighlight = [];
+                for (let i = 0; i < coords.length; i++) {
+                    if (isPointInBox(coords[i], action.selectionBox)) {
+                        nodesToHighlight.push(i);
+                        draft.isNodeHighlighted[i] = true;
+                    }
+                }
+                const neighToHighlight = highlightNeighbors(
                     draft.graph.nodes.length,
                     draft.graph.neigh,
                     draft.param.hopsHighlight,
-                    action.nodeIdx
+                    null,
+                    nodesToHighlight
                 );
-                draft.isNodeHighlighted[action.nodeIdx] = true;
+                // Merge into draft.isNodeHighlighted
+                for (let neighId in neighToHighlight)
+                    if (neighToHighlight[neighId]) {
+                        draft.isNodeHighlighted[neighId] = true;
+                    }
+            } else {
+                if (action.nodeIdx === null) {
+                    draft.highlightTrigger = null;
+                    draft.isNodeHighlighted = {};
+                } else {
+                    draft.highlightTrigger = { by: "node", which: action.nodeIdx };
+                    draft.isNodeHighlighted = highlightNeighbors(
+                        draft.graph.nodes.length,
+                        draft.graph.neigh,
+                        draft.param.hopsHighlight,
+                        action.nodeIdx,
+                        null
+                    );
+                    draft.isNodeHighlighted[action.nodeIdx] = true;
+                }
             }
             return;
         case ACTION_TYPES.HIGHLIGHT_NEIGHBORS:

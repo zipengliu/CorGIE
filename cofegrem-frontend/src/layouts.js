@@ -10,6 +10,7 @@ import {
     forceX,
     forceY,
     linkRadial,
+    transition,
 } from "d3";
 import { Layout as cola } from "webcola";
 import tSNE from "./tsne";
@@ -451,7 +452,58 @@ export function getNeighborDistance(mask1, mask2, metric) {
     }
 }
 
-export function computeSpaceFillingCurveLayout() {}
+export function computeSpaceFillingCurveLayout(
+    nodes,
+    hops,
+    isNodeSelected,
+    isNodeSelectedNeighbor,
+    neighArr,
+    neighMap,
+    distMetric
+) {
+    const n = nodes.length;
+    const orderedNodes = [];
+    for (let nodeId in isNodeSelected)
+        if (isNodeSelected[nodeId]) {
+            orderedNodes.push(nodeId);
+        }
+    for (let a of neighArr) {
+        for (let neighId of a) {
+            orderedNodes.push(neighId);
+        }
+    }
+    for (let i = 0; i < n; i++)
+        if (!isNodeSelected[i] && !isNodeSelectedNeighbor[i]) {
+            orderedNodes.push(i);
+        }
+    console.log({ orderedNodes });
+
+    const alpha = 2;
+    let curPos = 1;
+    const coords = new Array(n);
+    for (let i = 0; i < n; i++) {
+        let d = 1.2;
+        if (i > 0 && neighMap.hasOwnProperty(orderedNodes[i]) && neighMap.hasOwnProperty(orderedNodes[i - 1])) {
+            d = getNeighborDistance(neighMap[orderedNodes[i]].mask, neighMap[orderedNodes[i - 1]].mask, distMetric);
+            d = Math.max(d, 0.1)
+        }
+        curPos += d;
+        
+        const r = alpha * curPos;
+        coords[orderedNodes[i]] = [r * Math.cos(curPos), r * Math.sin(curPos)];
+    }
+    console.log(coords);
+
+    // Move the coordinates such that (0,0) is on the top left for rendering
+    const xExtent = extent(coords.map((c) => c[0]));
+    const yExtent = extent(coords.map((c) => c[1]));
+    const width = xExtent[1] - xExtent[0];
+    const height = yExtent[1] - yExtent[0];
+    const transCoords = coords.map((c) => ({x: c[0] - xExtent[0], y: c[1] - yExtent[0]}));
+    console.log({transCoords});
+
+    return { coords: transCoords, running: false, width, height };
+}
 
 export function computeLocalLayoutWithUMAP(
     nodes,
@@ -496,7 +548,7 @@ export function computeLocalLayoutWithUMAP(
     let yOffset = gap;
     for (let i = 0; i < 4; i++) {
         // The allocated height for this group of nodes
-        const height = (canvasSize - (4 * gap)) / n * nums[i];
+        const height = ((canvasSize - 4 * gap) / n) * nums[i];
         let emb, xExtent, yExtent, xRange, yRange;
         if (i === 0 || i === 3) {
             // Assign a random embedding for now

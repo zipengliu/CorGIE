@@ -58,8 +58,8 @@ export function highlightNodeType(nodeTypeIdx) {
     return { type: ACTION_TYPES.HIGHLIGHT_NODE_TYPE, nodeTypeIdx };
 }
 
-export function highlightNodes(nodeIdx) {
-    return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIdx };
+export function highlightNodes(nodeIdx, selectionBox = null, appendMode = false, selectionBoxView = null) {
+    return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIdx, selectionBox, selectionBoxView, appendMode };
 }
 
 export function highlightNeighbors(nodes) {

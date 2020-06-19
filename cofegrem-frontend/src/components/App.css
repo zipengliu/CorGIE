@@ -92,7 +92,7 @@
 .edge.highlighted {
     /*stroke: black;*/
     /*stroke-width: 1px;*/
-    animation: blinkingEffect 0.5s infinite;
+    animation: blinkingEffect 1s infinite;
 }
 
 .edges line.edge.highlighted {
@@ -104,18 +104,26 @@
 @keyframes blinkingEffect {
     0% {
         fill-opacity: 0.2;
+        stroke: none;
     }
     25% {
         fill-opacity: 0.6;
+        stroke-width: 1px;
+        stroke: black;
     }
     50% {
         fill-opacity: 1;
+        stroke-width: 1px;
+        stroke: black;
     }
     75% {
         fill-opacity: 0.6;
+        stroke-width: 1px;
+        stroke: black;
     }
     100% {
         fill-opacity: 0.2;
+        stroke: none;
     }
 }
 

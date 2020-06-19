@@ -6,6 +6,7 @@ import { Form } from "react-bootstrap";
 import { highlightNodes, selectNodes, changeParam, layoutTick } from "../actions";
 import { max, scaleLinear } from "d3";
 import NodeRep from "./NodeRep";
+import SelectionBox from "./SelectionBox";
 
 class GraphView extends Component {
     // constructor(props) {
@@ -160,9 +161,8 @@ class GraphView extends Component {
                                             <option value="group-constraint-cola">
                                                 group constraint (WebCola)
                                             </option>
-                                            <option value="umap">
-                                                umap for neighbors
-                                            </option>
+                                            <option value="umap">umap for neighbors</option>
+                                            <option value="spiral">spiral</option>
                                         </Form.Control>
                                     </Form.Group>
                                 </Form>
@@ -227,6 +227,13 @@ class GraphView extends Component {
                                         ))}
                                     </g>
                                     <text y={5}>#iterations: {focalGraphLayout.simulationTickNumber}</text>
+
+                                    <SelectionBox
+                                        width={focalGraphLayout.width}
+                                        height={focalGraphLayout.height}
+                                        selectedFunc={this.props.highlightNodes}
+                                        selectionBoxView="focal-graph"
+                                    />
                                 </g>
                             </svg>
                         </div>

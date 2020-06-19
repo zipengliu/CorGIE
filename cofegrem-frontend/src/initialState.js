@@ -22,8 +22,8 @@ export default {
         hops: 2,
         hopsHighlight: 1,
 
-        neighborDistanceMetric: 'hamming',
-        // neighborDistanceMetric: 'jaccard',
+        // neighborDistanceMetric: 'hamming',
+        neighborDistanceMetric: 'jaccard',
 
         graph: {
             layout: "force-directed-d3",
@@ -31,7 +31,8 @@ export default {
 
         focalGraph: {
             // layout: 'force-directed-d3',
-            layout: 'umap',
+            // layout: 'umap',
+            layout: 'spiral',
             // layout: 'group-constraint-cola',
         },
 
@@ -47,7 +48,7 @@ export default {
             edgeType: "line",
             width: 1000,
             height: 1000,
-            margins: { top: 10, bottom: 10, left: 10, right: 10 },
+            margins: { top: 10, bottom: 10, left: 20, right: 20 },
 
             neighborMarkerMaxHeight: 30,
             centralNodeSize: 4,
