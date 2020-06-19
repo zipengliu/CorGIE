@@ -13,6 +13,7 @@ import {
 } from "d3";
 import { Layout as cola } from "webcola";
 import tSNE from "./tsne";
+import { UMAP } from "umap-js";
 
 const EPSILON = 1e-8;
 
@@ -239,7 +240,8 @@ export function computeLocalLayoutWithCola(
     hops,
     isNodeSelected,
     isNodeSelectedNeighbor,
-    neighGrpByHop,
+    neighGrp,
+    neighMap,
     distMetric,
     spec
 ) {
@@ -258,12 +260,12 @@ export function computeLocalLayoutWithCola(
         groups.push({ id: h, leaves: [], padding: 5 });
     }
     groups[1].groups = [];
-    for (let g of neighGrpByHop[0]) {
-        const curGrp = { id: groups.length, leaves: [], groups: [], padding: 5 };
+    for (let g of neighGrp[0]) {
+        const curGrp = { id: groups.length, leaves: [], groups: [], padding: 3 };
         groups[1].groups.push(curGrp.id);
         groups.push(curGrp);
         for (let g2 of g.subgroups) {
-            const curGrp2 = { id: groups.length, leaves: g2.slice(), padding: 5 };
+            const curGrp2 = { id: groups.length, leaves: g2.slice(), padding: 2 };
             groups.push(curGrp2);
             curGrp.groups.push(curGrp2.id);
         }
@@ -278,19 +280,30 @@ export function computeLocalLayoutWithCola(
     const canvasSize = Math.ceil(Math.sqrt(nodes.length * 3000));
 
     const constraints = [];
-    for (let grp of neighGrpByHop[0]) {
+    for (let grp of neighGrp[0]) {
         for (let nodeA of grp.nodes) {
+            // 1-hop neighbors are below selected nodes
             for (let nodeB of groups[0].leaves) {
                 constraints.push({ axis: "y", left: nodeB, right: nodeA, gap: 40 });
             }
+            // 1-hop neighbors are above 2-hop neighbors and others
             for (let nodeB of groups[2].leaves) {
                 constraints.push({ axis: "y", left: nodeA, right: nodeB, gap: 40 });
             }
         }
     }
+    // 2-hop neighbors are above others
     for (let nodeA of groups[2].leaves) {
         for (let nodeB of groups[3].leaves) {
             constraints.push({ axis: "y", left: nodeA, right: nodeB, gap: 40 });
+        }
+    }
+    // Order the groups in 1-hop neighbors from left to right
+    for (let i = 0; i < neighGrp[0].length - 1; i++) {
+        for (let nodeA of neighGrp[0][i].nodes) {
+            for (let nodeB of neighGrp[0][i + 1].nodes) {
+                constraints.push({ axis: "x", left: nodeA, right: nodeB, gap: 25 });
+            }
         }
     }
     // console.log("layout constraints: ", constraints);
@@ -304,13 +317,20 @@ export function computeLocalLayoutWithCola(
         .links(copiedEdges)
         .groups(groups)
         .defaultNodeSize(3)
-        .linkDistance(15)
         .avoidOverlaps(true)
         .constraints(constraints)
+        // .linkDistance(15)
+        .linkDistance((e) => {
+            if (neighMap.hasOwnProperty(e.source) && neighMap.hasOwnProperty(e.target)) {
+                return 20 * getNeighborDistance(neighMap[e.source].mask, neighMap[e.target].mask, distMetric);
+            } else {
+                return 15;
+            }
+        })
         // .symmetricDiffLinkLengths(2, 1)
-        // .jaccardLinkLengths(5, 0.7)
-        .convergenceThreshold(1)
-        .start(0, 0, 10, 0, false);
+        // .jaccardLinkLengths(5, 1)
+        .convergenceThreshold(10)
+        .start(10, 15, 10, 0, false);
 
     // let iter = 0;
     // while (!simulation.tick()) {
@@ -429,4 +449,105 @@ export function getNeighborDistance(mask1, mask2, metric) {
     } else {
         return 0;
     }
+}
+
+export function computeSpaceFillingCurveLayout() {}
+
+export function computeLocalLayoutWithUMAP(
+    nodes,
+    edges,
+    hops,
+    isNodeSelected,
+    isNodeSelectedNeighbor,
+    neighArr,
+    neighMap,
+    distMetric,
+    spec
+) {
+    // Run UMAP
+    const distFunc = (x, y) => getNeighborDistance(neighMap[x[0]].mask, neighMap[y[0]].mask, distMetric);
+    const sim = new UMAP({ distanceFn: distFunc });
+
+    let embeddings = [];
+    for (let i = 0; i < hops; i++) {
+        let r;
+        if (neighArr[i].length <= sim.nNeighbors) {
+            // not enough data points
+            // use random embeddings
+            r = neighArr[i].map((_) => [Math.random(), Math.random()]);
+        } else {
+            const data = neighArr[i].map((x) => [x]);
+            r = sim.fit(data);
+        }
+        embeddings.push(r);
+    }
+    console.log({ embeddings });
+
+    // Resize the embeddings for the four different groups of nodes: selected, 1-hop, 2-hop, others
+    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 1000));
+    const n = nodes.length;
+    const n1 = Object.keys(isNodeSelected).length,
+        n2 = neighArr[0].length,
+        n3 = neighArr[1].length,
+        n4 = n - n1 - n2 - n3;
+    const nums = [n1, n2, n3, n4];
+    const coords = new Array(n);
+    const gap = 30;
+    let yOffset = gap;
+    for (let i = 0; i < 4; i++) {
+        // The allocated height for this group of nodes
+        const height = (canvasSize - (4 * gap)) / n * nums[i];
+        let emb, xExtent, yExtent, xRange, yRange;
+        if (i === 0 || i === 3) {
+            // Assign a random embedding for now
+            // TODO
+        } else {
+            emb = embeddings[i - 1];
+            xExtent = extent(emb.map((e) => e[0]));
+            yExtent = extent(emb.map((e) => e[1]));
+            xRange = xExtent[1] - xExtent[0];
+            yRange = yExtent[1] - yExtent[0];
+            console.log({ i, xExtent, yExtent });
+        }
+
+        // Fit emb to the allocated space
+        if (i === 1 || i === 2) {
+            for (let j = 0; j < neighArr[i - 1].length; j++) {
+                const nodeId = neighArr[i - 1][j];
+                coords[nodeId] = {
+                    x: ((emb[j][0] - xExtent[0]) * canvasSize) / xRange,
+                    y: yOffset + ((emb[j][1] - yExtent[0]) * height) / yRange,
+                };
+            }
+        } else if (i === 0) {
+            for (let nodeId in isNodeSelected)
+                if (isNodeSelected.hasOwnProperty(nodeId)) {
+                    coords[nodeId] = {
+                        x: Math.random() * canvasSize,
+                        y: yOffset + Math.random() * height,
+                    };
+                }
+        } else {
+            // Other nodes
+            for (let nodeId = 0; nodeId < n; nodeId++) {
+                if (!isNodeSelected[nodeId] && !isNodeSelectedNeighbor[nodeId]) {
+                    coords[nodeId] = {
+                        x: Math.random() * canvasSize,
+                        y: yOffset + Math.random() * height,
+                    };
+                }
+            }
+        }
+        yOffset += height + gap;
+    }
+    console.log({ coords });
+
+    return {
+        coords,
+        width: canvasSize,
+        height: canvasSize,
+        // simulation,
+        // simulationTickNumber: 10,
+        running: false,
+    };
 }

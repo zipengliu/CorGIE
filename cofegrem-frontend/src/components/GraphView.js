@@ -17,7 +17,7 @@ class GraphView extends Component {
         if (focalGraphLayout.running) {
             setTimeout(() => {
                 this.props.layoutTick();
-            }, 100);
+            }, 10);
         }
     }
 
@@ -159,6 +159,9 @@ class GraphView extends Component {
                                             <option value="force-directed-d3">force-directed (D3)</option>
                                             <option value="group-constraint-cola">
                                                 group constraint (WebCola)
+                                            </option>
+                                            <option value="umap">
+                                                umap for neighbors
                                             </option>
                                         </Form.Control>
                                     </Form.Group>

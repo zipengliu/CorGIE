@@ -9,6 +9,7 @@ import {
     computeForceLayoutWithCola,
     computeLocalLayoutWithCola,
     computeLocalLayoutWithD3,
+    computeLocalLayoutWithUMAP,
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
@@ -247,87 +248,115 @@ function countNeighborSets(neighborMasksByType, selectedNodes) {
     return { allCounts, allCountsMapping, bins: histos, countsByType };
 }
 
-function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
+function countSelectedNeighborsByHop(
+    neighborMasks,
+    selectedNodes,
+    hops,
+    isNodeSelected,
+    isNodeSelectedNeighbor
+) {
     if (selectedNodes.length === 0) return {};
 
-    // compute a mask for the selected nodes
-    let selMask = bs(0);
-    for (let selectedId of selectedNodes) {
-        selMask.set(selectedId, 1);
+    let neighGrp = [],
+        neighArr = [],
+        neighMap = {};
+    let prevHopNodes = selectedNodes;
+
+    for (let h = 0; h < hops; h++) {
+        neighArr.push([]);
     }
-    console.log("counting...");
-    console.log(selectedNodes, selMask);
+    for (let nodeId in isNodeSelectedNeighbor)
+        if (isNodeSelectedNeighbor[nodeId] && !isNodeSelected[nodeId]) {
+            neighArr[isNodeSelectedNeighbor[nodeId] - 1].push(parseInt(nodeId));
+        }
 
-    let res = [],
-        cnts, cntArray;
-    for (let curMasks of neighborMasks) {
-        // iterate the masks for each hop
-        let curGroups = [];
+    // iterate the masks for each hop
+    let h = 0;
+    for (let curHopNeigh of neighArr) {
+        // const curMasks = neighborMasks[h];
+        // compute a mask for the selected nodes
+        let prevHopNodesMask = bs(0);
+        for (let nodeId of prevHopNodes) {
+            prevHopNodesMask.set(nodeId, 1);
+        }
 
-        // Find out the frequency of each neighbor in that hop
-        cnts = {};
-        for (let selectedId of selectedNodes) {
-            const m = curMasks[selectedId].toArray();
-            for (let neighId of m) {
-                if (!cnts.hasOwnProperty(neighId)) {
-                    cnts[neighId] = { cnt: 0, mask: curMasks[neighId].and(selMask) };
-                }
-                cnts[neighId].cnt++;
-            }
+        // Find out #connections to nodes in previous hop
+        for (let neighId of curHopNeigh) {
+            neighMap[neighId] = {
+                mask: neighborMasks[0][neighId].and(prevHopNodesMask),
+                h: h + 1,
+            };
+            neighMap[neighId].cnt = neighMap[neighId].mask.cardinality();
+        }
+
+        // for (let nodeId of prevHopNodes) {
+        //     const m = curMasks[nodeId].toArray();
+        //     for (let neighId of m) {
+        //         // Exclude the selected nodes
+        //         if (!isNodeSelected[neighId]) {
+        //             if (!neighMap.hasOwnProperty(neighId)) {
+        //                 curHopNeigh.push(neighId);
+        //                 neighMap[neighId] = {
+        //                     cnt: 0,
+        //                     mask: curMasks[neighId].and(prevHopNodesMask),
+        //                     h: h + 1,
+        //                 };
+        //             }
+        //             neighMap[neighId].cnt++;
+        //         }
+        //     }
+        // }
+
+        // Sort array by #conn
+        curHopNeigh.sort((a, b) => neighMap[b].cnt - neighMap[a].cnt);
+        // Populate the order of the node in that hop
+        for (let i = 0; i < curHopNeigh.length; i++) {
+            neighMap[curHopNeigh[i]].order = i;
         }
 
         // Group the neighbors by frequency
-        // 1. convert mapping to array
-        cntArray = [];
-        for (let neighId in cnts)
-            if (cnts.hasOwnProperty(neighId)) {
-                cntArray.push({ id: parseInt(neighId), cnt: cnts[neighId].cnt, mask: cnts[neighId].mask });
-            }
-        // 2. sort array by freq
-        cntArray.sort((a, b) => b.cnt - a.cnt);
-        for (let i = 0; i < cntArray.length; i++) {
-            cnts[cntArray[i].id].order = i;
-        }
-        // 3. group
         let idx = 0;
-        while (idx < cntArray.length) {
+        let curGroups = [];
+        while (idx < curHopNeigh.length) {
             let curG = {
-                freq: cntArray[idx].cnt,
+                freq: neighMap[curHopNeigh[idx]].cnt,
                 prevTotal: idx, // Number of neighbors previous to this group, used for computing layout
                 nodes: [],
                 expanded: false,
-                cntsPerSelected: {},        // For roll-up matrix
-                nodesPerSelected: {},       // For highlighting in the roll-up matrix
+                cntsPerSelected: {}, // For roll-up matrix
+                nodesPerSelected: {}, // For highlighting in the roll-up matrix
                 subgroups: [],
-                subGroupPrevTotal: [],      // Number of neighbors previous to this subgroup (count within this group)
-                isBoundary: {},     // For drawing visual boundary lines
+                subGroupPrevTotal: [], // Number of neighbors previous to this subgroup (count within this group)
+                isBoundary: {}, // For drawing visual boundary lines
             };
-            for (let selectedId of selectedNodes) {
-                curG.cntsPerSelected[selectedId] = 0;
-                curG.nodesPerSelected[selectedId] = [];
+            for (let nodeId of prevHopNodes) {
+                curG.cntsPerSelected[nodeId] = 0;
+                curG.nodesPerSelected[nodeId] = [];
             }
 
             let j = idx;
-            while (j < cntArray.length && cntArray[j].cnt === curG.freq) {
-                curG.nodes.push(cntArray[j].id);
+            while (j < curHopNeigh.length) {
+                let curNeighData = neighMap[curHopNeigh[j]];
+                if (curNeighData.cnt !== curG.freq) break;
+                curG.nodes.push(curHopNeigh[j]);
 
-                // Compute the counts per selected node
-                for (let selectedId of selectedNodes) {
-                    const m = curMasks[selectedId];
-                    if (m.get(cntArray[j].id)) {
-                        curG.cntsPerSelected[selectedId]++;
-                        curG.nodesPerSelected[selectedId].push(cntArray[j].id);
+                // Compute the counts per prev-hop node
+                for (let nodeId of prevHopNodes) {
+                    const m = neighborMasks[0][nodeId];
+                    if (m.get(curHopNeigh[j])) {
+                        curG.cntsPerSelected[nodeId]++;
+                        curG.nodesPerSelected[nodeId].push(curHopNeigh[j]);
                     }
                 }
 
                 // Compute the subgroups by comparing neighbor j with j-1
-                if (j === idx || !cntArray[j].mask.equals(cntArray[j - 1].mask)) {
+                if (j === idx || !curNeighData.mask.equals(neighMap[curHopNeigh[j - 1]].mask)) {
                     // add a new subgroup
-                    curG.subgroups.push([cntArray[j].id]);
-                    curG.subGroupPrevTotal.push(j - idx);        // count within this group
-                    curG.isBoundary[cntArray[j].id] = true;
+                    curG.subgroups.push([curHopNeigh[j]]);
+                    curG.subGroupPrevTotal.push(j - idx); // count within this group
+                    curG.isBoundary[curHopNeigh[j]] = true;
                 } else {
-                    curG.subgroups[curG.subgroups.length - 1].push(cntArray[j].id);
+                    curG.subgroups[curG.subgroups.length - 1].push(curHopNeigh[j]);
                 }
 
                 j++;
@@ -336,12 +365,14 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes) {
             idx = j;
         }
 
-        res.push(curGroups);
-        break; // TODO only work for the 1-hop now
+        neighGrp.push(curGroups);
+        prevHopNodes = curHopNeigh;
+        h++;
     }
 
+    console.log({ neighMap, neighArr, neighGrp });
     // Note that cnts does not have info about hop
-    return { neighGrp: res, neighMap: cnts, neighArr: [cntArray.map(x => x.id)] };
+    return { neighGrp, neighMap, neighArr };
 }
 
 function isPointInBox(p, box) {
@@ -381,6 +412,19 @@ function callLocalLayoutFunc(state) {
                 state.isNodeSelected,
                 state.isNodeSelectedNeighbor,
                 state.neighGrp,
+                state.neighMap,
+                state.param.neighborDistanceMetric,
+                state.spec.graph
+            );
+        } else if (state.param.focalGraph.layout === "umap") {
+            return computeLocalLayoutWithUMAP(
+                state.graph.nodes,
+                state.graph.edges,
+                state.param.hops,
+                state.isNodeSelected,
+                state.isNodeSelectedNeighbor,
+                state.neighArr,
+                state.neighMap,
                 state.param.neighborDistanceMetric,
                 state.spec.graph
             );
@@ -531,11 +575,6 @@ const reducers = produce((draft, action) => {
             // draft.neighborCountsByType = temp.countsByType;
             // draft.neighborCountsBins = temp.bins;
 
-            const temp = countSelectedNeighborsByHop(draft.graph.neigh, draft.selectedNodes);
-            draft.neighGrp = temp.neighGrp;
-            draft.neighMap = temp.neighMap;
-            draft.neighArr = temp.neighArr;
-
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
             draft.isNodeSelectedNeighbor = {};
@@ -549,6 +588,18 @@ const reducers = produce((draft, action) => {
                     }
                 }
             }
+
+            const temp = countSelectedNeighborsByHop(
+                draft.graph.neigh,
+                draft.selectedNodes,
+                draft.param.hops,
+                draft.isNodeSelected,
+                draft.isNodeSelectedNeighbor
+            );
+            draft.neighGrp = temp.neighGrp;
+            draft.neighMap = temp.neighMap;
+            draft.neighArr = temp.neighArr;
+
             draft.focalGraphLayout = callLocalLayoutFunc(draft);
             return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
@@ -625,8 +676,8 @@ const reducers = produce((draft, action) => {
                         id: g.id,
                         bounds: g.bounds,
                     }));
-                    // if (converged || draft.focalGraphLayout.simulationTickNumber > 20) {
-                    if (converged) {
+                    if (converged || draft.focalGraphLayout.simulationTickNumber > 20) {
+                        // if (converged) {
                         draft.focalGraphLayout.running = false;
                     }
                 } else {

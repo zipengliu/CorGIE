@@ -22,15 +22,16 @@ export default {
         hops: 2,
         hopsHighlight: 1,
 
-        // neighborDistanceMetric: 'hamming',
-        neighborDistanceMetric: 'jaccard',
+        neighborDistanceMetric: 'hamming',
+        // neighborDistanceMetric: 'jaccard',
 
         graph: {
             layout: "force-directed-d3",
         },
 
         focalGraph: {
-            layout: 'force-directed-d3',
+            // layout: 'force-directed-d3',
+            layout: 'umap',
             // layout: 'group-constraint-cola',
         },
 
