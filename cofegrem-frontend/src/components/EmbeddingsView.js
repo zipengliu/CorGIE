@@ -2,10 +2,12 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
+import { scaleSequential, interpolateGreens, scaleLinear, interpolate } from "d3";
 import { highlightNodes, selectNodes } from "../actions";
 import SelectionBox from "./SelectionBox";
 import Histogram from "./Histogram";
 import NodeRep from "./NodeRep";
+import { getNodeEmbeddingColor } from "../layouts";
 
 class EmbeddingsView extends Component {
     // constructor(props) {
@@ -19,8 +21,12 @@ class EmbeddingsView extends Component {
         const { width, height, margins, histSize } = spec.latent;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
-        const { coords, distBinAbsent, distBinPresent, emb } = latent;
+        const { coords, distBinAbsent, distBinPresent, emb, distToCurFoc } = latent;
         const { nodes, nodeTypes } = graph;
+
+        const colorScale = scaleSequential(interpolateGreens).domain([1, 0]);
+        const tileNum = 100;
+        const tileArr = new Array(tileNum).fill(0);
 
         return (
             <div id="embeddings-view" className="view">
@@ -46,6 +52,22 @@ class EmbeddingsView extends Component {
                             height={height + (margins.top + margins.bottom) / 2}
                             style={{ stroke: "#000", strokeWidth: "1px", fill: "none" }}
                         />
+                        <g className="background-color-tiles">
+                            {tileArr.map((dummyX, i) => (
+                                <g key={i}>
+                                    {tileArr.map((dummyY, j) => (
+                                        <rect
+                                            key={j}
+                                            x={(i / tileNum) * width}
+                                            y={(j / tileNum) * height}
+                                            width={width / tileNum}
+                                            height={height / tileNum}
+                                            style={{ fill: getNodeEmbeddingColor(i / tileNum, j / tileNum) }}
+                                        />
+                                    ))}
+                                </g>
+                            ))}
+                        </g>
                         <g className="points">
                             {coords.map((c, i) => (
                                 <g
@@ -54,12 +76,16 @@ class EmbeddingsView extends Component {
                                         highlighted: isNodeHighlighted[i],
                                         selected: isNodeSelected[i],
                                         "hop-1": isNodeSelectedNeighbor[i] === 1,
-                                        "hop-2": isNodeSelectedNeighbor[i] === 2
+                                        "hop-2": isNodeSelectedNeighbor[i] === 2,
                                     })}
                                     transform={`translate(${c.x},${c.y})`}
                                     onMouseEnter={this.props.highlightNodes.bind(this, i)}
                                     onMouseLeave={this.props.highlightNodes.bind(this, null)}
                                     onClick={this.props.selectNodes.bind(null, i)}
+                                    style={{
+                                        // fill: distToCurFoc ? colorScale(distToCurFoc[i]) : "grey",
+                                        fill: "grey",
+                                    }}
                                 >
                                     <NodeRep shape={nodes[i].typeId === 0 ? "triangle" : "circle"} r={3} />
                                     {/* <circle
@@ -79,13 +105,13 @@ class EmbeddingsView extends Component {
     }
 }
 
-const mapStateToProps = state => ({ ...state });
+const mapStateToProps = (state) => ({ ...state });
 
-const mapDispatchToProps = dispatch =>
+const mapDispatchToProps = (dispatch) =>
     bindActionCreators(
         {
             highlightNodes,
-            selectNodes
+            selectNodes,
         },
         dispatch
     );

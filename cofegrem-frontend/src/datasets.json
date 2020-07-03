@@ -88,5 +88,32 @@
         "numEdges": 22453,
         "numTypes": 5,
         "desc": ""
+    },
+    {
+        "id": "cora-gcn",
+        "name": "cora-gcn",
+        "source": "paper citation network",
+        "numNodes": 2708,
+        "numEdges": 10556,
+        "numTypes": 1,
+        "desc": "Applying GCN on Cora dataset"
+    },
+    {
+        "id": "citeseer-gcn",
+        "name": "citeseer-gcn",
+        "source": "paper citation network",
+        "numNodes": 3327,
+        "numEdges": 4732,
+        "numTypes": 1,
+        "desc": "Applying GCN on CiteSeer dataset"
+    },
+    {
+        "id": "pubmed-gcn",
+        "name": "pubmed-gcn",
+        "source": "paper citation network",
+        "numNodes": 19717,
+        "numEdges": 44338,
+        "numTypes": 1,
+        "desc": "Applying GCN on Pubmed dataset"
     }
 ]

@@ -42,7 +42,7 @@ export default function renderHistogram({bins, margins, histSize}) {
                     ))}
                 </g>
                 <g className="axis">
-                    <line x1={0} y1={histSize.height} x2={0} y2={0} />
+                    <line x1={-2} y1={histSize.height} x2={-2} y2={0} />
                     {yTicks.map((y, i) => (
                         <text key={i} x={-6} y={histSize.height - yScale(y)} textAnchor="end">
                             {yFormat(y)}

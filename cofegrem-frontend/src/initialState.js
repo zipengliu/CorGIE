@@ -27,12 +27,13 @@ export default {
 
         graph: {
             layout: "force-directed-d3",
+            // layout: "random",
         },
 
         focalGraph: {
             // layout: 'force-directed-d3',
-            // layout: 'umap',
-            layout: 'spiral',
+            layout: 'umap',
+            // layout: 'spiral',
             // layout: 'group-constraint-cola',
         },
 

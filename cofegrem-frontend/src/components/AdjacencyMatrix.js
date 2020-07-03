@@ -47,6 +47,10 @@ class AdjacencyMatrix extends Component {
             neighMap.hasOwnProperty(neighId)
         );
 
+        if (selectedNodes.length > 500) {
+            return <div />;
+        }
+
         return (
             <div id="adjacency-matrix-view" className="view">
                 <h5>Adjacency matrix of selected nodes</h5>

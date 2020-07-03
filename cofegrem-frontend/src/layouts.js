@@ -11,6 +11,7 @@ import {
     forceY,
     linkRadial,
     transition,
+    lab,
 } from "d3";
 import { Layout as cola } from "webcola";
 import tSNE from "./tsne";
@@ -90,6 +91,7 @@ export function getDistanceMatrixFromEmbeddings(emb) {
 
 export function getAllNodeDistance(emb, edges) {
     let f = [];
+    console.log(emb.length);
     for (let i = 0; i < emb.length; i++) {
         f.push(new Array(emb.length).fill(false));
     }
@@ -99,13 +101,21 @@ export function getAllNodeDistance(emb, edges) {
     }
 
     let d = [];
+    let m = [];
     for (let i = 0; i < emb.length; i++) {
         // Make sure i < j to avoid duplicate computation
+        m.push(new Array(emb.length));
         for (let j = i + 1; j < emb.length; j++) {
-            d.push({ i, j, d: getCosineDistance(emb[i], emb[j]), p: f[i][j] });
+            const cosD = getCosineDistance(emb[i], emb[j]);
+            d.push({ i, j, d: cosD, p: f[i][j] });
+            m[i][j] = cosD;
         }
+        for (let j = 0; j < i; j++) {
+            m[i][j] = m[j][i];
+        }
+        m[i][i] = 0;
     }
-    return d;
+    return { nodeDist: d, distMatrix: m };
 }
 
 export function getCosineDistance(u, v) {
@@ -163,6 +173,15 @@ export function computeForceLayoutWithCola(nodes, edges, spec) {
     }
 
     return { coords: coords.map((d) => ({ x: d.x, y: d.y })), width: canvasSize, height: canvasSize };
+}
+
+export function computeDummyLayout(nodes) {
+    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 100));
+    return {
+        coords: nodes.map((_) => ({ x: Math.random() * canvasSize, y: Math.random() * canvasSize })),
+        width: canvasSize,
+        height: canvasSize,
+    };
 }
 
 // Compute a circular layout with an inner ring for one central node type and outer ring for other node types
@@ -483,12 +502,20 @@ export function computeSpaceFillingCurveLayout(
     const coords = new Array(n);
     for (let i = 0; i < n; i++) {
         let d = 1.2;
-        if (i > 0 && neighMap.hasOwnProperty(orderedNodes[i]) && neighMap.hasOwnProperty(orderedNodes[i - 1])) {
-            d = getNeighborDistance(neighMap[orderedNodes[i]].mask, neighMap[orderedNodes[i - 1]].mask, distMetric);
-            d = Math.max(d, 0.1)
+        if (
+            i > 0 &&
+            neighMap.hasOwnProperty(orderedNodes[i]) &&
+            neighMap.hasOwnProperty(orderedNodes[i - 1])
+        ) {
+            d = getNeighborDistance(
+                neighMap[orderedNodes[i]].mask,
+                neighMap[orderedNodes[i - 1]].mask,
+                distMetric
+            );
+            d = Math.max(d, 0.1);
         }
         curPos += d;
-        
+
         const r = alpha * curPos;
         coords[orderedNodes[i]] = [r * Math.cos(curPos), r * Math.sin(curPos)];
     }
@@ -499,8 +526,8 @@ export function computeSpaceFillingCurveLayout(
     const yExtent = extent(coords.map((c) => c[1]));
     const width = xExtent[1] - xExtent[0];
     const height = yExtent[1] - yExtent[0];
-    const transCoords = coords.map((c) => ({x: c[0] - xExtent[0], y: c[1] - yExtent[0]}));
-    console.log({transCoords});
+    const transCoords = coords.map((c) => ({ x: c[0] - xExtent[0], y: c[1] - yExtent[0] }));
+    console.log({ transCoords });
 
     return { coords: transCoords, running: false, width, height };
 }
@@ -516,19 +543,39 @@ export function computeLocalLayoutWithUMAP(
     distMetric,
     spec
 ) {
-    // Run UMAP
-    const distFunc = (x, y) => getNeighborDistance(neighMap[x[0]].mask, neighMap[y[0]].mask, distMetric);
-    const sim = new UMAP({ distanceFn: distFunc });
-
     let embeddings = [];
     for (let i = 0; i < hops; i++) {
         let r;
-        if (neighArr[i].length <= sim.nNeighbors) {
+        if (neighArr[i].length <= 15) {
             // not enough data points
             // use random embeddings
             r = neighArr[i].map((_) => [Math.random(), Math.random()]);
         } else {
             const data = neighArr[i].map((x) => [x]);
+            // Construct a local distanace matrix
+            // let m = new Array(neighArr[i].length);
+            // for (let j = 0; j < neighArr[i].length; j++) {
+            //     m[j] = new Array(neighArr[i].length);
+            // }
+            // for (let j = 0; j < neighArr[i].length; j++) {
+            //     for (let k = 0; k < j - 1; k++) {
+            //         m[k][j] = m[j][k];
+            //     }
+            //     m[j][j] = 0;
+            //     for (let k = j + 1; k < neighArr[i].length; k++) {
+            //         m[j][k] = getNeighborDistance(
+            //             neighMap[neighArr[i][j]].mask,
+            //             neighMap[neighArr[i][k]].mask,
+            //             distMetric
+            //         );
+            //     }
+            // }
+
+            console.log("Calling UMAP: ", data.length);
+            const distFunc = (x, y) =>
+                getNeighborDistance(neighMap[x[0]].mask, neighMap[y[0]].mask, distMetric);
+            // const distFunc = (x, y) => m[x[0]][y[0]];
+            const sim = new UMAP({ distanceFn: distFunc });
             r = sim.fit(data);
         }
         embeddings.push(r);
@@ -602,4 +649,12 @@ export function computeLocalLayoutWithUMAP(
         // simulationTickNumber: 10,
         running: false,
     };
+}
+
+// Get the positional color for a node that sits at (x, y), where x,y is in [0,1]
+const labScale = scaleLinear().domain([0, 1]).range([-160, 160]);
+export function getNodeEmbeddingColor(x, y) {
+    const a = labScale(x), b = labScale(y);
+    const l = 60;
+    return lab(l, a, b).formatHex();
 }

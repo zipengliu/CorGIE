@@ -7,6 +7,7 @@ import { highlightNodes, selectNodes, changeParam, layoutTick } from "../actions
 import { max, scaleLinear } from "d3";
 import NodeRep from "./NodeRep";
 import SelectionBox from "./SelectionBox";
+import { getNodeEmbeddingColor } from "../layouts";
 
 class GraphView extends Component {
     // constructor(props) {
@@ -27,6 +28,7 @@ class GraphView extends Component {
             spec,
             param,
             graph,
+            latent,
             isNodeHighlighted,
             isNodeSelected,
             selectedNodes,
@@ -40,6 +42,10 @@ class GraphView extends Component {
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
         const { coords, nodes, edges } = graph;
+
+        const latentCoords = latent.coords;
+        const latentWidth = spec.latent.width,
+            latentHeight = spec.latent.height;
 
         const markerScale = scaleLinear()
             .domain([0, selectedNodes.length + 1])
@@ -115,6 +121,12 @@ class GraphView extends Component {
                                                     "hop-1": isNodeSelectedNeighbor[i] === 1,
                                                     "hop-2": isNodeSelectedNeighbor[i] === 2,
                                                 })}
+                                                style={{
+                                                    fill: getNodeEmbeddingColor(
+                                                        latentCoords[i].x / latentWidth,
+                                                        latentCoords[i].y / latentHeight
+                                                    ),
+                                                }}
                                                 onMouseEnter={this.props.highlightNodes.bind(null, i)}
                                                 onMouseLeave={this.props.highlightNodes.bind(null, null)}
                                                 onClick={this.props.selectNodes.bind(null, i, null, true)}
@@ -215,6 +227,12 @@ class GraphView extends Component {
                                                     "hop-1": isNodeSelectedNeighbor[i] === 1,
                                                     "hop-2": isNodeSelectedNeighbor[i] === 2,
                                                 })}
+                                                style={{
+                                                    fill: getNodeEmbeddingColor(
+                                                        latentCoords[i].x / latentWidth,
+                                                        latentCoords[i].y / latentHeight
+                                                    ),
+                                                }}
                                                 onMouseEnter={this.props.highlightNodes.bind(null, i)}
                                                 onMouseLeave={this.props.highlightNodes.bind(null, null)}
                                                 // onClick={this.props.selectNodes.bind(null, i, null, true)}

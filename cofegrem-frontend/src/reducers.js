@@ -5,6 +5,7 @@ import {
     computeForceLayoutWithD3,
     coordsRescale,
     computeCircularLayout,
+    computeDummyLayout,
     getAllNodeDistance,
     computeForceLayoutWithCola,
     computeLocalLayoutWithCola,
@@ -14,7 +15,7 @@ import {
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
-import { histogram, select } from "d3";
+import { histogram, extent } from "d3";
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -370,6 +371,22 @@ function countSelectedNeighborsByHop(
     return { neighGrp, neighMap, neighArr };
 }
 
+function computeDistanceToCurrentFocus(distMatrix, focalNodes) {
+    if (focalNodes.length === 0) {
+        return null;
+    }
+    const d = [];
+    for (let i = 0; i < distMatrix.length; i++) {
+        let t = 0;
+        for (let nodeId of focalNodes) {
+            t += distMatrix[i][nodeId];
+        }
+        d.push(t / focalNodes.length);
+    }
+    console.log({extent: extent(d)});
+    return d;
+}
+
 function isPointInBox(p, box) {
     const offX = p.x - box.x,
         offY = p.y - box.y;
@@ -385,8 +402,10 @@ function callLayoutFunc(state) {
         layoutRes = computeForceLayoutWithD3(graph.nodes, copiedEdges);
     } else if (state.param.graph.layout === "force-directed-cola") {
         layoutRes = computeForceLayoutWithCola(graph.nodes, copiedEdges, state.spec.graph);
-    } else {
+    } else if (state.param.graph.layout === "circular") {
         layoutRes = computeCircularLayout(graph.nodes, copiedEdges, state.spec.graph, state.centralNodeType);
+    } else {
+        layoutRes = computeDummyLayout(graph.nodes);
     }
     state.spec.graph.width = layoutRes.width;
     state.spec.graph.height = layoutRes.height;
@@ -395,6 +414,7 @@ function callLayoutFunc(state) {
 }
 
 function callLocalLayoutFunc(state) {
+    console.log('Calling local layout function...');
     // Compute the force layout for focal nodes (selected + k-hop neighbors)
     if (state.selectedNodes.length === 0) {
         return {};
@@ -484,7 +504,7 @@ const reducers = produce((draft, action) => {
             draft.latent = {
                 emb,
                 coords: coordsRescale(emb2d, draft.spec.latent.width, draft.spec.latent.height),
-                nodeDist: getAllNodeDistance(emb, draft.graph.edges),
+                ...getAllNodeDistance(emb, draft.graph.edges),
             };
             let binGen = histogram()
                 .domain([0, 1])
@@ -610,6 +630,7 @@ const reducers = produce((draft, action) => {
             // draft.neighborCountsByType = temp.countsByType;
             // draft.neighborCountsBins = temp.bins;
 
+            draft.latent.distToCurFoc = computeDistanceToCurrentFocus(draft.latent.distMatrix, draft.selectedNodes);
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
             draft.isNodeSelectedNeighbor = {};
