@@ -1,5 +1,32 @@
 [
     {
+        "id": "kinship-rotate",
+        "name": "kinship dataset using RotatE model",
+        "source": "xxx",
+        "numNodes": 104,
+        "numEdges": 10686,
+        "numTypes": 1,
+        "desc": "25 edge type"
+    },
+    {
+        "id": "umls-rotate",
+        "name": "umls dataset using RotatE model",
+        "source": "xxx",
+        "numNodes": 135,
+        "numEdges": 6529,
+        "numTypes": 1,
+        "desc": "46 edge types"
+    },
+    {
+        "id": "family-rotate",
+        "name": "family dataset using RotatE model",
+        "source": "xxx",
+        "numNodes": 3007,
+        "numEdges": 28356,
+        "numTypes": 1,
+        "desc": "11 edge types"
+    },
+    {
         "id": "bipartite-user-movie-medium-1",
         "name": "bipartite network (user-movie) medium 1",
         "source": "IMDB Movie",

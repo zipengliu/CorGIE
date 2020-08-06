@@ -35,6 +35,7 @@ class GraphView extends Component {
             isNodeSelectedNeighbor,
             neighMap,
             focalGraphLayout,
+            edgeAttributes,
         } = this.props;
         const layout = param.graph.layout;
         const focalLayout = param.focalGraph.layout;
@@ -42,6 +43,15 @@ class GraphView extends Component {
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
         const { coords, nodes, edges } = graph;
+
+        const edgeTypes = edgeAttributes.type;
+        const showAllEdges = edgeTypes.show[0] && edgeTypes.show[1] && edgeTypes.show[2];
+        let filteredEdges;
+        if (showAllEdges) {
+            filteredEdges = edges;
+        } else {
+            filteredEdges = edges.filter((e) => edgeTypes.show[e.type]);
+        }
 
         const latentCoords = latent.coords;
         const latentWidth = spec.latent.width,
@@ -87,7 +97,7 @@ class GraphView extends Component {
                                     }
                                 >
                                     <g className="edges">
-                                        {edges.map((e, i) =>
+                                        {filteredEdges.map((e, i) =>
                                             edgeType === "curve" ? (
                                                 <path key={i} className="edge" d={e.curvePath} />
                                             ) : (
@@ -185,7 +195,7 @@ class GraphView extends Component {
                             >
                                 <g transform={`translate(${margins.left},${margins.top})`}>
                                     <g className="edges">
-                                        {edges.map((e, i) => (
+                                        {filteredEdges.map((e, i) => (
                                             <line
                                                 key={i}
                                                 className={cn("edge", {
@@ -210,8 +220,8 @@ class GraphView extends Component {
                                                     ry={5}
                                                     x={g.bounds.x}
                                                     y={g.bounds.y}
-                                                    width={g.bounds.width()}
-                                                    height={g.bounds.height()}
+                                                    width={g.bounds.width || g.bounds.width()}
+                                                    height={g.bounds.height || g.bounds.height()}
                                                 />
                                             ))}
                                         </g>

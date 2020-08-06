@@ -11,7 +11,7 @@ import {
     computeLocalLayoutWithCola,
     computeLocalLayoutWithD3,
     computeLocalLayoutWithUMAP,
-    computeSpaceFillingCurveLayout
+    computeSpaceFillingCurveLayout,
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
@@ -383,7 +383,7 @@ function computeDistanceToCurrentFocus(distMatrix, focalNodes) {
         }
         d.push(t / focalNodes.length);
     }
-    console.log({extent: extent(d)});
+    console.log({ extent: extent(d) });
     return d;
 }
 
@@ -414,7 +414,7 @@ function callLayoutFunc(state) {
 }
 
 function callLocalLayoutFunc(state) {
-    console.log('Calling local layout function...');
+    console.log("Calling local layout function...");
     // Compute the force layout for focal nodes (selected + k-hop neighbors)
     if (state.selectedNodes.length === 0) {
         return {};
@@ -451,7 +451,7 @@ function callLocalLayoutFunc(state) {
                 state.isNodeSelectedNeighbor,
                 state.neighArr,
                 state.neighMap,
-                state.param.neighborDistanceMetric,
+                state.param.neighborDistanceMetric
             );
         } else {
             return computeLocalLayoutWithD3(
@@ -468,6 +468,45 @@ function callLocalLayoutFunc(state) {
     }
 }
 
+function summarizeNodeAttrs(nodes, attrs, nodeTypes) {
+    let res = [];
+    for (let a of attrs) {
+        if (a.type === 'scalar') {
+            a.values = [];      // The attribute values, used for compuing stats
+        } else if (a.type === 'categorical') {
+            a.values = {};      // A mapping from value to count
+        }
+    }
+    for (let n of nodes) {
+        for (let a of attrs) {
+            if (nodeTypes[n.typeId].name === a.nodeType) {
+                if (a.type === 'scalar') {
+                    n[a.name] = +n[a.name];
+                    a.values.push(n[a.name]);
+                } else if (a.type === 'categorical') {
+                    if (!a.values.hasOwnProperty(n[a.name])) {
+                        a.values[n[a.name]] = 0;
+                    }
+                    a.values[n[a.name]]++;
+                }
+            }
+        }
+    }
+
+    for (let a of attrs) {
+        if (a.type === 'scalar') {
+            let binGen = histogram()
+                .domain(extent(a.values))
+                .thresholds(10);
+            a.bins = binGen(a.values);
+        } else {
+            a.bins = Object.keys(a.values).sort((x, y) => a.values[x] - a.values[y]).map(x => ({v: x, c: a.values[x]}));
+        }
+    }
+    console.log(attrs);
+    return attrs;
+}
+
 const reducers = produce((draft, action) => {
     switch (action.type) {
         case ACTION_TYPES.FETCH_DATA_PENDING:
@@ -479,7 +518,7 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
-            const { graph, emb, emb2d } = action.data;
+            const { graph, emb, emb2d, attrs } = action.data;
             draft.datasetId = action.data.datasetId;
             draft.graph = {
                 nodes: graph.nodes,
@@ -512,7 +551,10 @@ const reducers = produce((draft, action) => {
                 .thresholds(50);
             draft.latent.distBinPresent = binGen(draft.latent.nodeDist.filter((d) => d.p));
             draft.latent.distBinAbsent = binGen(draft.latent.nodeDist.filter((d) => !d.p));
+
             // draft.latent.coords = runTSNE(draft.latent.distMat, draft.spec.latent);
+
+            draft.nodeAttrs = summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes);
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
             return;
@@ -630,7 +672,10 @@ const reducers = produce((draft, action) => {
             // draft.neighborCountsByType = temp.countsByType;
             // draft.neighborCountsBins = temp.bins;
 
-            draft.latent.distToCurFoc = computeDistanceToCurrentFocus(draft.latent.distMatrix, draft.selectedNodes);
+            draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
+                draft.latent.distMatrix,
+                draft.selectedNodes
+            );
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
             draft.isNodeSelectedNeighbor = {};
@@ -743,6 +788,10 @@ const reducers = produce((draft, action) => {
                 }
                 draft.focalGraphLayout.simulationTickNumber += 1;
             }
+            return;
+
+        case ACTION_TYPES.CHANGE_EDGE_TYPE_STATE:
+            draft.edgeAttributes.type.show[action.idx] = !draft.edgeAttributes.type.show[action.idx];
             return;
 
         default:

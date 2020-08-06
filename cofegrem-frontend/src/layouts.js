@@ -592,10 +592,14 @@ export function computeLocalLayoutWithUMAP(
     const nums = [n1, n2, n3, n4];
     const coords = new Array(n);
     const gap = 30;
+    let groups = [];
     let yOffset = gap;
     for (let i = 0; i < 4; i++) {
         // The allocated height for this group of nodes
         const height = ((canvasSize - 4 * gap) / n) * nums[i];
+        groups.push({
+            bounds: { x: 0, y: yOffset - gap / 3, width: canvasSize, height: height + (gap / 3) * 2 },
+        });
         let emb, xExtent, yExtent, xRange, yRange;
         if (i === 0 || i === 3) {
             // Assign a random embedding for now
@@ -643,6 +647,7 @@ export function computeLocalLayoutWithUMAP(
 
     return {
         coords,
+        groups,
         width: canvasSize,
         height: canvasSize,
         // simulation,
@@ -654,7 +659,8 @@ export function computeLocalLayoutWithUMAP(
 // Get the positional color for a node that sits at (x, y), where x,y is in [0,1]
 const labScale = scaleLinear().domain([0, 1]).range([-160, 160]);
 export function getNodeEmbeddingColor(x, y) {
-    const a = labScale(x), b = labScale(y);
+    const a = labScale(x),
+        b = labScale(y);
     const l = 60;
     return lab(l, a, b).formatHex();
 }

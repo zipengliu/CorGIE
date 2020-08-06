@@ -76,7 +76,7 @@ export class GlobalControls extends Component {
                                     as="select"
                                     size="sm"
                                     value={selectedNodeType}
-                                    onChange={e => {
+                                    onChange={(e) => {
                                         this.props.changeSelectedNodeType(e.target.value);
                                     }}
                                 >
@@ -98,7 +98,7 @@ export class GlobalControls extends Component {
                                     as="select"
                                     size="sm"
                                     value={param.hops}
-                                    onChange={e => {
+                                    onChange={(e) => {
                                         this.props.changeHops(parseInt(e.target.value));
                                     }}
                                 >
@@ -114,8 +114,8 @@ export class GlobalControls extends Component {
                                     as="select"
                                     size="sm"
                                     value={param.hopsHighlight}
-                                    onChange={e => {
-                                        this.props.changeParam('hopsHighlight', parseInt(e.target.value));
+                                    onChange={(e) => {
+                                        this.props.changeParam("hopsHighlight", parseInt(e.target.value));
                                     }}
                                 >
                                     <option value={1}>1</option>
@@ -125,17 +125,19 @@ export class GlobalControls extends Component {
                             </Form.Group>
                         </Form>
                     </div>
+
+                    <div>test</div>
                 </div>
             </div>
         );
     }
 }
 
-const mapStateToProps = state => ({
-    ...state
+const mapStateToProps = (state) => ({
+    ...state,
 });
 
-const mapDispatchToProps = dispatch =>
+const mapDispatchToProps = (dispatch) =>
     bindActionCreators(
         {
             highlightNodeType,

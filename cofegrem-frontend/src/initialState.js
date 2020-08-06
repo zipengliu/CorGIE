@@ -18,12 +18,23 @@ export default {
 
     powerSetLimit: 8,
 
+    edgeAttributes: {
+        type: {
+            type: "categorical",
+            values: ["train", "valid", "test"],
+            show: [true, true, true],
+            counts: [0, 0, 0],
+        },
+    },
+
     param: {
         hops: 2,
         hopsHighlight: 1,
 
+        colorBy: 'position',        // Could be "position" or index of nodeAttrs
+
         // neighborDistanceMetric: 'hamming',
-        neighborDistanceMetric: 'jaccard',
+        neighborDistanceMetric: "jaccard",
 
         graph: {
             layout: "force-directed-d3",
@@ -32,7 +43,7 @@ export default {
 
         focalGraph: {
             // layout: 'force-directed-d3',
-            layout: 'umap',
+            layout: "umap",
             // layout: 'spiral',
             // layout: 'group-constraint-cola',
         },
@@ -40,8 +51,8 @@ export default {
         filter: {
             presentEdges: true,
             absentEdges: true,
-            ascending: true
-        }
+            ascending: true,
+        },
     },
 
     spec: {
@@ -56,7 +67,7 @@ export default {
             auxNodeSize: 3,
             innerRingNodeGap: 10,
             outerRingNodeGap: 2,
-            minRingGap: 50 // Minimum gap between the two rings (along the radius axis)
+            minRingGap: 50, // Minimum gap between the two rings (along the radius axis)
         },
         focalGraph: {
             width: 300,
@@ -66,7 +77,7 @@ export default {
             width: 400,
             height: 400,
             margins: { top: 10, bottom: 10, left: 10, right: 10 },
-            histSize: { width: 200, height: 100 }
+            histSize: { width: 200, height: 100 },
         },
         intersectionPlot: {
             margins: { top: 10, bottom: 10, left: 10, right: 10 },
@@ -75,7 +86,7 @@ export default {
             dotMargin: 10,
             verticalMargin: 5,
             cardScaleRange: 50,
-            plotHorizontalMargin: 30
+            plotHorizontalMargin: 30,
         },
         adjacencyMatrix: {
             margins: { top: 10, bottom: 10, left: 10, right: 80 },
@@ -89,13 +100,13 @@ export default {
             labelAreaSize: 100,
             labelSize: 10, // Must be <= rowHeight and colWidth
             countAreaSize: 20,
-            countBarHeight: 100
+            countBarHeight: 100,
         },
         histogram: {
             margins: { top: 10, bottom: 30, left: 30, right: 10, betweenHist: 20 },
             height: 100,
             barWidth: 10,
-            barGap: 2
-        }
-    }
+            barGap: 2,
+        },
+    },
 };

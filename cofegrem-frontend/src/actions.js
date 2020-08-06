@@ -13,6 +13,7 @@ const ACTION_TYPES = {
     CHANGE_PARAM: "CHANGE_PARAM",
     CHANGE_HOPS: "CHANGE_HOPS",
     LAYOUT_TICK: "LAYOUT_TICK",
+    CHANGE_EDGE_TYPE_STATE: "CHANGE_EDGE_TYPE_STATE",
 };
 export default ACTION_TYPES;
 
@@ -24,7 +25,7 @@ export function fetchGraphData(homePath, datasetId) {
         dispatch(fetchDataPending());
 
         try {
-            let [graph, emb, emb2d] = [
+            let [graph, emb, emb2d, attrs] = [
                 await fetch(`${where}/graph.json`).then((r) => r.json()),
                 await fetch(`${where}/node-embedding.csv`)
                     .then((r) => r.text())
@@ -33,9 +34,14 @@ export function fetchGraphData(homePath, datasetId) {
                     .then((r) => r.text())
                     .then(csvParseRows)
                     .then((d) => d.map((x) => [parseFloat(x[0]), parseFloat(x[1])])),
+                await fetch(`${where}/attr-meta.json`)
+                    .then((r) => r.json())
+                    .catch(() => {
+                        return [];      // In case there is no meta data
+                    }),
             ];
 
-            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d }));
+            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs }));
         } catch (e) {
             dispatch(fetchDataError(e));
         }
@@ -84,4 +90,8 @@ export function changeHops(hops) {
 
 export function layoutTick() {
     return { type: ACTION_TYPES.LAYOUT_TICK };
+}
+
+export function changeEdgeTypeState(idx) {
+    return { type: ACTION_TYPES.CHANGE_EDGE_TYPE_STATE, idx };
 }
