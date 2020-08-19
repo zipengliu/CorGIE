@@ -2,10 +2,9 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
-import { scaleSequential, interpolateGreens, scaleLinear, interpolate } from "d3";
-import { highlightNodes, selectNodes } from "../actions";
+import { Form } from "react-bootstrap";
+import { highlightNodes, selectNodes, changeParam } from "../actions";
 import SelectionBox from "./SelectionBox";
-import Histogram from "./Histogram";
 import NodeRep from "./NodeRep";
 import { getNodeEmbeddingColor } from "../layouts";
 
@@ -17,14 +16,24 @@ class EmbeddingsView extends Component {
 
     render() {
         // console.log('rendering EmbeddingView...');
-        const { spec, latent, graph, isNodeHighlighted, isNodeSelected, isNodeSelectedNeighbor } = this.props;
-        const { width, height, margins, histSize } = spec.latent;
+        const {
+            spec,
+            latent,
+            graph,
+            isNodeHighlighted,
+            isNodeSelected,
+            isNodeSelectedNeighbor,
+            param,
+            nodeAttrs,
+        } = this.props;
+        const { width, height, margins } = spec.latent;
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
-        const { coords, distBinAbsent, distBinPresent, emb, distToCurFoc } = latent;
+        const { coords, emb } = latent;
         const { nodes, nodeTypes } = graph;
+        const { colorBy, colorScale } = param;
 
-        const colorScale = scaleSequential(interpolateGreens).domain([1, 0]);
+        // const colorScale = scaleSequential(interpolateGreens).domain([1, 0]);
         const tileNum = 100;
         const tileArr = new Array(tileNum).fill(0);
 
@@ -33,16 +42,14 @@ class EmbeddingsView extends Component {
                 <h5 className="text-center">
                     Latent space <small>(#dim={emb[0].length})</small>
                 </h5>
-                <div style={{ marginBottom: "10px" }}>
-                    <h6>Node distance distribution</h6>
-                    <div>present edges:</div>
-                    <Histogram bins={distBinPresent} margins={margins} histSize={histSize} />
-
-                    <div>absent edges:</div>
-                    <Histogram bins={distBinAbsent} margins={margins} histSize={histSize} />
-                </div>
 
                 <h6>UMAP 2D embeddings</h6>
+                <Form.Check
+                    type="radio"
+                    label="Color by position"
+                    checked={colorBy === "position"}
+                    onChange={this.props.changeParam.bind(null, "colorBy", "position", false)}
+                />
                 <svg width={svgWidth} height={svgHeight}>
                     <g transform={`translate(${margins.left},${margins.top})`}>
                         <rect
@@ -52,22 +59,26 @@ class EmbeddingsView extends Component {
                             height={height + (margins.top + margins.bottom) / 2}
                             style={{ stroke: "#000", strokeWidth: "1px", fill: "none" }}
                         />
-                        <g className="background-color-tiles">
-                            {tileArr.map((dummyX, i) => (
-                                <g key={i}>
-                                    {tileArr.map((dummyY, j) => (
-                                        <rect
-                                            key={j}
-                                            x={(i / tileNum) * width}
-                                            y={(j / tileNum) * height}
-                                            width={width / tileNum}
-                                            height={height / tileNum}
-                                            style={{ fill: getNodeEmbeddingColor(i / tileNum, j / tileNum) }}
-                                        />
-                                    ))}
-                                </g>
-                            ))}
-                        </g>
+                        {colorBy === "position" && (
+                            <g className="background-color-tiles">
+                                {tileArr.map((dummyX, i) => (
+                                    <g key={i}>
+                                        {tileArr.map((dummyY, j) => (
+                                            <rect
+                                                key={j}
+                                                x={(i / tileNum) * width}
+                                                y={(j / tileNum) * height}
+                                                width={width / tileNum}
+                                                height={height / tileNum}
+                                                style={{
+                                                    fill: getNodeEmbeddingColor(i / tileNum, j / tileNum),
+                                                }}
+                                            />
+                                        ))}
+                                    </g>
+                                ))}
+                            </g>
+                        )}
                         <g className="points">
                             {coords.map((c, i) => (
                                 <g
@@ -84,7 +95,13 @@ class EmbeddingsView extends Component {
                                     onClick={this.props.selectNodes.bind(null, i)}
                                     style={{
                                         // fill: distToCurFoc ? colorScale(distToCurFoc[i]) : "grey",
-                                        fill: "grey",
+                                        // fill: "grey",
+                                        fill:
+                                            colorBy === "position"
+                                                ? "grey"
+                                                : nodes[i].hasOwnProperty(nodeAttrs[colorBy].name)
+                                                ? colorScale(nodes[i][nodeAttrs[colorBy].name])
+                                                : "grey",
                                     }}
                                 >
                                     <NodeRep shape={nodes[i].typeId === 0 ? "triangle" : "circle"} r={3} />
@@ -112,6 +129,7 @@ const mapDispatchToProps = (dispatch) =>
         {
             highlightNodes,
             selectNodes,
+            changeParam,
         },
         dispatch
     );

@@ -9,7 +9,8 @@ import EmbeddingsView from "./EmbeddingsView";
 import PowerSetIntersectionView from "./PowerSetIntersectionView";
 import DetailView from "./DetailView";
 import AdjacencyMatrix from "./AdjacencyMatrix";
-import FilterView from "./FilterView";
+import NodeAttrView from "./NodeAttrView";
+import EdgeAttrView from "./EdgeAttrView";
 import GlobalControls from "./GlobalControls";
 import "./App.css";
 
@@ -36,7 +37,8 @@ class App extends Component {
 
                 <div className="App">
                     <GlobalControls />
-                    <FilterView />
+                    <NodeAttrView />
+                    <EdgeAttrView />
                     <EmbeddingsView />
                     <GraphView />
                     {numSelectedNodes > 0 && <AdjacencyMatrix />}

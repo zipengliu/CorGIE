@@ -3,25 +3,28 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Button } from "react-bootstrap";
 import { scaleLinear, max, scaleBand } from "d3";
-import { changeParam, changeEdgeTypeState } from "../actions";
+import { changeParam } from "../actions";
 
-class FilterView extends Component {
+class NodeAttrView extends Component {
     render() {
-        const { param, latent, graph, edgeAttributes, nodeAttrs } = this.props;
-        const { filter, colorBy } = param;
-        const edgeTypes = edgeAttributes.type;
+        const { param, nodeAttrs } = this.props;
+        const { colorBy } = param;
 
         const { changeParam } = this.props;
 
         function renderAttrFilter(a, idx) {
-            const h = 100,
-                w = 100,
-                margin = 10,
-                padding = 0.1;
-            let yScaleMax, xScale, yScale;
+            const h = 80,
+                w = 80,
+                margin = 15,
+                padding = 0.1,
+                n = a.bins.length;
+            let yScaleMax,
+                xScale,
+                yScale,
+                xTicks = [];
+            const xTickGap = n > 4 ? n / 4 : 1;
             if (a.type === "scalar") {
                 yScaleMax = max(a.bins.map((b) => b.length));
-                yScale = scaleLinear().domain([0, yScaleMax]).range([0, h]);
                 xScale = scaleBand()
                     .domain(a.bins.map((_, i) => i))
                     .range([0, w])
@@ -29,17 +32,25 @@ class FilterView extends Component {
                     .padding(padding);
             } else {
                 yScaleMax = max(a.bins.map((b) => b.c));
-                yScale = scaleLinear().domain([0, yScaleMax]).range([0, h]);
                 xScale = scaleBand()
                     .domain(a.bins.map((x) => x.v))
                     .range([0, w])
                     .round(true)
                     .padding(padding);
             }
+            yScale = scaleLinear().domain([0, yScaleMax]).range([0, h]);
+            const yTicks = yScale.ticks(3),
+                yFormat = yScale.tickFormat(3, "s");
+            let cur = 0;
+            while (cur < n) {
+                xTicks.push(cur);
+                cur += xTickGap;
+            }
+
             return (
                 <div key={idx}>
                     <div>
-                        <span style={{ marginRight: "5px" }}>{a.name}</span>
+                        <span style={{ marginRight: "10px" }}>{a.name}</span>
                         <Form.Check
                             inline
                             type="radio"
@@ -82,6 +93,14 @@ class FilterView extends Component {
                                     )
                                 )}
                             </g>
+                            <g className="axis">
+                                <line x1={-2} y1={h} x2={-2} y2={0} />
+                                {yTicks.map((y, i) => (
+                                    <text key={i} x={-6} y={h - yScale(y)} textAnchor="end">
+                                        {yFormat(y)}
+                                    </text>
+                                ))}
+                            </g>
                         </g>
                     </svg>
                 </div>
@@ -89,59 +108,9 @@ class FilterView extends Component {
         }
 
         return (
-            <div id="filter-view" className="view">
+            <div id="node-attr-view" className="view">
                 <h5 className="text-center">Nodes</h5>
                 {nodeAttrs.map((a, i) => renderAttrFilter(a, i))}
-
-                <h5 className="text-center">Edges</h5>
-                <Form
-                    onSubmit={() => {
-                        console.log("submitted.");
-                    }}
-                >
-                    Show the following edges:
-                    {edgeTypes.values.map((v, i) => (
-                        <Form.Check
-                            key={i}
-                            type="checkbox"
-                            checked={edgeTypes.show[i]}
-                            id={`edge-type-${v}`}
-                            label={v}
-                            onChange={this.props.changeEdgeTypeState.bind(null, i)}
-                        />
-                    ))}
-                    {/* <Form.Check
-                        type="checkbox"
-                        checked={filter.presentEdges}
-                        id="present-edge"
-                        label="present edges"
-                        onChange={changeParam.bind(null, "filter.presentEdges", null, true)}
-                    />
-                    <Form.Check
-                        type="checkbox"
-                        checked={filter.absentEdges}
-                        id="absent-edge"
-                        label="absent edges"
-                        onChange={changeParam.bind(null, "filter.absentEdges", null, true)}
-                    /> */}
-                    Sort edges by distance in embeddings
-                    <Form.Check
-                        type="switch"
-                        checked={filter.ascending}
-                        id="ascending"
-                        label="ascending order"
-                        onChange={changeParam.bind(null, "filter.ascending", null, true)}
-                    />
-                    <Form.Group controlId="source-node-label">
-                        <Form.Label>Source node label</Form.Label>
-                        <Form.Control as="input" size="sm"></Form.Control>
-                    </Form.Group>
-                    <Form.Group controlId="target-node-label">
-                        <Form.Label>Target node label</Form.Label>
-                        <Form.Control as="input" size="sm"></Form.Control>
-                    </Form.Group>
-                    <Button type="submit">Search</Button>
-                </Form>
             </div>
         );
     }
@@ -151,6 +120,6 @@ const mapStateToProps = (state) => ({
     ...state,
 });
 
-const mapDispatchToProps = (dispatch) => bindActionCreators({ changeParam, changeEdgeTypeState }, dispatch);
+const mapDispatchToProps = (dispatch) => bindActionCreators({ changeParam }, dispatch);
 
-export default connect(mapStateToProps, mapDispatchToProps)(FilterView);
+export default connect(mapStateToProps, mapDispatchToProps)(NodeAttrView);

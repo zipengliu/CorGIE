@@ -10,6 +10,7 @@ const ACTION_TYPES = {
     HIGHLIGHT_NEIGHBORS: "HIGHLIGHT_NEIGHBORS",
     CHANGE_SELECTED_NODE_TYPE: "CHANGE_SELECTED_NODE_TYPE",
     SELECT_NODES: "SELECT_NODES",
+    SELECT_EDGE: "SELECT_EDGE",
     CHANGE_PARAM: "CHANGE_PARAM",
     CHANGE_HOPS: "CHANGE_HOPS",
     LAYOUT_TICK: "LAYOUT_TICK",
@@ -37,7 +38,7 @@ export function fetchGraphData(homePath, datasetId) {
                 await fetch(`${where}/attr-meta.json`)
                     .then((r) => r.json())
                     .catch(() => {
-                        return [];      // In case there is no meta data
+                        return []; // In case there is no meta data
                     }),
             ];
 
@@ -74,6 +75,10 @@ export function highlightNeighbors(nodes) {
 
 export function selectNodes(nodeIdx, selectionBox = null, appendMode = false) {
     return { type: ACTION_TYPES.SELECT_NODES, nodeIdx, selectionBox, appendMode };
+}
+
+export function selectEdge(eid) {
+    return { type: ACTION_TYPES.SELECT_EDGE, eid };
 }
 
 export function changeSelectedNodeType(idx) {

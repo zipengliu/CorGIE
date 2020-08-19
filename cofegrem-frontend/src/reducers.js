@@ -7,6 +7,7 @@ import {
     computeCircularLayout,
     computeDummyLayout,
     getAllNodeDistance,
+    getEdgeLengthLatent,
     computeForceLayoutWithCola,
     computeLocalLayoutWithCola,
     computeLocalLayoutWithD3,
@@ -15,7 +16,7 @@ import {
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
-import { histogram, extent } from "d3";
+import { histogram, extent, scaleSequential, interpolateGreens } from "d3";
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -471,19 +472,19 @@ function callLocalLayoutFunc(state) {
 function summarizeNodeAttrs(nodes, attrs, nodeTypes) {
     let res = [];
     for (let a of attrs) {
-        if (a.type === 'scalar') {
-            a.values = [];      // The attribute values, used for compuing stats
-        } else if (a.type === 'categorical') {
-            a.values = {};      // A mapping from value to count
+        if (a.type === "scalar") {
+            a.values = []; // The attribute values, used for compuing stats
+        } else if (a.type === "categorical") {
+            a.values = {}; // A mapping from value to count
         }
     }
     for (let n of nodes) {
         for (let a of attrs) {
             if (nodeTypes[n.typeId].name === a.nodeType) {
-                if (a.type === 'scalar') {
+                if (a.type === "scalar") {
                     n[a.name] = +n[a.name];
                     a.values.push(n[a.name]);
-                } else if (a.type === 'categorical') {
+                } else if (a.type === "categorical") {
                     if (!a.values.hasOwnProperty(n[a.name])) {
                         a.values[n[a.name]] = 0;
                     }
@@ -494,13 +495,13 @@ function summarizeNodeAttrs(nodes, attrs, nodeTypes) {
     }
 
     for (let a of attrs) {
-        if (a.type === 'scalar') {
-            let binGen = histogram()
-                .domain(extent(a.values))
-                .thresholds(10);
+        if (a.type === "scalar") {
+            let binGen = histogram().domain(extent(a.values)).thresholds(10);
             a.bins = binGen(a.values);
         } else {
-            a.bins = Object.keys(a.values).sort((x, y) => a.values[x] - a.values[y]).map(x => ({v: x, c: a.values[x]}));
+            a.bins = Object.keys(a.values)
+                .sort((x, y) => a.values[x] - a.values[y])
+                .map((x) => ({ v: x, c: a.values[x] }));
         }
     }
     console.log(attrs);
@@ -522,7 +523,7 @@ const reducers = produce((draft, action) => {
             draft.datasetId = action.data.datasetId;
             draft.graph = {
                 nodes: graph.nodes,
-                edges: graph.links,
+                edges: graph.links.map((e, i) => ({ ...e, eid: i })),
                 nodeTypes: countNodesByType(graph.nodes),
             };
             draft.focalGraphLayout = {};
@@ -543,20 +544,22 @@ const reducers = produce((draft, action) => {
             draft.latent = {
                 emb,
                 coords: coordsRescale(emb2d, draft.spec.latent.width, draft.spec.latent.height),
-                ...getAllNodeDistance(emb, draft.graph.edges),
+                // ...getAllNodeDistance(emb, draft.graph.edges),
+                edgeLen: getEdgeLengthLatent(emb, draft.graph.edges),
             };
-            let binGen = histogram()
-                .domain([0, 1])
-                .value((d) => d.d)
-                .thresholds(50);
-            draft.latent.distBinPresent = binGen(draft.latent.nodeDist.filter((d) => d.p));
-            draft.latent.distBinAbsent = binGen(draft.latent.nodeDist.filter((d) => !d.p));
-
-            // draft.latent.coords = runTSNE(draft.latent.distMat, draft.spec.latent);
+            let binGen = histogram().domain([0, 1]).thresholds(40);
+            draft.latent.edgeLenBins = binGen(draft.latent.edgeLen);
 
             draft.nodeAttrs = summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes);
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
+            draft.showEdges = draft.graph.edges
+                .filter(
+                    (e, i) =>
+                        draft.param.filter.edgeDistRange[0] <= e.d &&
+                        e.d <= draft.param.filter.edgeDistRange[1]
+                )
+                .sort((e1, e2) => e1.d - e2.d);
             return;
 
         case ACTION_TYPES.HIGHLIGHT_NODE_TYPE:
@@ -665,17 +668,10 @@ const reducers = produce((draft, action) => {
                 );
             }
 
-            // Deprecated
-            // const temp = countNeighborSets(draft.graph.neighborMasksByType, draft.selectedNodes);
-            // draft.neighborCounts = temp.allCounts;
-            // draft.neighborCountsMapping = temp.allCountsMapping;
-            // draft.neighborCountsByType = temp.countsByType;
-            // draft.neighborCountsBins = temp.bins;
-
-            draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
-                draft.latent.distMatrix,
-                draft.selectedNodes
-            );
+            // draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
+            //     draft.latent.distMatrix,
+            //     draft.selectedNodes
+            // );
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
             draft.isNodeSelectedNeighbor = {};
@@ -703,6 +699,46 @@ const reducers = produce((draft, action) => {
 
             draft.focalGraphLayout = callLocalLayoutFunc(draft);
             return;
+        case ACTION_TYPES.SELECT_EDGE:
+            if (draft.selectedEdge !== action.eid) {
+                draft.selectedEdge = action.eid;
+                if (action.eid !== null) {
+                    draft.selectedNodes = [
+                        draft.graph.edges[action.eid].source,
+                        draft.graph.edges[action.eid].target,
+                    ];
+                    draft.isNodeSelected = {};
+                    draft.isNodeSelected[draft.selectedNodes[0]] = true;
+                    draft.isNodeSelected[draft.selectedNodes[1]] = true;
+
+                    // TODO dup code
+                    draft.isNodeSelectedNeighbor = {};
+                    for (let nodeIdx of draft.selectedNodes) {
+                        for (let h = draft.param.hops - 1; h >= 0; h--) {
+                            const curNeigh = draft.graph.neigh[h][nodeIdx];
+                            for (let neighIdx of curNeigh.toArray()) {
+                                if (neighIdx !== nodeIdx) {
+                                    draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+                                }
+                            }
+                        }
+                    }
+
+                    const temp = countSelectedNeighborsByHop(
+                        draft.graph.neigh,
+                        draft.selectedNodes,
+                        draft.param.hops,
+                        draft.isNodeSelected,
+                        draft.isNodeSelectedNeighbor
+                    );
+                    draft.neighGrp = temp.neighGrp;
+                    draft.neighMap = temp.neighMap;
+                    draft.neighArr = temp.neighArr;
+
+                    draft.focalGraphLayout = callLocalLayoutFunc(draft);
+                }
+            }
+            return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
             if (
                 draft.selectedNodes.length > 0 &&
@@ -729,10 +765,31 @@ const reducers = produce((draft, action) => {
                 cur[lastParam] = action.value;
             }
 
+            // Special param changes
             if (action.param === "graph.layout") {
                 draft.graph.coords = callLayoutFunc(draft);
             } else if (action.param === "focalGraph.layout") {
                 draft.focalGraphLayout = callLocalLayoutFunc(draft);
+            } else if (action.param === "colorBy") {
+                if (action.value === "position") {
+                    draft.param.colorScale = null;
+                } else {
+                    const colorAttr = draft.nodeAttrs[action.value];
+                    const attrDomain = [colorAttr.bins[0].x0, colorAttr.bins[colorAttr.bins.length - 1].x1];
+                    const leftMargin = 0.2 * (attrDomain[1] - attrDomain[0]);
+                    draft.param.colorScale = scaleSequential(interpolateGreens).domain([
+                        attrDomain[0] - leftMargin,
+                        attrDomain[1],
+                    ]);
+                }
+            } else if (action.param === "filter.edgeDistRange") {
+                draft.showEdges = draft.graph.edges
+                    .filter(
+                        (e, i) =>
+                            action.value[0] <= draft.latent.edgeLen[i] &&
+                            draft.latent.edgeLen[i] <= action.value[1]
+                    )
+                    .sort((e1, e2) => e1.d - e2.d);
             }
             return;
         case ACTION_TYPES.CHANGE_HOPS:

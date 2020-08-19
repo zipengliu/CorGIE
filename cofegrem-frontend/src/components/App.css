@@ -205,7 +205,7 @@ rect.highlight-strip {
     stroke: none;
 }
 
-/* Filter view */
+/* node attr view */
 
 .histogram rect.bar {
     stroke: none;
@@ -219,4 +219,12 @@ rect.highlight-strip {
 
 .histogram .axis text {
     font-size: 10px;
+}
+
+.edge-list {
+    /* border: 1px solid grey; */
+    max-height: 400px;
+    max-width: 250px;
+    overflow: scroll;
+    font-size: 12px;
 }

@@ -16,12 +16,12 @@ export default function renderHistogram({bins, margins, histSize}) {
     const yTicks = yScale.ticks(5),
         yFormat = yScale.tickFormat(5, "s");
 
-    const svgWidth = margins.left + margins.right + histSize.width + 22;
-    const svgHeight = margins.left + margins.right + histSize.height + 10;
+    const svgWidth = margins.left + margins.right + histSize.width;
+    const svgHeight = margins.left + margins.right + histSize.height;
 
     return (
         <svg width={svgWidth} height={svgHeight}>
-            <g transform={`translate(${margins.left + 22},${margins.top})`} className="histogram">
+            <g transform={`translate(${margins.left},${margins.top})`} className="histogram">
                 {bins.map((bin, i) => (
                     <rect
                         className="bar"

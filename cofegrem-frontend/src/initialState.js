@@ -26,12 +26,15 @@ export default {
             counts: [0, 0, 0],
         },
     },
+    showEdges: [],
+    selectedEdge: null,
 
     param: {
         hops: 2,
         hopsHighlight: 1,
 
         colorBy: 'position',        // Could be "position" or index of nodeAttrs
+        colorScale: null,
 
         // neighborDistanceMetric: 'hamming',
         neighborDistanceMetric: "jaccard",
@@ -49,9 +52,8 @@ export default {
         },
 
         filter: {
-            presentEdges: true,
-            absentEdges: true,
             ascending: true,
+            edgeDistRange: [0.5, 0.6],
         },
     },
 
@@ -78,6 +80,7 @@ export default {
             height: 400,
             margins: { top: 10, bottom: 10, left: 10, right: 10 },
             histSize: { width: 200, height: 100 },
+            histMargins: { top: 10, bottom: 30, left: 30, right: 10 },
         },
         intersectionPlot: {
             margins: { top: 10, bottom: 10, left: 10, right: 10 },

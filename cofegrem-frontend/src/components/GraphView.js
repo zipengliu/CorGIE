@@ -36,7 +36,9 @@ class GraphView extends Component {
             neighMap,
             focalGraphLayout,
             edgeAttributes,
+            nodeAttrs,
         } = this.props;
+        const { colorBy, colorScale } = param;
         const layout = param.graph.layout;
         const focalLayout = param.focalGraph.layout;
         const { width, height, margins, edgeType, centralNodeSize, auxNodeSize } = spec.graph;
@@ -60,6 +62,19 @@ class GraphView extends Component {
         const markerScale = scaleLinear()
             .domain([0, selectedNodes.length + 1])
             .range([0, spec.graph.neighborMarkerMaxHeight]);
+
+        function getNodeColor(i) {
+            if (colorBy === "position") {
+                return getNodeEmbeddingColor(
+                    latentCoords[i].x / latentWidth,
+                    latentCoords[i].y / latentHeight
+                );
+            } else {
+                return nodes[i].hasOwnProperty(nodeAttrs[colorBy].name)
+                    ? colorScale(nodes[i][nodeAttrs[colorBy].name])
+                    : "grey";
+            }
+        }
 
         console.log("rendering graphs...");
 
@@ -131,12 +146,7 @@ class GraphView extends Component {
                                                     "hop-1": isNodeSelectedNeighbor[i] === 1,
                                                     "hop-2": isNodeSelectedNeighbor[i] === 2,
                                                 })}
-                                                style={{
-                                                    fill: getNodeEmbeddingColor(
-                                                        latentCoords[i].x / latentWidth,
-                                                        latentCoords[i].y / latentHeight
-                                                    ),
-                                                }}
+                                                style={{ fill: getNodeColor(i) }}
                                                 onMouseEnter={this.props.highlightNodes.bind(null, i)}
                                                 onMouseLeave={this.props.highlightNodes.bind(null, null)}
                                                 onClick={this.props.selectNodes.bind(null, i, null, true)}
@@ -237,12 +247,7 @@ class GraphView extends Component {
                                                     "hop-1": isNodeSelectedNeighbor[i] === 1,
                                                     "hop-2": isNodeSelectedNeighbor[i] === 2,
                                                 })}
-                                                style={{
-                                                    fill: getNodeEmbeddingColor(
-                                                        latentCoords[i].x / latentWidth,
-                                                        latentCoords[i].y / latentHeight
-                                                    ),
-                                                }}
+                                                style={{ fill: getNodeColor(i) }}
                                                 onMouseEnter={this.props.highlightNodes.bind(null, i)}
                                                 onMouseLeave={this.props.highlightNodes.bind(null, null)}
                                                 // onClick={this.props.selectNodes.bind(null, i, null, true)}

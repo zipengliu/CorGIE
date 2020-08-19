@@ -118,6 +118,15 @@ export function getAllNodeDistance(emb, edges) {
     return { nodeDist: d, distMatrix: m };
 }
 
+// Return the cosine distances of nodes that come with links
+export function getEdgeLengthLatent(emb, edges) {
+    const d = edges.map(e => getCosineDistance(emb[e.source], emb[e.target]));
+    for (let i = 0; i < edges.length; i++) {
+        edges[i].d = d[i];
+    }
+    return d;
+}
+
 export function getCosineDistance(u, v) {
     let p = 0,
         magU = 0,
