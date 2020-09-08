@@ -37,6 +37,7 @@ class GraphView extends Component {
             focalGraphLayout,
             edgeAttributes,
             nodeAttrs,
+            highlightNodeAttrs,
         } = this.props;
         const { colorBy, colorScale } = param;
         const layout = param.graph.layout;
@@ -45,6 +46,10 @@ class GraphView extends Component {
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
         const { coords, nodes, edges } = graph;
+
+        if (nodes.length > 5000) {
+            return <div />;
+        }
 
         const edgeTypes = edgeAttributes.type;
         const showAllEdges = edgeTypes.show[0] && edgeTypes.show[1] && edgeTypes.show[2];
@@ -219,6 +224,14 @@ class GraphView extends Component {
                                                 y2={focalGraphLayout.coords[e.target].y}
                                             />
                                         ))}
+                                    </g>
+                                    <g className="bounding-box">
+                                        {highlightNodeAttrs.map((h, i) =>
+                                            <g key={i}>
+                                                <text x={h.boundingBox.x} y={h.boundingBox.y - 10}>grp {i}</text>
+                                                <rect {...h.boundingBox} />
+                                            </g>
+                                        )}
                                     </g>
                                     {focalGraphLayout.groups && (
                                         <g className="groups">

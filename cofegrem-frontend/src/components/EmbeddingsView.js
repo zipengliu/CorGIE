@@ -44,12 +44,12 @@ class EmbeddingsView extends Component {
                 </h5>
 
                 <h6>UMAP 2D embeddings</h6>
-                <Form.Check
+                {/* <Form.Check
                     type="radio"
                     label="Color by position"
                     checked={colorBy === "position"}
                     onChange={this.props.changeParam.bind(null, "colorBy", "position", false)}
-                />
+                /> */}
                 <svg width={svgWidth} height={svgHeight}>
                     <g transform={`translate(${margins.left},${margins.top})`}>
                         <rect

@@ -2,115 +2,67 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Button } from "react-bootstrap";
-import { scaleLinear, max, scaleBand } from "d3";
-import { changeParam } from "../actions";
+import { changeParam, toggleHighlightNodesAttr } from "../actions";
+import Histogram from "./Histogram";
 
 class NodeAttrView extends Component {
     render() {
-        const { param, nodeAttrs } = this.props;
+        const { param, nodeAttrs, nodesToHighlight, highlightNodeAttrs } = this.props;
+        const histSpec = this.props.spec.histogram;
         const { colorBy } = param;
-
-        const { changeParam } = this.props;
-
-        function renderAttrFilter(a, idx) {
-            const h = 80,
-                w = 80,
-                margin = 15,
-                padding = 0.1,
-                n = a.bins.length;
-            let yScaleMax,
-                xScale,
-                yScale,
-                xTicks = [];
-            const xTickGap = n > 4 ? n / 4 : 1;
-            if (a.type === "scalar") {
-                yScaleMax = max(a.bins.map((b) => b.length));
-                xScale = scaleBand()
-                    .domain(a.bins.map((_, i) => i))
-                    .range([0, w])
-                    .round(true)
-                    .padding(padding);
-            } else {
-                yScaleMax = max(a.bins.map((b) => b.c));
-                xScale = scaleBand()
-                    .domain(a.bins.map((x) => x.v))
-                    .range([0, w])
-                    .round(true)
-                    .padding(padding);
-            }
-            yScale = scaleLinear().domain([0, yScaleMax]).range([0, h]);
-            const yTicks = yScale.ticks(3),
-                yFormat = yScale.tickFormat(3, "s");
-            let cur = 0;
-            while (cur < n) {
-                xTicks.push(cur);
-                cur += xTickGap;
-            }
-
-            return (
-                <div key={idx}>
-                    <div>
-                        <span style={{ marginRight: "10px" }}>{a.name}</span>
-                        <Form.Check
-                            inline
-                            type="radio"
-                            label="use for color"
-                            checked={colorBy === idx}
-                            onChange={changeParam.bind(null, "colorBy", idx, false)}
-                        />
-                    </div>
-                    <svg width={w + 2 * margin} height={h + 2 * margin} className="bar-charts">
-                        <g transform={`translate(${margin},${margin})`}>
-                            <g>
-                                {a.bins.map((b, i) =>
-                                    a.type === "scalar" ? (
-                                        <rect
-                                            className="bar"
-                                            key={i}
-                                            x={xScale(i)}
-                                            y={h - yScale(b.length)}
-                                            width={xScale.bandwidth()}
-                                            height={yScale(b.length)}
-                                        >
-                                            <title>
-                                                {a.name}: {b.x0}-{b.x1} count: {b.length}
-                                            </title>
-                                        </rect>
-                                    ) : (
-                                        <rect
-                                            className="bar"
-                                            key={i}
-                                            x={xScale(b.v)}
-                                            y={h - yScale(b.c)}
-                                            width={xScale.bandwidth()}
-                                            height={yScale(b.c)}
-                                            title="abc"
-                                        >
-                                            <title>
-                                                {a.name}: {b.v} count: {b.c}
-                                            </title>
-                                        </rect>
-                                    )
-                                )}
-                            </g>
-                            <g className="axis">
-                                <line x1={-2} y1={h} x2={-2} y2={0} />
-                                {yTicks.map((y, i) => (
-                                    <text key={i} x={-6} y={h - yScale(y)} textAnchor="end">
-                                        {yFormat(y)}
-                                    </text>
-                                ))}
-                            </g>
-                        </g>
-                    </svg>
-                </div>
-            );
-        }
+        const { changeParam, toggleHighlightNodesAttr } = this.props;
+        const hasHighlight = nodesToHighlight && nodesToHighlight.length > 0;
 
         return (
             <div id="node-attr-view" className="view">
                 <h5 className="text-center">Nodes</h5>
-                {nodeAttrs.map((a, i) => renderAttrFilter(a, i))}
+                <Button
+                    size="sm"
+                    variant={hasHighlight ? "primary" : "secondary"}
+                    disabled={!hasHighlight}
+                    onClick={toggleHighlightNodesAttr.bind(null, null)}
+                >
+                    Show attributes of highlighted nodes
+                </Button>
+                <div style={{ display: "flex" }}>
+                    <div className="histogram-column">
+                        <div>All</div>
+                        {nodeAttrs.map((a, i) => (
+                            <div key={i} className="histogram-block">
+                                <div className="title">{a.name}</div>
+                                {/* <Form.Check
+                            inline
+                            type="radio"
+                            label="use for color"
+                            checked={colorBy === i}
+                            onChange={changeParam.bind(null, "colorBy", i, false)}
+                        /> */}
+                                <Histogram bins={a.bins} spec={histSpec} />
+                            </div>
+                        ))}
+                    </div>
+                    {highlightNodeAttrs.map((h, k) => (
+                        <div key={k} className="histogram-column" style={{ border: "1px dotted grey" }}>
+                            <div
+                                className="histogram-close-btn"
+                                onClick={toggleHighlightNodesAttr.bind(null, k)}
+                            >
+                                x
+                            </div>
+                            <div>Highlight grp {k}</div>
+                            {h.attrs.map((a, i) => (
+                                <div key={i} className="histogram-block">
+                                    <div className="title"></div>
+                                    {a.values.length === 0 ? (
+                                        <div>N/A</div>
+                                    ) : (
+                                        <Histogram bins={a.bins} spec={histSpec} />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
@@ -120,6 +72,7 @@ const mapStateToProps = (state) => ({
     ...state,
 });
 
-const mapDispatchToProps = (dispatch) => bindActionCreators({ changeParam }, dispatch);
+const mapDispatchToProps = (dispatch) =>
+    bindActionCreators({ changeParam, toggleHighlightNodesAttr }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(NodeAttrView);

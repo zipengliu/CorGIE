@@ -180,7 +180,7 @@
 .bar-charts {
     font-size: 10px;
 }
-.bar-charts .axis line {
+.axis line {
     stroke: black;
     stroke-width: 1px;
 }
@@ -227,4 +227,43 @@ rect.highlight-strip {
     max-width: 250px;
     overflow: scroll;
     font-size: 12px;
+}
+
+.node-pair-distribution {
+    font-size: 10px;
+}
+.node-pair-distribution .dot {
+    color: grey;
+    opacity: 0.5;
+}
+
+.histogram-column {
+    margin: 10px;
+    position: relative;
+}
+.histogram-column .histogram-close-btn {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    background-color: #666;
+    color: white;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 0px 4px;
+}
+.histogram-block {
+    height: 160px;
+}
+.histogram-block .title {
+    height: 20px;
+}
+
+.bounding-box {
+    font: 10px;
+}
+.bounding-box rect {
+    stroke: #ccc;
+    stroke-width: 1px;
+    fill: blue;
+    fill-opacity: 0.3;
 }

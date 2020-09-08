@@ -119,6 +119,7 @@ export function getAllNodeDistance(emb, edges) {
 }
 
 // Return the cosine distances of nodes that come with links
+// Note that it will populate the computed value to the edge object
 export function getEdgeLengthLatent(emb, edges) {
     const d = edges.map(e => getCosineDistance(emb[e.source], emb[e.target]));
     for (let i = 0; i < edges.length; i++) {

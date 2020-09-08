@@ -15,6 +15,7 @@ const ACTION_TYPES = {
     CHANGE_HOPS: "CHANGE_HOPS",
     LAYOUT_TICK: "LAYOUT_TICK",
     CHANGE_EDGE_TYPE_STATE: "CHANGE_EDGE_TYPE_STATE",
+    TOGGLE_HIGHLIGHT_NODES_ATTR: "TOGGLE_HIGHLIGHT_NODES_ATTR",
 };
 export default ACTION_TYPES;
 
@@ -67,6 +68,10 @@ export function highlightNodeType(nodeTypeIdx) {
 
 export function highlightNodes(nodeIdx, selectionBox = null, appendMode = false, selectionBoxView = null) {
     return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIdx, selectionBox, selectionBoxView, appendMode };
+}
+
+export function toggleHighlightNodesAttr(delIdx = null) {
+    return { type: ACTION_TYPES.TOGGLE_HIGHLIGHT_NODES_ATTR, delIdx };
 }
 
 export function highlightNeighbors(nodes) {

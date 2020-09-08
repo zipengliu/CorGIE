@@ -1,5 +1,14 @@
 [
     {
+        "id": "coauthor-full",
+        "name": "Coauthorshp network",
+        "source": "xxx",
+        "numNodes": 69109,
+        "numEdges": 249613,
+        "numTypes": 1,
+        "desc": ""
+    },
+    {
         "id": "kinship-rotate",
         "name": "kinship dataset using RotatE model",
         "source": "xxx",
@@ -48,8 +57,8 @@
         "id": "tripartite-user-movie-genre-medium-1",
         "name": "tripartite network (user-movie) medium 1",
         "source": "IMDB Movie",
-        "numNodes": 7407,
-        "numEdges": 50000,
+        "numNodes": 269,
+        "numEdges": 861,
         "numTypes": 3,
         "desc": ""
     },

@@ -30,8 +30,8 @@ class AdjacencyMatrix extends Component {
             fullSvgHeight =
                 labelAreaSize +
                 selectedNodes.length * (rowHeight + gap) +
-                50 +
-                numNeighbors * (rowHeight + gap) +
+                // 50 +
+                // numNeighbors * (rowHeight + gap) +
                 margins.top +
                 margins.bottom;
 
@@ -228,7 +228,7 @@ class AdjacencyMatrix extends Component {
                                     </g>
 
                                     {/* cells of distance matrix */}
-                                    <g
+                                    {/* <g
                                         transform={`translate(0,${
                                             selectedNodes.length * (rowHeight + gap) + 20
                                         })`}
@@ -248,19 +248,6 @@ class AdjacencyMatrix extends Component {
                                                             neighMap[neighId2].mask,
                                                             neighborDistanceMetric
                                                         )
-                                                        // 1 - Math.abs(
-                                                        //     getNeighborDistance(
-                                                        //         neighMap[neighId].mask,
-                                                        //         neighMap[neighId2].mask,
-                                                        //         "hamming"
-                                                        //     ) /
-                                                        //         selectedNodes.length -
-                                                        //         getNeighborDistance(
-                                                        //             neighMap[neighId].mask,
-                                                        //             neighMap[neighId2].mask,
-                                                        //             "jaccard"
-                                                        //         )
-                                                        // )
                                                     ),
                                                 }}
                                                 onMouseEnter={this.props.highlightNeighbors.bind(null, [
@@ -270,13 +257,13 @@ class AdjacencyMatrix extends Component {
                                                 onMouseLeave={this.props.highlightNeighbors.bind(null, null)}
                                             />
                                         ))}
-                                    </g>
+                                    </g> */}
                                 </g>
                             ))}
                         </g>
 
                         {/* legends */}
-                        <g>
+                        {/* <g>
                             <text x={0} y={labelAreaSize + selectedNodes.length * (rowHeight + gap) + 10}>
                                 {neighborDistanceMetric} distances:
                             </text>
@@ -302,7 +289,7 @@ class AdjacencyMatrix extends Component {
                                     </text>
                                 </g>
                             ))}
-                        </g>
+                        </g> */}
                     </g>
                 </svg>
             </div>

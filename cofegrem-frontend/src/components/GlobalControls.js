@@ -1,14 +1,15 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form } from "react-bootstrap";
+import { Form, Dropdown, DropdownButton } from "react-bootstrap";
 import { highlightNodeType, changeSelectedNodeType, changeHops, changeParam } from "../actions";
 import NodeRep from "./NodeRep";
 
 export class GlobalControls extends Component {
     render() {
-        const { graph, selectedNodeType, centralNodeType, param } = this.props;
+        const { graph, selectedNodeType, centralNodeType, param, nodeAttrs } = this.props;
         const { nodes, edges, nodeTypes } = graph;
+        const { colorBy } = param;
 
         return (
             <div id="global-controls">
@@ -126,7 +127,28 @@ export class GlobalControls extends Component {
                         </Form>
                     </div>
 
-                    <div>test</div>
+                    <div style={{display: 'flex'}}>
+                        <div>Node color: </div>
+                        <Dropdown
+                            onSelect={(k) => {
+                                this.props.changeParam("colorBy", k, false);
+                            }}
+                        >
+                            <Dropdown.Toggle id="color-by-toggle-btn" size="sm">
+                                {colorBy === "position" ? "UMAP position" : nodeAttrs[colorBy].name}
+                            </Dropdown.Toggle>
+
+                            <Dropdown.Menu>
+                                <Dropdown.Item eventKey={"position"}>UMAP position</Dropdown.Item>
+                                <Dropdown.Divider />
+                                {nodeAttrs.map((a, i) => (
+                                    <Dropdown.Item key={i} eventKey={i}>
+                                        {a.name}
+                                    </Dropdown.Item>
+                                ))}
+                            </Dropdown.Menu>
+                        </Dropdown>
+                    </div>
                 </div>
             </div>
         );

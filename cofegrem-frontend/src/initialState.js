@@ -18,6 +18,10 @@ export default {
 
     powerSetLimit: 8,
 
+    nodeAttrs: null,        //  Attribute distributions for all nodes
+    highlightNodeAttrs: [],   // Attribute distributions for highlighted nodes
+    nodesToHighlight: [],
+
     edgeAttributes: {
         type: {
             type: "categorical",
@@ -108,6 +112,7 @@ export default {
         histogram: {
             margins: { top: 10, bottom: 30, left: 30, right: 10, betweenHist: 20 },
             height: 100,
+            width: 100,
             barWidth: 10,
             barGap: 2,
         },

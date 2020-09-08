@@ -13,6 +13,7 @@ import {
     computeLocalLayoutWithD3,
     computeLocalLayoutWithUMAP,
     computeSpaceFillingCurveLayout,
+    getNeighborDistance,
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
@@ -469,17 +470,21 @@ function callLocalLayoutFunc(state) {
     }
 }
 
-function summarizeNodeAttrs(nodes, attrs, nodeTypes) {
-    let res = [];
-    for (let a of attrs) {
+// Note that attrs will be changed by calling this function
+// attrs is an array of object that describes the attribute names and types
+function summarizeNodeAttrs(nodes, attrs, nodeTypes, included = null) {
+    let res = attrs.map((a) => ({ ...a }));
+    // Init
+    for (let a of res) {
         if (a.type === "scalar") {
             a.values = []; // The attribute values, used for compuing stats
         } else if (a.type === "categorical") {
             a.values = {}; // A mapping from value to count
         }
     }
-    for (let n of nodes) {
-        for (let a of attrs) {
+    // Count
+    function countValues(n) {
+        for (let a of res) {
             if (nodeTypes[n.typeId].name === a.nodeType) {
                 if (a.type === "scalar") {
                     n[a.name] = +n[a.name];
@@ -494,9 +499,19 @@ function summarizeNodeAttrs(nodes, attrs, nodeTypes) {
         }
     }
 
-    for (let a of attrs) {
+    if (included !== null) {
+        for (let nid of included) {
+            countValues(nodes[nid]);
+        }
+    } else {
+        for (let n of nodes) {
+            countValues(n);
+        }
+    }
+    // Binning
+    for (let a of res) {
         if (a.type === "scalar") {
-            let binGen = histogram().domain(extent(a.values)).thresholds(10);
+            let binGen = histogram().domain(extent(a.values)).thresholds(15);
             a.bins = binGen(a.values);
         } else {
             a.bins = Object.keys(a.values)
@@ -504,8 +519,38 @@ function summarizeNodeAttrs(nodes, attrs, nodeTypes) {
                 .map((x) => ({ v: x, c: a.values[x] }));
         }
     }
-    console.log(attrs);
-    return attrs;
+    return res;
+}
+
+function computeBoundingBox(coords, included) {
+    let xMin = 1e9,
+        xMax = 0,
+        yMin = 1e9,
+        yMax = 0;
+    const padding = 5;
+    for (let nid of included) {
+        const c = coords[nid];
+        xMin = Math.min(xMin, c.x);
+        xMax = Math.max(xMax, c.x);
+        yMin = Math.min(yMin, c.y);
+        yMax = Math.max(yMax, c.y);
+    }
+    return {
+        x: xMin - padding,
+        y: yMin - padding,
+        width: xMax - xMin + 2 * padding,
+        height: yMax - yMin + 2 * padding,
+    };
+}
+
+// Compute the distance between node pairs by comparing their neighbor sets
+function computeEdgeLengthTopo(edges, masks, distMetric) {
+    for (let e of edges) {
+        const m1 = masks[e.source],
+            m2 = masks[e.target];
+        e.dNei = getNeighborDistance(m1, m2, distMetric);
+    }
+    return;
 }
 
 const reducers = produce((draft, action) => {
@@ -540,6 +585,11 @@ const reducers = produce((draft, action) => {
             draft.graph.neighborMasks = draft.graph.neighborMasksByType.map((m) =>
                 m.reduce((acc, x) => acc.or(x), bs(0))
             );
+            computeEdgeLengthTopo(
+                draft.graph.edges,
+                draft.graph.neighborMasks,
+                draft.param.neighborDistanceMetric
+            );
 
             draft.latent = {
                 emb,
@@ -550,6 +600,7 @@ const reducers = produce((draft, action) => {
             let binGen = histogram().domain([0, 1]).thresholds(40);
             draft.latent.edgeLenBins = binGen(draft.latent.edgeLen);
 
+            draft.attrMeta = attrs;
             draft.nodeAttrs = summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes);
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
@@ -581,10 +632,10 @@ const reducers = produce((draft, action) => {
                     action.selectionBoxView === "embedding-view"
                         ? draft.latent.coords
                         : draft.focalGraphLayout.coords;
-                const nodesToHighlight = [];
+                draft.nodesToHighlight = [];
                 for (let i = 0; i < coords.length; i++) {
                     if (isPointInBox(coords[i], action.selectionBox)) {
-                        nodesToHighlight.push(i);
+                        draft.nodesToHighlight.push(i);
                         draft.isNodeHighlighted[i] = true;
                     }
                 }
@@ -593,7 +644,7 @@ const reducers = produce((draft, action) => {
                     draft.graph.neigh,
                     draft.param.hopsHighlight,
                     null,
-                    nodesToHighlight
+                    draft.nodesToHighlight
                 );
                 // Merge into draft.isNodeHighlighted
                 for (let neighId in neighToHighlight)
@@ -617,6 +668,30 @@ const reducers = produce((draft, action) => {
                 }
             }
             return;
+        case ACTION_TYPES.TOGGLE_HIGHLIGHT_NODES_ATTR:
+            if (action.delIdx !== null) {
+                if (draft.highlightNodeAttrs.length > action.delIdx) {
+                    draft.highlightNodeAttrs.splice(action.delIdx, 1);
+                }
+            } else {
+                if (draft.nodesToHighlight && draft.nodesToHighlight.length > 0) {
+                    draft.highlightNodeAttrs.push({
+                        nodes: draft.nodesToHighlight.slice(),
+                        boundingBox: computeBoundingBox(
+                            draft.focalGraphLayout.coords,
+                            draft.nodesToHighlight
+                        ),
+                        attrs: summarizeNodeAttrs(
+                            draft.graph.nodes,
+                            draft.attrMeta,
+                            draft.graph.nodeTypes,
+                            draft.nodesToHighlight
+                        ),
+                    });
+                }
+            }
+
+            return;
         case ACTION_TYPES.HIGHLIGHT_NEIGHBORS:
             draft.isNodeHighlighted = {};
             if (action.nodes) {
@@ -626,6 +701,10 @@ const reducers = produce((draft, action) => {
             }
             return;
         case ACTION_TYPES.SELECT_NODES:
+            // Clear the highlight nodes
+            draft.nodesToHighlight = [];
+            draft.isNodeHighlighted = {};
+
             if (action.selectionBox != null) {
                 if (!action.appendMode) {
                     draft.selectedNodes = [];
@@ -680,7 +759,14 @@ const reducers = produce((draft, action) => {
                     const curNeigh = draft.graph.neigh[h][nodeIdx];
                     for (let neighIdx of curNeigh.toArray()) {
                         if (neighIdx !== nodeIdx) {
-                            draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+                            if (draft.isNodeSelectedNeighbor.hasOwnProperty(neighIdx)) {
+                                draft.isNodeSelectedNeighbor[neighIdx] = Math.min(
+                                    draft.isNodeSelectedNeighbor[neighIdx],
+                                    h + 1
+                                );
+                            } else {
+                                draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+                            }
                         }
                     }
                 }
@@ -698,8 +784,18 @@ const reducers = produce((draft, action) => {
             draft.neighArr = temp.neighArr;
 
             draft.focalGraphLayout = callLocalLayoutFunc(draft);
+
+            // Update the bounding box for the highlight group TODO
+            for (let h of draft.highlightNodeAttrs) {
+                h.boundingBox = computeBoundingBox(draft.focalGraphLayout.coords, h.nodes);
+            }
+
             return;
         case ACTION_TYPES.SELECT_EDGE:
+            // Clear the highlight nodes
+            draft.nodesToHighlight = [];
+            draft.isNodeHighlighted = {};
+
             if (draft.selectedEdge !== action.eid) {
                 draft.selectedEdge = action.eid;
                 if (action.eid !== null) {
@@ -718,7 +814,14 @@ const reducers = produce((draft, action) => {
                             const curNeigh = draft.graph.neigh[h][nodeIdx];
                             for (let neighIdx of curNeigh.toArray()) {
                                 if (neighIdx !== nodeIdx) {
-                                    draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+                                    if (draft.isNodeSelectedNeighbor.hasOwnProperty(neighIdx)) {
+                                        draft.isNodeSelectedNeighbor[neighIdx] = Math.min(
+                                            draft.isNodeSelectedNeighbor[neighIdx],
+                                            h + 1
+                                        );
+                                    } else {
+                                        draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+                                    }
                                 }
                             }
                         }
@@ -736,6 +839,10 @@ const reducers = produce((draft, action) => {
                     draft.neighArr = temp.neighArr;
 
                     draft.focalGraphLayout = callLocalLayoutFunc(draft);
+                    // Update the bounding box for the highlight group TODO
+                    for (let h of draft.highlightNodeAttrs) {
+                        h.boundingBox = computeBoundingBox(draft.focalGraphLayout.coords, h.nodes);
+                    }
                 }
             }
             return;
