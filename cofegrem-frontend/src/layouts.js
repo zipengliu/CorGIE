@@ -121,7 +121,7 @@ export function getAllNodeDistance(emb, edges) {
 // Return the cosine distances of nodes that come with links
 // Note that it will populate the computed value to the edge object
 export function getEdgeLengthLatent(emb, edges) {
-    const d = edges.map(e => getCosineDistance(emb[e.source], emb[e.target]));
+    const d = edges.map((e) => getCosineDistance(emb[e.source], emb[e.target]));
     for (let i = 0; i < edges.length; i++) {
         edges[i].d = d[i];
     }
@@ -546,59 +546,53 @@ export function computeLocalLayoutWithUMAP(
     nodes,
     edges,
     hops,
+    selectedNodes,
     isNodeSelected,
     isNodeSelectedNeighbor,
     neighArr,
-    neighMap,
+    neighMap, // node connection signature: either global or local
     distMetric,
     spec
 ) {
-    let embeddings = [];
-    for (let i = 0; i < hops; i++) {
-        let r;
-        if (neighArr[i].length <= 15) {
-            // not enough data points
-            // use random embeddings
-            r = neighArr[i].map((_) => [Math.random(), Math.random()]);
+    const runUMAP = (nodeIdxArr) => {
+        if (nodeIdxArr.length < 15) {
+            // Not enough data to compute UMAP
+            return nodeIdxArr.map((_) => [Math.random(), Math.random()]);
         } else {
-            const data = neighArr[i].map((x) => [x]);
-            // Construct a local distanace matrix
-            // let m = new Array(neighArr[i].length);
-            // for (let j = 0; j < neighArr[i].length; j++) {
-            //     m[j] = new Array(neighArr[i].length);
-            // }
-            // for (let j = 0; j < neighArr[i].length; j++) {
-            //     for (let k = 0; k < j - 1; k++) {
-            //         m[k][j] = m[j][k];
-            //     }
-            //     m[j][j] = 0;
-            //     for (let k = j + 1; k < neighArr[i].length; k++) {
-            //         m[j][k] = getNeighborDistance(
-            //             neighMap[neighArr[i][j]].mask,
-            //             neighMap[neighArr[i][k]].mask,
-            //             distMetric
-            //         );
-            //     }
-            // }
-
-            console.log("Calling UMAP: ", data.length);
-            const distFunc = (x, y) =>
-                getNeighborDistance(neighMap[x[0]].mask, neighMap[y[0]].mask, distMetric);
-            // const distFunc = (x, y) => m[x[0]][y[0]];
+            console.log("Calling UMAP: ", nodeIdxArr.length);
+            const distFunc = (x, y) => getNeighborDistance(neighMap[x], neighMap[y], distMetric); // Global signature
+            // const distFunc = (x, y) => getNeighborDistance(neighMap[x[0]], neighMap[y[0]], distMetric); // Global signature
+            // getNeighborDistance(neighMap[x[0]].mask, neighMap[y[0]].mask, distMetric);   // Local signature
             const sim = new UMAP({ distanceFn: distFunc });
-            r = sim.fit(data);
+            // const trickyArr = nodeIdxArr.map((x) => [x]);
+            return sim.fit(nodeIdxArr);
         }
-        embeddings.push(r);
-    }
-    console.log({ embeddings });
+    };
 
-    // Resize the embeddings for the four different groups of nodes: selected, 1-hop, 2-hop, others
-    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 1000));
     const n = nodes.length;
-    const n1 = Object.keys(isNodeSelected).length,
+    const n1 = selectedNodes.length,
         n2 = neighArr[0].length,
         n3 = neighArr[1].length,
         n4 = n - n1 - n2 - n3;
+    let nodesByHop = [selectedNodes];
+    for (let i = 0; i < hops; i++) {
+        nodesByHop.push(neighArr[i]);
+    }
+    let others = [];
+    for (let nodeId = 0; nodeId < n; nodeId++)
+        if (!isNodeSelected[nodeId] && !isNodeSelectedNeighbor[nodeId]) {
+            others.push(nodeId);
+        }
+    nodesByHop.push(others);
+
+    let embeddings = nodesByHop.map((idxArr) => runUMAP(idxArr));
+    console.log({ embeddings });
+
+    // Embeddings of other nodes
+
+    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 1000));
+    // Resize the embeddings for the four different groups of nodes: selected, 1-hop, 2-hop, others
+    const weightedN = (n1 + n2 + n3) * 1.5 + 0.5 * n4;
     const nums = [n1, n2, n3, n4];
     const coords = new Array(n);
     const gap = 30;
@@ -606,50 +600,30 @@ export function computeLocalLayoutWithUMAP(
     let yOffset = gap;
     for (let i = 0; i < 4; i++) {
         // The allocated height for this group of nodes
-        const height = ((canvasSize - 4 * gap) / n) * nums[i];
+        let height = ((canvasSize - 4 * gap) / weightedN) * nums[i];
+        if (i < 3) {
+            height *= 1.5;
+        } else {
+            height *= 0.5;
+        }
         groups.push({
             bounds: { x: 0, y: yOffset - gap / 3, width: canvasSize, height: height + (gap / 3) * 2 },
         });
         let emb, xExtent, yExtent, xRange, yRange;
-        if (i === 0 || i === 3) {
-            // Assign a random embedding for now
-            // TODO
-        } else {
-            emb = embeddings[i - 1];
-            xExtent = extent(emb.map((e) => e[0]));
-            yExtent = extent(emb.map((e) => e[1]));
-            xRange = xExtent[1] - xExtent[0];
-            yRange = yExtent[1] - yExtent[0];
-            console.log({ i, xExtent, yExtent });
-        }
+        emb = embeddings[i];
+        xExtent = extent(emb.map((e) => e[0]));
+        yExtent = extent(emb.map((e) => e[1]));
+        xRange = xExtent[1] - xExtent[0];
+        yRange = yExtent[1] - yExtent[0];
+        console.log({ i, xExtent, yExtent });
 
         // Fit emb to the allocated space
-        if (i === 1 || i === 2) {
-            for (let j = 0; j < neighArr[i - 1].length; j++) {
-                const nodeId = neighArr[i - 1][j];
-                coords[nodeId] = {
-                    x: ((emb[j][0] - xExtent[0]) * canvasSize) / xRange,
-                    y: yOffset + ((emb[j][1] - yExtent[0]) * height) / yRange,
-                };
-            }
-        } else if (i === 0) {
-            for (let nodeId in isNodeSelected)
-                if (isNodeSelected.hasOwnProperty(nodeId)) {
-                    coords[nodeId] = {
-                        x: Math.random() * canvasSize,
-                        y: yOffset + Math.random() * height,
-                    };
-                }
-        } else {
-            // Other nodes
-            for (let nodeId = 0; nodeId < n; nodeId++) {
-                if (!isNodeSelected[nodeId] && !isNodeSelectedNeighbor[nodeId]) {
-                    coords[nodeId] = {
-                        x: Math.random() * canvasSize,
-                        y: yOffset + Math.random() * height,
-                    };
-                }
-            }
+        for (let j = 0; j < nodesByHop[i].length; j++) {
+            const nodeId = nodesByHop[i][j];
+            coords[nodeId] = {
+                x: ((emb[j][0] - xExtent[0]) * canvasSize) / xRange,
+                y: yOffset + ((emb[j][1] - yExtent[0]) * height) / yRange,
+            };
         }
         yOffset += height + gap;
     }

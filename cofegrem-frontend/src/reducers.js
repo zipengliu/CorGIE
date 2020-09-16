@@ -438,10 +438,12 @@ function callLocalLayoutFunc(state) {
                 state.graph.nodes,
                 state.graph.edges,
                 state.param.hops,
+                state.selectedNodes,
                 state.isNodeSelected,
                 state.isNodeSelectedNeighbor,
                 state.neighArr,
-                state.neighMap,
+                // state.neighMap,
+                state.graph.neigh[0],           // Use global signature 
                 state.param.neighborDistanceMetric,
                 state.spec.graph
             );

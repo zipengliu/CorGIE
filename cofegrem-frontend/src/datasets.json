@@ -1,5 +1,50 @@
 [
     {
+        "id": "coauthor-sample-100",
+        "name": "Coauthorshp network sample 100",
+        "source": "xxx",
+        "numNodes": 100,
+        "numEdges": 348,
+        "numTypes": 1,
+        "desc": ""
+    },
+    {
+        "id": "coauthor-sample-500",
+        "name": "Coauthorshp network sample 500",
+        "source": "xxx",
+        "numNodes": 500,
+        "numEdges": 2343,
+        "numTypes": 1,
+        "desc": ""
+    },
+    {
+        "id": "coauthor-sample-1000",
+        "name": "Coauthorshp network sample 1000",
+        "source": "xxx",
+        "numNodes": 1000,
+        "numEdges": 5494,
+        "numTypes": 1,
+        "desc": ""
+    },
+    {
+        "id": "coauthor-sample-5000",
+        "name": "Coauthorshp network sample 5000",
+        "source": "xxx",
+        "numNodes": 5000,
+        "numEdges": 27109,
+        "numTypes": 1,
+        "desc": ""
+    },
+    {
+        "id": "coauthor-sample-10000",
+        "name": "Coauthorshp network sample 10000",
+        "source": "xxx",
+        "numNodes": 10000,
+        "numEdges": 54348,
+        "numTypes": 1,
+        "desc": ""
+    },
+    {
         "id": "coauthor-full",
         "name": "Coauthorshp network",
         "source": "xxx",
