@@ -16,6 +16,7 @@ import {
 import { Layout as cola } from "webcola";
 import tSNE from "./tsne";
 import { UMAP } from "umap-js";
+import { selectNodes } from "./actions";
 
 const EPSILON = 1e-8;
 
@@ -570,10 +571,11 @@ export function computeLocalLayoutWithUMAP(
     };
 
     const n = nodes.length;
-    const n1 = selectedNodes.length,
+    const n1a = selectedNodes[0].length,
+        n1b = selectedNodes.length > 1 ? selectedNodes[1].length : 0,
         n2 = neighArr[0].length,
         n3 = neighArr[1].length,
-        n4 = n - n1 - n2 - n3;
+        n4 = n - n1a - n1b - n2 - n3;
     let nodesByHop = [selectedNodes];
     for (let i = 0; i < hops; i++) {
         nodesByHop.push(neighArr[i]);
@@ -585,49 +587,81 @@ export function computeLocalLayoutWithUMAP(
         }
     nodesByHop.push(others);
 
-    let embeddings = nodesByHop.map((idxArr) => runUMAP(idxArr));
+    let embeddings = [[runUMAP(selectedNodes[0])]];
+    if (selectedNodes.length > 1) {
+        embeddings[0].push(runUMAP(selectedNodes[1]));
+    }
+    for (let i = 1; i < nodesByHop.length; i++) {
+        embeddings.push(runUMAP(nodesByHop[i]));
+    }
     console.log({ embeddings });
 
     // Embeddings of other nodes
 
     const canvasSize = Math.ceil(Math.sqrt(nodes.length * 1000));
     // Resize the embeddings for the four different groups of nodes: selected, 1-hop, 2-hop, others
-    const weightedN = (n1 + n2 + n3) * 1.5 + 0.5 * n4;
-    const nums = [n1, n2, n3, n4];
+    const weightedN = (n1a + n1b + n2 + n3) * 1.5 + 0.5 * n4;
+    const nums = [n1a + n1b, n2, n3, n4];
     const coords = new Array(n);
     const gap = 30;
+    const selectedNodesSep = 40;
     let groups = [];
     let yOffset = gap;
+
+    // Rescale the UMAP embeddings to a width x height rectangular space
+    let rescale = (nodes, emb, width, height, xOffset, yOffset) => {
+        let xExtent, yExtent, xRange, yRange;
+
+        xExtent = extent(emb.map((e) => e[0]));
+        yExtent = extent(emb.map((e) => e[1]));
+        xRange = xExtent[1] - xExtent[0];
+        yRange = yExtent[1] - yExtent[0];
+        console.log({ nodes: nodes.slice(), xExtent, yExtent });
+        if (xRange < Number.EPSILON) {
+            xRange = 1;
+        }
+        if (yRange < Number.EPSILON) {
+            yRange = 1;
+        }
+        for (let j = 0; j < nodes.length; j++) {
+            const nodeId = nodes[j];
+            coords[nodeId] = {
+                x: xOffset + ((emb[j][0] - xExtent[0]) * width) / xRange,
+                y: yOffset + ((emb[j][1] - yExtent[0]) * height) / yRange,
+            };
+        }
+    };
+
     for (let i = 0; i < 4; i++) {
         // The allocated height for this group of nodes
-        let height = ((canvasSize - 4 * gap) / weightedN) * nums[i];
+        let height = ((canvasSize - 4 * gap) / weightedN) * nums[i],
+            width = canvasSize;
         if (i < 3) {
             height *= 1.5;
         } else {
             height *= 0.5;
         }
-        groups.push({
-            bounds: { x: 0, y: yOffset - gap / 3, width: canvasSize, height: height + (gap / 3) * 2 },
-        });
-        let emb, xExtent, yExtent, xRange, yRange;
-        emb = embeddings[i];
-        xExtent = extent(emb.map((e) => e[0]));
-        yExtent = extent(emb.map((e) => e[1]));
-        xRange = xExtent[1] - xExtent[0];
-        yRange = yExtent[1] - yExtent[0];
-        console.log({ i, xExtent, yExtent });
-
-        // Fit emb to the allocated space
-        for (let j = 0; j < nodesByHop[i].length; j++) {
-            const nodeId = nodesByHop[i][j];
-            coords[nodeId] = {
-                x: ((emb[j][0] - xExtent[0]) * canvasSize) / xRange,
-                y: yOffset + ((emb[j][1] - yExtent[0]) * height) / yRange,
-            };
+        const b = { x: 0, y: yOffset - gap / 3, width: canvasSize, height: height + (gap / 3) * 2 };
+        if (i == 0 && selectedNodes.length > 1) {
+            // Seperate the two selected groups
+            width = (canvasSize - selectedNodesSep) / 2;
+            groups.push({ bounds: { ...b, width } });
+            groups.push({ bounds: { ...b, x: width + selectedNodesSep, width } });
+        } else {
+            groups.push({ bounds: b });
+        }
+        if (i == 0) {
+            rescale(selectedNodes[0], embeddings[0][0], width, height, 0, yOffset);
+            if (selectedNodes.length > 1) {
+                rescale(selectedNodes[1], embeddings[0][1], width, height, width + selectedNodesSep, yOffset);
+            }
+        } else {
+            rescale(nodesByHop[i], embeddings[i], width, height, 0, yOffset);
         }
         yOffset += height + gap;
     }
-    console.log({ coords });
+    console.log("UMAP layout computed!");
+    console.log({ groups, coords });
 
     return {
         coords,

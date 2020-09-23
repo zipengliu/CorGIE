@@ -78,8 +78,8 @@ export function highlightNeighbors(nodes) {
     return { type: ACTION_TYPES.HIGHLIGHT_NEIGHBORS, nodes };
 }
 
-export function selectNodes(nodeIdx, selectionBox = null, appendMode = false) {
-    return { type: ACTION_TYPES.SELECT_NODES, nodeIdx, selectionBox, appendMode };
+export function selectNodes(nodeIdx, selectionBox = null, mode = 'CREATE') {
+    return { type: ACTION_TYPES.SELECT_NODES, nodeIdx, selectionBox, mode };
 }
 
 export function selectEdge(eid) {

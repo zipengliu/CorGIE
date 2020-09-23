@@ -188,6 +188,7 @@ function computeIntersections(neighborMasksByType, selectedNodes) {
     return intersections;
 }
 
+// TODO selectNodes is now an array of array fix this!!!
 // Count frequency of a neighbor presenting in the neighbor sets of the selected nodes
 // Return an array, each item in the array is an object with the node id and frequencies, sorted by node types.
 // Quadratic time to the number of nodes.  Potentially we can apply incremental changes and reduce computation
@@ -258,7 +259,11 @@ function countSelectedNeighborsByHop(
     let neighGrp = [],
         neighArr = [],
         neighMap = {};
-    let prevHopNodes = selectedNodes;
+    // Merge the selected nodes into an flat array
+    let prevHopNodes = [];
+    for (let g of selectedNodes) {
+        for (let id of g) prevHopNodes.push(id);
+    }
 
     for (let h = 0; h < hops; h++) {
         neighArr.push([]);
@@ -443,7 +448,7 @@ function callLocalLayoutFunc(state) {
                 state.isNodeSelectedNeighbor,
                 state.neighArr,
                 // state.neighMap,
-                state.graph.neigh[0],           // Use global signature 
+                state.graph.neigh[0], // Use global signature
                 state.param.neighborDistanceMetric,
                 state.spec.graph
             );
@@ -708,21 +713,24 @@ const reducers = produce((draft, action) => {
             draft.isNodeHighlighted = {};
 
             if (action.selectionBox != null) {
-                if (!action.appendMode) {
-                    draft.selectedNodes = [];
-                    draft.isNodeSelected = {};
-                }
+                let newSel = [];
                 for (let i = 0; i < draft.latent.coords.length; i++) {
                     const c = draft.latent.coords[i];
                     if (
                         draft.graph.nodes[i].typeId === draft.selectedNodeType &&
                         isPointInBox(c, action.selectionBox)
                     ) {
-                        draft.selectedNodes.push(i);
+                        newSel.push(i);
                         draft.isNodeSelected[i] = true;
                     }
                 }
+                if (action.mode === "CREATE") {
+                    draft.selectedNodes.push(newSel);
+                } else {
+                    // TODO append
+                }
             } else {
+                // Deprecated
                 if (draft.graph.nodes[action.nodeIdx].typeId !== draft.selectedNodeType) {
                     // If user wants to select a node that is not the selected node type, do nothing
                     return;
@@ -738,16 +746,16 @@ const reducers = produce((draft, action) => {
                     draft.isNodeSelected[action.nodeIdx] = true;
                 }
             }
-            draft.selectedCountsByType = countNeighborsByType(
-                draft.graph.neighborMasksByType,
-                draft.selectedNodes
-            );
-            if (draft.selectedNodes.length <= draft.powerSetLimit) {
-                draft.neighborIntersections = computeIntersections(
-                    draft.graph.neighborMasksByType,
-                    draft.selectedNodes
-                );
-            }
+            // draft.selectedCountsByType = countNeighborsByType(
+            //     draft.graph.neighborMasksByType,
+            //     draft.selectedNodes
+            // );
+            // if (draft.selectedNodes.length <= draft.powerSetLimit) {
+            //     draft.neighborIntersections = computeIntersections(
+            //         draft.graph.neighborMasksByType,
+            //         draft.selectedNodes
+            //     );
+            // }
 
             // draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
             //     draft.latent.distMatrix,
@@ -756,23 +764,24 @@ const reducers = produce((draft, action) => {
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
             draft.isNodeSelectedNeighbor = {};
-            for (let nodeIdx of draft.selectedNodes) {
-                for (let h = draft.param.hops - 1; h >= 0; h--) {
-                    const curNeigh = draft.graph.neigh[h][nodeIdx];
-                    for (let neighIdx of curNeigh.toArray()) {
-                        if (neighIdx !== nodeIdx) {
-                            if (draft.isNodeSelectedNeighbor.hasOwnProperty(neighIdx)) {
-                                draft.isNodeSelectedNeighbor[neighIdx] = Math.min(
-                                    draft.isNodeSelectedNeighbor[neighIdx],
-                                    h + 1
-                                );
-                            } else {
-                                draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+            for (let nodeIdx in draft.isNodeSelected)
+                if (draft.isNodeSelected.hasOwnProperty(nodeIdx) && draft.isNodeSelected[nodeIdx]) {
+                    for (let h = draft.param.hops - 1; h >= 0; h--) {
+                        const curNeigh = draft.graph.neigh[h][nodeIdx];
+                        for (let neighIdx of curNeigh.toArray()) {
+                            if (neighIdx !== nodeIdx) {
+                                if (draft.isNodeSelectedNeighbor.hasOwnProperty(neighIdx)) {
+                                    draft.isNodeSelectedNeighbor[neighIdx] = Math.min(
+                                        draft.isNodeSelectedNeighbor[neighIdx],
+                                        h + 1
+                                    );
+                                } else {
+                                    draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+                                }
                             }
                         }
                     }
                 }
-            }
 
             const temp = countSelectedNeighborsByHop(
                 draft.graph.neigh,
@@ -802,8 +811,8 @@ const reducers = produce((draft, action) => {
                 draft.selectedEdge = action.eid;
                 if (action.eid !== null) {
                     draft.selectedNodes = [
-                        draft.graph.edges[action.eid].source,
-                        draft.graph.edges[action.eid].target,
+                        [draft.graph.edges[action.eid].source],
+                        [draft.graph.edges[action.eid].target],
                     ];
                     draft.isNodeSelected = {};
                     draft.isNodeSelected[draft.selectedNodes[0]] = true;
@@ -811,7 +820,7 @@ const reducers = produce((draft, action) => {
 
                     // TODO dup code
                     draft.isNodeSelectedNeighbor = {};
-                    for (let nodeIdx of draft.selectedNodes) {
+                    for (let nodeIdx in draft.isNodeSelected) if (draft.isNodeSelected[nodeIdx]) {
                         for (let h = draft.param.hops - 1; h >= 0; h--) {
                             const curNeigh = draft.graph.neigh[h][nodeIdx];
                             for (let neighIdx of curNeigh.toArray()) {
@@ -853,6 +862,7 @@ const reducers = produce((draft, action) => {
                 draft.selectedNodes.length > 0 &&
                 draft.graph.nodes[draft.selectedNodes[0]].typeId !== action.idx
             ) {
+                // TODO don't remove!
                 // Remove the current selection
                 draft.selectedNodes = [];
                 draft.isNodeSelected = {};

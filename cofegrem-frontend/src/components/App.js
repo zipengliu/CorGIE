@@ -41,10 +41,10 @@ class App extends Component {
                     <EdgeAttrView />
                     <EmbeddingsView />
                     <GraphView />
-                    {numSelectedNodes > 0 && <AdjacencyMatrix />}
+                    {/* {numSelectedNodes > 0 && <AdjacencyMatrix />}
                     {numSelectedNodes > 1 && numSelectedNodes <= this.props.powerSetLimit && (
                         <PowerSetIntersectionView />
-                    )}
+                    )} */}
                 </div>
                 <DetailView />
             </div>

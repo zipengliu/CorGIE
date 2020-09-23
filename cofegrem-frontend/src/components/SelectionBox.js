@@ -37,7 +37,7 @@ class SelectionBox extends Component {
         const selectionBox = { ...this.state.selectionBox };
         const { appendMode } = this.state;
         this.setState(initState);
-        this.props.selectedFunc(null, selectionBox, appendMode, this.props.selectionBoxView);
+        this.props.selectedFunc(null, selectionBox, appendMode? 'APPEND': 'CREATE', this.props.selectionBoxView);
     }
 
     _onMouseMove(e) {

@@ -11,8 +11,8 @@ export default {
     centralNodeType: 0,
 
     selectedNodeType: 0,
-    selectedNodes: [],
-    isNodeSelected: {}, // Make sure the two data structures are in-sync
+    selectedNodes: [],      // Array of array
+    isNodeSelected: {},     // Dict for ALL selected nodes
     isNodeSelectedNeighbor: {},
     neighborIntersections: null,
 
