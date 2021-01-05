@@ -858,17 +858,17 @@ const reducers = produce((draft, action) => {
             }
             return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
-            if (
-                draft.selectedNodes.length > 0 &&
-                draft.graph.nodes[draft.selectedNodes[0]].typeId !== action.idx
-            ) {
-                // TODO don't remove!
-                // Remove the current selection
-                draft.selectedNodes = [];
-                draft.isNodeSelected = {};
-                draft.isNodeSelectedNeighbor = {};
-                draft.focalGraphLayout = {};
-            }
+            // if (
+            //     draft.selectedNodes.length > 0 &&
+            //     draft.graph.nodes[draft.selectedNodes[0]].typeId !== action.idx
+            // ) {
+            //     // TODO don't remove!
+            //     // Remove the current selection
+            //     draft.selectedNodes = [];
+            //     draft.isNodeSelected = {};
+            //     draft.isNodeSelectedNeighbor = {};
+            //     draft.focalGraphLayout = {};
+            // }
             draft.selectedNodeType = action.idx;
             return;
         case ACTION_TYPES.CHANGE_PARAM:

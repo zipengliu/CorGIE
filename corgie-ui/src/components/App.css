@@ -65,8 +65,8 @@
 }
 
 .node-group {
-    stroke: pink;
-    stroke-width: 1px;
+    stroke: red;
+    stroke-width: 6px;
     fill: #ddd;
     fill-opacity: 0.3;
 }
