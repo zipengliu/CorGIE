@@ -34,7 +34,7 @@ export default {
     selectedEdge: null,
 
     param: {
-        hops: 2,
+        hops: 1,
         hopsHighlight: 1,
 
         colorBy: 'position',        // Could be "position" or index of nodeAttrs
@@ -116,5 +116,12 @@ export default {
             barWidth: 10,
             barGap: 2,
         },
+        feature: {
+            cellSize: 6,
+            cellGap: 1,
+            margins: { top: 10, bottom: 10, left: 10, right: 10 },
+            barcodeMaxWidth: 250,
+            barcodeHeight: 15,
+        }
     },
 };

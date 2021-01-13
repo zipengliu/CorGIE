@@ -27,9 +27,9 @@ export function fetchGraphData(homePath, datasetId) {
         dispatch(fetchDataPending());
 
         try {
-            let [graph, emb, emb2d, attrs] = [
+            let [graph, emb, emb2d, attrs, features] = [
                 await fetch(`${where}/graph.json`).then((r) => r.json()),
-                await fetch(`${where}/node-embedding.csv`)
+                await fetch(`${where}/node-embeddings.csv`)
                     .then((r) => r.text())
                     .then(csvParseRows),
                 await fetch(`${where}/umap.csv`)
@@ -41,9 +41,24 @@ export function fetchGraphData(homePath, datasetId) {
                     .catch(() => {
                         return []; // In case there is no meta data
                     }),
+                await fetch(`${where}/features.csv`)
+                    .then((r) => r.text())
+                    .then(csvParseRows)
+                    .then((d) => {
+                        if (isNaN(d[0][0])) {
+                            throw new Error();
+                        }
+                        // Check if integer or float
+                        const func = d[0][0] % 1 == 0? parseInt: parseFloat
+                        // Convert a 2D matrix of numbers
+                        return d.map(row => row.map(x => func(x)));
+                    })
+                    .catch(() => {
+                        return null; // In case there is no meta data
+                    }),
             ];
 
-            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs }));
+            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features }));
         } catch (e) {
             dispatch(fetchDataError(e));
         }

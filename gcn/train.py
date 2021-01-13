@@ -128,16 +128,27 @@ def main(args):
     print()
     acc, emb = evaluate(model, features, labels, test_mask)
     print("Test accuracy {:.2%}".format(acc))
+    print()
+    print('# Dimensions of embeddings: ', len(emb[0]))
 
     output_dir = '../data/' + args.dataset + '-gcn/'
-    np.savetxt(output_dir + 'node-embedding.csv', emb.numpy(), delimiter=',')    
-    json_data = nx.node_link_data(g.to_networkx())
+    np.savetxt(output_dir + 'node-embeddings.csv', emb.numpy(), delimiter=',', fmt='%.3f')    
+    nx_graph = g.to_networkx()
+    # for node in nx_graph.nodes():
+    #     node['features'] = features[node.id]
+    json_data = nx.node_link_data(nx_graph)
     json.dump(json_data, open(output_dir + 'graph.json', 'w'), allow_nan=False)
     
     umap_emb = UMAP().fit_transform(emb)
-    np.savetxt(output_dir + 'umap.csv', umap_emb, delimiter=',')
+    np.savetxt(output_dir + 'umap.csv', umap_emb, delimiter=',', fmt='%.3f')
 
-    np.savetxt(output_dir + 'features.csv', features.numpy(), delimiter=',', fmt='%.2f')
+    if args.dataset == 'cora' or args.dataset == 'citeseer':
+        def convert_to_binary(x):
+            return 1 if x > 0 else 0
+        bin_features = np.vectorize(convert_to_binary)(features.numpy())
+        np.savetxt(output_dir + 'features.csv', bin_features, delimiter=',', fmt='%d')
+    else:
+        np.savetxt(output_dir + 'features.csv', features.numpy(), delimiter=',', fmt='%.3f')
 
     np.savetxt(output_dir + 'true-labels.txt', labels.numpy(), delimiter=',', fmt='%d')
     pred_labels = predict(model, features)

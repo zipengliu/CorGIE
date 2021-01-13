@@ -17,7 +17,15 @@ import {
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
-import { histogram, extent, scaleSequential, interpolateGreens } from "d3";
+import {
+    histogram,
+    extent,
+    max,
+    scaleSequential,
+    interpolateGreens,
+    interpolateGreys,
+    scaleLinear,
+} from "d3";
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -518,8 +526,10 @@ function summarizeNodeAttrs(nodes, attrs, nodeTypes, included = null) {
     // Binning
     for (let a of res) {
         if (a.type === "scalar") {
-            let binGen = histogram().domain(extent(a.values)).thresholds(15);
-            a.bins = binGen(a.values);
+            const thresCnt = 10;
+            let s = scaleLinear().domain(extent(a.values)).nice(thresCnt);
+            a.binGen = histogram().domain(s.domain()).thresholds(s.ticks(thresCnt));
+            a.bins = a.binGen(a.values);
         } else {
             a.bins = Object.keys(a.values)
                 .sort((x, y) => a.values[x] - a.values[y])
@@ -560,6 +570,42 @@ function computeEdgeLengthTopo(edges, masks, distMetric) {
     return;
 }
 
+function aggregateBinaryFeatures(features, highlightNodes) {
+    const m = features[0].length;
+    const res = new Array(m).fill(0);
+    if (!highlightNodes) {
+        for (let f of features) {
+            for (let i = 0; i < m; i++) {
+                res[i] += f[i];
+            }
+        }
+    } else {
+        for (let nodeId of highlightNodes) {
+            for (let i = 0; i < m; i++) {
+                res[i] += features[nodeId][i];
+            }
+        }
+    }
+    return res;
+}
+
+function compressFeatureValues(values, maxWidth) {
+    const sortedVal = values.slice().sort((a, b) => b - a);
+    const n = values.length;
+    // Compression ratio
+    const r = Math.ceil(n / maxWidth);
+
+    const compValues = [];
+    for (let i = 0; i < n; i += r) {
+        let t = 0;
+        for (let j = i; j < n && j < i + r; j++) {
+            t += sortedVal[j];
+        }
+        compValues.push(t / r);
+    }
+    return compValues;
+}
+
 const reducers = produce((draft, action) => {
     switch (action.type) {
         case ACTION_TYPES.FETCH_DATA_PENDING:
@@ -571,13 +617,36 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
-            const { graph, emb, emb2d, attrs } = action.data;
+            const { graph, emb, emb2d, attrs, features } = action.data;
+            // the scalar values in emb are in string format, so convert them to float first
+            for (let e of emb) {
+                for (let i = 0; i < e.length; i++) {
+                    e[i] = parseFloat(e[i]);
+                }
+            }
             draft.datasetId = action.data.datasetId;
             draft.graph = {
                 nodes: graph.nodes,
                 edges: graph.links.map((e, i) => ({ ...e, eid: i })),
                 nodeTypes: countNodesByType(graph.nodes),
+                features,
             };
+            draft.featureVis = {
+                values: null, 
+            };
+            if (features && features[0][0] % 1 == 0) {
+                // is binary features
+                draft.featureVis.values = aggregateBinaryFeatures(features, null);
+                draft.featureVis.maxVal = max(draft.featureVis.values);
+                draft.featureVis.compValues = compressFeatureValues(
+                    draft.featureVis.values,
+                    draft.spec.feature.barcodeMaxWidth
+                );
+                draft.featureVis.scale = scaleSequential(interpolateGreys).domain([
+                    0,
+                    draft.featureVis.maxVal,
+                ]);
+            }
             draft.focalGraphLayout = {};
             populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
             mapColorToNodeType(draft.graph.nodeTypes);
@@ -601,11 +670,12 @@ const reducers = produce((draft, action) => {
             draft.latent = {
                 emb,
                 coords: coordsRescale(emb2d, draft.spec.latent.width, draft.spec.latent.height),
-                // ...getAllNodeDistance(emb, draft.graph.edges),
+                ...getAllNodeDistance(emb, draft.graph.edges),
                 edgeLen: getEdgeLengthLatent(emb, draft.graph.edges),
+                binGen: histogram().domain([0, 1]).thresholds(40),
             };
-            let binGen = histogram().domain([0, 1]).thresholds(40);
-            draft.latent.edgeLenBins = binGen(draft.latent.edgeLen);
+            draft.latent.edgeLenBins = draft.latent.binGen(draft.latent.edgeLen);
+            draft.latent.allDistBins = draft.latent.binGen(draft.latent.distArr.map((x) => x.d));
 
             draft.attrMeta = attrs;
             draft.nodeAttrs = summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes);
@@ -672,6 +742,7 @@ const reducers = produce((draft, action) => {
                         null
                     );
                     draft.isNodeHighlighted[action.nodeIdx] = true;
+                    draft.nodesToHighlight = [action.nodeIdx];
                 }
             }
             return;
@@ -820,23 +891,24 @@ const reducers = produce((draft, action) => {
 
                     // TODO dup code
                     draft.isNodeSelectedNeighbor = {};
-                    for (let nodeIdx in draft.isNodeSelected) if (draft.isNodeSelected[nodeIdx]) {
-                        for (let h = draft.param.hops - 1; h >= 0; h--) {
-                            const curNeigh = draft.graph.neigh[h][nodeIdx];
-                            for (let neighIdx of curNeigh.toArray()) {
-                                if (neighIdx !== nodeIdx) {
-                                    if (draft.isNodeSelectedNeighbor.hasOwnProperty(neighIdx)) {
-                                        draft.isNodeSelectedNeighbor[neighIdx] = Math.min(
-                                            draft.isNodeSelectedNeighbor[neighIdx],
-                                            h + 1
-                                        );
-                                    } else {
-                                        draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+                    for (let nodeIdx in draft.isNodeSelected)
+                        if (draft.isNodeSelected[nodeIdx]) {
+                            for (let h = draft.param.hops - 1; h >= 0; h--) {
+                                const curNeigh = draft.graph.neigh[h][nodeIdx];
+                                for (let neighIdx of curNeigh.toArray()) {
+                                    if (neighIdx !== nodeIdx) {
+                                        if (draft.isNodeSelectedNeighbor.hasOwnProperty(neighIdx)) {
+                                            draft.isNodeSelectedNeighbor[neighIdx] = Math.min(
+                                                draft.isNodeSelectedNeighbor[neighIdx],
+                                                h + 1
+                                            );
+                                        } else {
+                                            draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
                     const temp = countSelectedNeighborsByHop(
                         draft.graph.neigh,

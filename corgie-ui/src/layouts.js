@@ -92,7 +92,7 @@ export function getDistanceMatrixFromEmbeddings(emb) {
 
 export function getAllNodeDistance(emb, edges) {
     let f = [];
-    console.log(emb.length);
+    console.log('Getting distances of all node pairs...', emb.length);
     for (let i = 0; i < emb.length; i++) {
         f.push(new Array(emb.length).fill(false));
     }
@@ -116,7 +116,7 @@ export function getAllNodeDistance(emb, edges) {
         }
         m[i][i] = 0;
     }
-    return { nodeDist: d, distMatrix: m };
+    return { distArr: d, distMatrix: m };
 }
 
 // Return the cosine distances of nodes that come with links

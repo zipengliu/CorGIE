@@ -13,6 +13,7 @@ export class EdgeAttrView extends Component {
         const { edges } = this.props.graph;
         const spec = this.props.spec.histogram;
         const { margins } = spec;
+        const marginTop = margins.top + 10;
         const w = 200,
             h = 200;
         const xScale = scaleLinear().domain([0, 1]).range([0, w]);
@@ -26,9 +27,9 @@ export class EdgeAttrView extends Component {
             <svg
                 className="node-pair-distribution"
                 width={w + margins.left + margins.right}
-                height={h + margins.top + margins.bottom}
+                height={h + marginTop + margins.bottom + 15}
             >
-                <g transform={`translate(${margins.left},${margins.top})`}>
+                <g transform={`translate(${margins.left},${marginTop})`}>
                     <g>
                         {edges.map((e, i) => (
                             <circle key={i} className="dot" r={2} cx={xScale(e.d)} cy={h - yScale(e.dNei)} />
@@ -42,6 +43,9 @@ export class EdgeAttrView extends Component {
                                 {x}
                             </text>
                         ))}
+                        <text x={w + margins.left} y={20} textAnchor="end">
+                            Cosine distance in latent space
+                        </text>
                     </g>
                     <g className="axis">
                         <line x1={-2} y1={h} x2={-2} y2={0} />
@@ -50,6 +54,9 @@ export class EdgeAttrView extends Component {
                                 {yFormat(y)}
                             </text>
                         ))}
+                        <text x={5} y={-5}>
+                            Jaccard distance of neighbor sets
+                        </text>
                     </g>
                 </g>
             </svg>
@@ -67,12 +74,13 @@ export class EdgeAttrView extends Component {
             showEdges,
             selectedEdge,
         } = this.props;
-        const histSpec = {...spec.histogram, width: 200};
-        const { edges } = graph;
+        const histSpec = { ...spec.histogram, width: 200 };
+        const { nodes } = graph;
         const { edgeLenBins, edgeLen } = latent;
         const { filter } = param;
         const { edgeDistRange } = filter;
         const edgeTypes = edgeAttributes.type;
+        const labelOrId = nodes && nodes[0].label? 'label': 'id';
         return (
             <div id="edge-attr-view" className="view">
                 <h5 className="text-center">Node pairs</h5>
@@ -81,7 +89,13 @@ export class EdgeAttrView extends Component {
                         Distances in latent space <br />
                         (connected node pairs)
                     </div>
-                    <Histogram bins={edgeLenBins} spec={histSpec} xDomain={[0, 1]} />
+                    <Histogram
+                        bins={edgeLenBins}
+                        spec={histSpec}
+                        xDomain={[0, 1]}
+                        xLabel={"Cosine distance in latent space"}
+                        yLabel={"#node pairs"}
+                    />
                     <div
                         style={{
                             width: histSpec.width,
@@ -128,13 +142,16 @@ export class EdgeAttrView extends Component {
                                 active={selectedEdge === e.eid}
                                 onClick={this.props.selectEdge.bind(null, e.eid)}
                             >
-                                {graph.nodes[e.source].label} - {graph.nodes[e.target].label} (w=
-                                {e.weight})
+                                {graph.nodes[e.source][labelOrId]} - {graph.nodes[e.target][labelOrId]} {e.weight? `(w=
+                                ${e.weight})`: ''}
                             </ListGroup.Item>
                         ))}
                     </ListGroup>
                 </div>
+                <div style={{marginTop: '10px'}}>
+                    <h6>Distance in graph topology vs. latent space</h6>
                 {this.renderScatterplot()}
+                </div>
                 {/* <Form
                     onSubmit={() => {
                         console.log("submitted.");

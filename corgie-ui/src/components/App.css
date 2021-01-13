@@ -220,6 +220,13 @@ rect.highlight-strip {
 .histogram .axis text {
     font-size: 10px;
 }
+.histogram .axis .value-marker line {
+    stroke: red;
+    stroke-width: 1px;
+}
+.histogram .axis .value-marker text {
+    fill: red;
+}
 
 .edge-list {
     /* border: 1px solid grey; */
@@ -235,6 +242,20 @@ rect.highlight-strip {
 .node-pair-distribution .dot {
     color: grey;
     opacity: 0.5;
+}
+
+.feature-matrix rect.cell {
+    border: none;
+}
+.feature-matrix .legend rect {
+    border: none;
+}
+.feature-matrix {
+    font-size: 12px;
+}
+
+.feature-barcode line {
+    stroke-width: 1px;
 }
 
 .histogram-column {
