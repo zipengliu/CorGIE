@@ -34,7 +34,7 @@ export default {
     selectedEdge: null,
 
     param: {
-        hops: 1,
+        hops: 2,
         hopsHighlight: 1,
 
         colorBy: 'position',        // Could be "position" or index of nodeAttrs

@@ -74,61 +74,6 @@ function avoidOverlap(coords, r) {
     return nodes.map((d) => ({ x: d.x, y: d.y }));
 }
 
-export function getDistanceMatrixFromEmbeddings(emb) {
-    let d = [];
-    for (let i = 0; i < emb.length; i++) {
-        let cur = [];
-        for (let j = 0; j < i; j++) {
-            cur.push(d[j][i]);
-        }
-        cur.push(0);
-        for (let j = i + 1; j < emb.length; j++) {
-            cur.push(getCosineDistance(emb[i], emb[j]));
-        }
-        d.push(cur);
-    }
-    return d;
-}
-
-export function getAllNodeDistance(emb, edges) {
-    let f = [];
-    console.log('Getting distances of all node pairs...', emb.length);
-    for (let i = 0; i < emb.length; i++) {
-        f.push(new Array(emb.length).fill(false));
-    }
-    for (let e of edges) {
-        f[e.source][e.target] = true;
-        f[e.target][e.source] = true;
-    }
-
-    let d = [];
-    let m = [];
-    for (let i = 0; i < emb.length; i++) {
-        // Make sure i < j to avoid duplicate computation
-        m.push(new Array(emb.length));
-        for (let j = i + 1; j < emb.length; j++) {
-            const cosD = getCosineDistance(emb[i], emb[j]);
-            d.push({ i, j, d: cosD, p: f[i][j] });
-            m[i][j] = cosD;
-        }
-        for (let j = 0; j < i; j++) {
-            m[i][j] = m[j][i];
-        }
-        m[i][i] = 0;
-    }
-    return { distArr: d, distMatrix: m };
-}
-
-// Return the cosine distances of nodes that come with links
-// Note that it will populate the computed value to the edge object
-export function getEdgeLengthLatent(emb, edges) {
-    const d = edges.map((e) => getCosineDistance(emb[e.source], emb[e.target]));
-    for (let i = 0; i < edges.length; i++) {
-        edges[i].d = d[i];
-    }
-    return d;
-}
-
 export function getCosineDistance(u, v) {
     let p = 0,
         magU = 0,
@@ -556,7 +501,7 @@ export function computeLocalLayoutWithUMAP(
     spec
 ) {
     const runUMAP = (nodeIdxArr) => {
-        if (nodeIdxArr.length < 15) {
+        if (nodeIdxArr.length < 15 || nodeIdxArr.length > 500) {
             // Not enough data to compute UMAP
             return nodeIdxArr.map((_) => [Math.random(), Math.random()]);
         } else {

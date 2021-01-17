@@ -76,11 +76,11 @@ export class EdgeAttrView extends Component {
         } = this.props;
         const histSpec = { ...spec.histogram, width: 200 };
         const { nodes } = graph;
-        const { edgeLenBins, edgeLen } = latent;
+        const { edgeLenBins, edgeLen, isComputing } = latent;
         const { filter } = param;
         const { edgeDistRange } = filter;
         const edgeTypes = edgeAttributes.type;
-        const labelOrId = nodes && nodes[0].label? 'label': 'id';
+        const labelOrId = nodes && nodes[0].label ? "label" : "id";
         return (
             <div id="edge-attr-view" className="view">
                 <h5 className="text-center">Node pairs</h5>
@@ -89,29 +89,35 @@ export class EdgeAttrView extends Component {
                         Distances in latent space <br />
                         (connected node pairs)
                     </div>
-                    <Histogram
-                        bins={edgeLenBins}
-                        spec={histSpec}
-                        xDomain={[0, 1]}
-                        xLabel={"Cosine distance in latent space"}
-                        yLabel={"#node pairs"}
-                    />
-                    <div
-                        style={{
-                            width: histSpec.width,
-                            marginLeft: histSpec.margins.left,
-                        }}
-                    >
-                        <Range
-                            value={edgeDistRange}
-                            min={0}
-                            max={1}
-                            step={0.05}
-                            onChange={(val) => {
-                                changeParam("filter.edgeDistRange", val);
-                            }}
-                        />
-                    </div>
+                    {isComputing ? (
+                        <div>Computing...</div>
+                    ) : (
+                        <div>
+                            <Histogram
+                                bins={edgeLenBins}
+                                spec={histSpec}
+                                xDomain={[0, 1]}
+                                xLabel={"Cosine distance in latent space"}
+                                yLabel={"#node pairs"}
+                            />
+                            <div
+                                style={{
+                                    width: histSpec.width,
+                                    marginLeft: histSpec.margins.left,
+                                }}
+                            >
+                                <Range
+                                    value={edgeDistRange}
+                                    min={0}
+                                    max={1}
+                                    step={0.05}
+                                    onChange={(val) => {
+                                        changeParam("filter.edgeDistRange", val);
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* <div>Show the following edges:</div> */}
@@ -142,15 +148,18 @@ export class EdgeAttrView extends Component {
                                 active={selectedEdge === e.eid}
                                 onClick={this.props.selectEdge.bind(null, e.eid)}
                             >
-                                {graph.nodes[e.source][labelOrId]} - {graph.nodes[e.target][labelOrId]} {e.weight? `(w=
-                                ${e.weight})`: ''}
+                                {graph.nodes[e.source][labelOrId]} - {graph.nodes[e.target][labelOrId]}{" "}
+                                {e.weight
+                                    ? `(w=
+                                ${e.weight})`
+                                    : ""}
                             </ListGroup.Item>
                         ))}
                     </ListGroup>
                 </div>
-                <div style={{marginTop: '10px'}}>
+                <div style={{ marginTop: "10px" }}>
                     <h6>Distance in graph topology vs. latent space</h6>
-                {this.renderScatterplot()}
+                    {this.renderScatterplot()}
                 </div>
                 {/* <Form
                     onSubmit={() => {

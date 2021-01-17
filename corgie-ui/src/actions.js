@@ -1,10 +1,16 @@
 import "whatwg-fetch";
 import { csvParseRows } from "d3-dsv";
 
+// eslint-disable-next-line import/no-webpack-loader-syntax
+import worker from 'workerize-loader!./worker'
+
+let workerInstance = new worker();
+
 const ACTION_TYPES = {
     FETCH_DATA_PENDING: "FETCH_DATA_PENDING",
     FETCH_DATA_SUCCESS: "FETCH_DATA_SUCCESS",
     FETCH_DATA_ERROR: "FETCH_DATA_ERROR",
+    COMPUTE_DISTANCES_DONE: "COMPUTE_DISTANCES_DONE",
     HIGHLIGHT_NODE_TYPE: "HIGHLIGHT_NODE_TYPE",
     HIGHLIGHT_NODES: "HIGHLIGHT_NODES",
     HIGHLIGHT_NEIGHBORS: "HIGHLIGHT_NEIGHBORS",
@@ -49,9 +55,9 @@ export function fetchGraphData(homePath, datasetId) {
                             throw new Error();
                         }
                         // Check if integer or float
-                        const func = d[0][0] % 1 == 0? parseInt: parseFloat
+                        const func = d[0][0] % 1 == 0 ? parseInt : parseFloat;
                         // Convert a 2D matrix of numbers
-                        return d.map(row => row.map(x => func(x)));
+                        return d.map((row) => row.map((x) => func(x)));
                     })
                     .catch(() => {
                         return null; // In case there is no meta data
@@ -59,6 +65,9 @@ export function fetchGraphData(homePath, datasetId) {
             ];
 
             dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features }));
+
+            let distData = await workerInstance.getDistancesOfAllPairs(emb, graph.links);
+            dispatch(computeDistancesDone(distData));
         } catch (e) {
             dispatch(fetchDataError(e));
         }
@@ -77,6 +86,10 @@ function fetchDataError(error) {
     return { type: ACTION_TYPES.FETCH_DATA_ERROR, error: error.toString() };
 }
 
+function computeDistancesDone(distData) {
+    return { type: ACTION_TYPES.COMPUTE_DISTANCES_DONE, distData };
+}
+
 export function highlightNodeType(nodeTypeIdx) {
     return { type: ACTION_TYPES.HIGHLIGHT_NODE_TYPE, nodeTypeIdx };
 }
@@ -93,7 +106,7 @@ export function highlightNeighbors(nodes) {
     return { type: ACTION_TYPES.HIGHLIGHT_NEIGHBORS, nodes };
 }
 
-export function selectNodes(nodeIdx, selectionBox = null, mode = 'CREATE') {
+export function selectNodes(nodeIdx, selectionBox = null, mode = "CREATE") {
     return { type: ACTION_TYPES.SELECT_NODES, nodeIdx, selectionBox, mode };
 }
 

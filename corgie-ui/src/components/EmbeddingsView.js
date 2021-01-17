@@ -32,7 +32,7 @@ class EmbeddingsView extends Component {
         const histSpec = { ...spec.histogram, width: 300 };
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
-        const { coords, emb } = latent;
+        const { coords, emb, isComputing } = latent;
         const { nodes, nodeTypes } = graph;
         const { colorBy, colorScale } = param;
 
@@ -115,29 +115,35 @@ class EmbeddingsView extends Component {
                     </g>
                 </svg>
 
-                <div>
-                    <h6 style={{ marginTop: "10px" }}>Distance distribution of ALL node pairs</h6>
-                    <Histogram
-                        bins={latent.allDistBins}
-                        spec={histSpec}
-                        xDomain={[0, 1]}
-                        xLabel="Cosine distance"
-                        yLabel="#node pairs"
-                        hVal={this.props.highlightDistSingle}
-                    />
-                </div>
-                {highlightDist.map((hd, i) => (
-                    <div key={i}>
-                        <h6>{hd.mode}</h6>
-                        <Histogram
-                            bins={hd.bins}
-                            spec={{ ...histSpec, height: histSpec.height / 2 }}
-                            xDomain={[0, 1]}
-                            xLabel="Cosine distance"
-                            yLabel="#node pairs"
-                        />
+                {isComputing ? (
+                    <div>Computing distances...</div>
+                ) : (
+                    <div>
+                        <div>
+                            <h6 style={{ marginTop: "10px" }}>Distance distribution of ALL node pairs</h6>
+                            <Histogram
+                                bins={latent.allDistBins}
+                                spec={histSpec}
+                                xDomain={[0, 1]}
+                                xLabel="Cosine distance"
+                                yLabel="#node pairs"
+                                hVal={this.props.highlightDistSingle}
+                            />
+                        </div>
+                        {highlightDist.map((hd, i) => (
+                            <div key={i}>
+                                <h6>{hd.mode}</h6>
+                                <Histogram
+                                    bins={hd.bins}
+                                    spec={{ ...histSpec, height: histSpec.height / 2 }}
+                                    xDomain={[0, 1]}
+                                    xLabel="Cosine distance"
+                                    yLabel="#node pairs"
+                                />
+                            </div>
+                        ))}
                     </div>
-                ))}
+                )}
             </div>
         );
     }
@@ -159,38 +165,40 @@ const mapStateToProps = (state) => {
     const highlightDist = [];
     let highlightDistSingle;
     const { selectedNodes } = state;
-    if (selectedNodes.length == 1 && selectedNodes[0].length > 1) {
-        const d = {
-            mode: "witin selected",
-            values: getIntraDistances(selectedNodes[0], state.latent.distMatrix),
-        };
-        d.bins = state.latent.binGen(d.values);
-        highlightDist.push(d);
-    } else if (selectedNodes.length > 1) {
-        for (let k = 0; k < selectedNodes.length; k++) {
-            if (selectedNodes[k].length > 1) {
-                const d = {
-                    mode: `within selected group ${k}`,
-                    values: getIntraDistances(selectedNodes[k], state.latent.distMatrix),
-                };
-                d.bins = state.latent.binGen(d.values);
-                highlightDist.push(d);
-            }
-        }
-        if (selectedNodes.length == 2) {
-            const n1 = selectedNodes[0].length,
-                n2 = selectedNodes[1].length;
-            if (n1 > 1 || n2 > 1) {
-                const d2 = { mode: "between two selected groups", values: [] };
-                for (let i = 0; i < n1; i++) {
-                    for (let j = 0; j < n2; j++) {
-                        d2.values.push(state.latent.distMatrix[selectedNodes[0][i]][selectedNodes[1][j]]);
-                    }
+    if (!state.latent.isComputing) {
+        if (selectedNodes.length == 1 && selectedNodes[0].length > 1) {
+            const d = {
+                mode: "witin selected",
+                values: getIntraDistances(selectedNodes[0], state.latent.distMatrix),
+            };
+            d.bins = state.latent.binGen(d.values);
+            highlightDist.push(d);
+        } else if (selectedNodes.length > 1) {
+            for (let k = 0; k < selectedNodes.length; k++) {
+                if (selectedNodes[k].length > 1) {
+                    const d = {
+                        mode: `within selected group ${k}`,
+                        values: getIntraDistances(selectedNodes[k], state.latent.distMatrix),
+                    };
+                    d.bins = state.latent.binGen(d.values);
+                    highlightDist.push(d);
                 }
-                d2.bins = state.latent.binGen(d2.values);
-                highlightDist.push(d2);
-            } else if (n1 == 1 && n2 == 1) {
-                highlightDistSingle = state.latent.distMatrix[selectedNodes[0][0]][selectedNodes[1][0]];
+            }
+            if (selectedNodes.length == 2) {
+                const n1 = selectedNodes[0].length,
+                    n2 = selectedNodes[1].length;
+                if (n1 > 1 || n2 > 1) {
+                    const d2 = { mode: "between two selected groups", values: [] };
+                    for (let i = 0; i < n1; i++) {
+                        for (let j = 0; j < n2; j++) {
+                            d2.values.push(state.latent.distMatrix[selectedNodes[0][i]][selectedNodes[1][j]]);
+                        }
+                    }
+                    d2.bins = state.latent.binGen(d2.values);
+                    highlightDist.push(d2);
+                } else if (n1 == 1 && n2 == 1) {
+                    highlightDistSingle = state.latent.distMatrix[selectedNodes[0][0]][selectedNodes[1][0]];
+                }
             }
         }
     }

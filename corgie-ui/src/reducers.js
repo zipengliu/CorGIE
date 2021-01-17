@@ -6,8 +6,6 @@ import {
     coordsRescale,
     computeCircularLayout,
     computeDummyLayout,
-    getAllNodeDistance,
-    getEdgeLengthLatent,
     computeForceLayoutWithCola,
     computeLocalLayoutWithCola,
     computeLocalLayoutWithD3,
@@ -26,6 +24,7 @@ import {
     interpolateGreys,
     scaleLinear,
 } from "d3";
+import { aggregateBinaryFeatures, compressFeatureValues } from "./utils";
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -570,42 +569,6 @@ function computeEdgeLengthTopo(edges, masks, distMetric) {
     return;
 }
 
-function aggregateBinaryFeatures(features, highlightNodes) {
-    const m = features[0].length;
-    const res = new Array(m).fill(0);
-    if (!highlightNodes) {
-        for (let f of features) {
-            for (let i = 0; i < m; i++) {
-                res[i] += f[i];
-            }
-        }
-    } else {
-        for (let nodeId of highlightNodes) {
-            for (let i = 0; i < m; i++) {
-                res[i] += features[nodeId][i];
-            }
-        }
-    }
-    return res;
-}
-
-function compressFeatureValues(values, maxWidth) {
-    const sortedVal = values.slice().sort((a, b) => b - a);
-    const n = values.length;
-    // Compression ratio
-    const r = Math.ceil(n / maxWidth);
-
-    const compValues = [];
-    for (let i = 0; i < n; i += r) {
-        let t = 0;
-        for (let j = i; j < n && j < i + r; j++) {
-            t += sortedVal[j];
-        }
-        compValues.push(t / r);
-    }
-    return compValues;
-}
-
 const reducers = produce((draft, action) => {
     switch (action.type) {
         case ACTION_TYPES.FETCH_DATA_PENDING:
@@ -632,7 +595,7 @@ const reducers = produce((draft, action) => {
                 features,
             };
             draft.featureVis = {
-                values: null, 
+                values: null,
             };
             if (features && features[0][0] % 1 == 0) {
                 // is binary features
@@ -670,12 +633,9 @@ const reducers = produce((draft, action) => {
             draft.latent = {
                 emb,
                 coords: coordsRescale(emb2d, draft.spec.latent.width, draft.spec.latent.height),
-                ...getAllNodeDistance(emb, draft.graph.edges),
-                edgeLen: getEdgeLengthLatent(emb, draft.graph.edges),
                 binGen: histogram().domain([0, 1]).thresholds(40),
+                isComputing: true,
             };
-            draft.latent.edgeLenBins = draft.latent.binGen(draft.latent.edgeLen);
-            draft.latent.allDistBins = draft.latent.binGen(draft.latent.distArr.map((x) => x.d));
 
             draft.attrMeta = attrs;
             draft.nodeAttrs = summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes);
@@ -683,11 +643,25 @@ const reducers = produce((draft, action) => {
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
             draft.showEdges = draft.graph.edges
                 .filter(
-                    (e, i) =>
+                    (e) =>
                         draft.param.filter.edgeDistRange[0] <= e.d &&
                         e.d <= draft.param.filter.edgeDistRange[1]
                 )
                 .sort((e1, e2) => e1.d - e2.d);
+            return;
+
+        case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
+            Object.assign(draft.latent, action.distData);
+            // Populate the edge length data to the graph.edges
+            for (let i = 0; i < draft.graph.edges.length; i++) {
+                draft.graph.edges[i].d = action.distData.edgeLen[i];
+            }
+            // Compute the histogram bins 
+            draft.latent.edgeLenBins = draft.latent.binGen(draft.latent.edgeLen);
+            draft.latent.allDistBins = draft.latent.binGen(draft.latent.distArray.map((x) => x.d));
+            
+            draft.latent.isComputing = false;
+
             return;
 
         case ACTION_TYPES.HIGHLIGHT_NODE_TYPE:
@@ -795,6 +769,8 @@ const reducers = produce((draft, action) => {
                         draft.isNodeSelected[i] = true;
                     }
                 }
+                console.log("Selecting a new group of nodes: ", newSel);
+                if (!newSel) return;
                 if (action.mode === "CREATE") {
                     draft.selectedNodes.push(newSel);
                 } else {
