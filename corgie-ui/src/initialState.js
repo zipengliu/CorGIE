@@ -16,6 +16,10 @@ export default {
     isNodeSelectedNeighbor: {},
     neighborIntersections: null,
 
+    focalGraphLayout: {
+        running: false,
+    },
+
     powerSetLimit: 8,
 
     nodeAttrs: null,        //  Attribute distributions for all nodes

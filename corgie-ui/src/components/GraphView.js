@@ -7,21 +7,18 @@ import { highlightNodes, selectNodes, changeParam, layoutTick } from "../actions
 import { max, scaleLinear } from "d3";
 import NodeRep from "./NodeRep";
 import SelectionBox from "./SelectionBox";
-import { getNodeEmbeddingColor } from "../layouts";
+import { getNodeEmbeddingColor } from "../utils";
 
 class GraphView extends Component {
-    // constructor(props) {
-    //     super(props);
-    // }
-    componentDidUpdate() {
-        const { focalGraphLayout } = this.props;
+    // componentDidUpdate() {
+    //     const { focalGraphLayout } = this.props;
 
-        if (focalGraphLayout.running) {
-            setTimeout(() => {
-                this.props.layoutTick();
-            }, 10);
-        }
-    }
+    //     if (focalGraphLayout.running) {
+    //         setTimeout(() => {
+    //             this.props.layoutTick();
+    //         }, 10);
+    //     }
+    // }
 
     render() {
         const {
@@ -179,7 +176,8 @@ class GraphView extends Component {
                         </svg>
                     </div>
 
-                    {focalGraphLayout.coords && (
+                    {focalGraphLayout.running && <div>Computing layouts for selected nodes...</div>}
+                    {focalGraphLayout.coords && !focalGraphLayout.running && (
                         <div>
                             <h6 className="text-center">Local graph</h6>
                             <div>
@@ -226,12 +224,14 @@ class GraphView extends Component {
                                         ))}
                                     </g>
                                     <g className="bounding-box">
-                                        {highlightNodeAttrs.map((h, i) =>
+                                        {highlightNodeAttrs.map((h, i) => (
                                             <g key={i}>
-                                                <text x={h.boundingBox.x} y={h.boundingBox.y - 10}>grp {i}</text>
+                                                <text x={h.boundingBox.x} y={h.boundingBox.y - 10}>
+                                                    grp {i}
+                                                </text>
                                                 <rect {...h.boundingBox} />
                                             </g>
-                                        )}
+                                        ))}
                                     </g>
                                     {focalGraphLayout.groups && (
                                         <g className="groups">
@@ -272,7 +272,7 @@ class GraphView extends Component {
                                             </g>
                                         ))}
                                     </g>
-                                    <text y={5}>#iterations: {focalGraphLayout.simulationTickNumber}</text>
+                                    {/* <text y={5}>#iterations: {focalGraphLayout.simulationTickNumber}</text> */}
 
                                     <SelectionBox
                                         width={focalGraphLayout.width}

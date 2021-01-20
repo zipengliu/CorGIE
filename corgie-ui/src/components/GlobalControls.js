@@ -1,13 +1,13 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form, Dropdown, DropdownButton } from "react-bootstrap";
-import { highlightNodeType, changeSelectedNodeType, changeHops, changeParam } from "../actions";
+import { Form, Dropdown, DropdownButton, Button } from "react-bootstrap";
+import { highlightNodeType, changeSelectedNodeType, changeHops, changeParam, selectNodes } from "../actions";
 import NodeRep from "./NodeRep";
 
 export class GlobalControls extends Component {
     render() {
-        const { graph, selectedNodeType, centralNodeType, param, nodeAttrs } = this.props;
+        const { graph, selectedNodeType, param, nodeAttrs, selectedNodes } = this.props;
         const { nodes, edges, nodeTypes } = graph;
         const { colorBy } = param;
 
@@ -19,28 +19,29 @@ export class GlobalControls extends Component {
                     </div>
                     {/* <div></div> */}
                     {/* <div># node types: {nodeTypes.length}</div> */}
-                    <div>
-                        <svg id="legends" width="200" height="70">
-                            <g transform="translate(10,10)">
-                                {nodeTypes.map((nt, i) => (
-                                    <g
-                                        key={i}
-                                        transform={`translate(${100 * i},0)`}
-                                        className="node"
-                                        onMouseEnter={this.props.highlightNodeType.bind(this, i)}
-                                        onMouseLeave={this.props.highlightNodeType.bind(this, null)}
-                                    >
-                                        <NodeRep
-                                            shape={i === 0 ? "triangle" : "circle"}
-                                            r={i === 0 ? 4 : 5}
-                                        />
-                                        <text x={10} y={4}>
-                                            {nt.name} ({nt.count})
-                                        </text>
-                                    </g>
-                                ))}
-                            </g>
-                            <g transform="translate(10,25)" className="node selected">
+                    {nodeTypes.length > 1 && (
+                        <div>
+                            <svg id="legends" width="200" height="70">
+                                <g transform="translate(10,10)">
+                                    {nodeTypes.map((nt, i) => (
+                                        <g
+                                            key={i}
+                                            transform={`translate(${100 * i},0)`}
+                                            className="node"
+                                            onMouseEnter={this.props.highlightNodeType.bind(this, i)}
+                                            onMouseLeave={this.props.highlightNodeType.bind(this, null)}
+                                        >
+                                            <NodeRep
+                                                shape={i === 0 ? "triangle" : "circle"}
+                                                r={i === 0 ? 4 : 5}
+                                            />
+                                            <text x={10} y={4}>
+                                                {nt.name} ({nt.count})
+                                            </text>
+                                        </g>
+                                    ))}
+                                </g>
+                                {/* <g transform="translate(10,25)" className="node selected">
                                 <NodeRep shape="triangle" r={4} />
                                 <g transform="translate(14,-1)">
                                     <NodeRep shape="circle" r={5} />
@@ -66,30 +67,33 @@ export class GlobalControls extends Component {
                                 <text x={22} y={4}>
                                     2-hop neighbor
                                 </text>
-                            </g>
-                        </svg>
-                    </div>
-                    <div>
-                        <Form inline>
-                            <Form.Group controlId="select-node-type">
-                                <Form.Label column="sm">Select node of type</Form.Label>
-                                <Form.Control
-                                    as="select"
-                                    size="sm"
-                                    value={selectedNodeType}
-                                    onChange={(e) => {
-                                        this.props.changeSelectedNodeType(e.target.value);
-                                    }}
-                                >
-                                    {nodeTypes.map((nt, i) => (
-                                        <option key={i} value={i}>
-                                            {nt.name}
-                                        </option>
-                                    ))}
-                                </Form.Control>
-                            </Form.Group>
-                        </Form>
-                    </div>
+                            </g> */}
+                            </svg>
+                        </div>
+                    )}
+                    {nodeTypes.length > 1 && (
+                        <div>
+                            <Form inline>
+                                <Form.Group controlId="select-node-type">
+                                    <Form.Label column="sm">Select node of type</Form.Label>
+                                    <Form.Control
+                                        as="select"
+                                        size="sm"
+                                        value={selectedNodeType}
+                                        onChange={(e) => {
+                                            this.props.changeSelectedNodeType(e.target.value);
+                                        }}
+                                    >
+                                        {nodeTypes.map((nt, i) => (
+                                            <option key={i} value={i}>
+                                                {nt.name}
+                                            </option>
+                                        ))}
+                                    </Form.Control>
+                                </Form.Group>
+                            </Form>
+                        </div>
+                    )}
 
                     <div>
                         <Form inline>
@@ -127,7 +131,7 @@ export class GlobalControls extends Component {
                         </Form>
                     </div>
 
-                    <div style={{display: 'flex'}}>
+                    <div style={{ display: "flex" }}>
                         <div>Node color: </div>
                         <Dropdown
                             onSelect={(k) => {
@@ -150,6 +154,29 @@ export class GlobalControls extends Component {
                         </Dropdown>
                     </div>
                 </div>
+                <div className="selection-info">
+                    {selectedNodes.map((g, i) => (
+                        <div className="selection-group" key={i}>
+                            Group #{i}: {g.length} {nodeTypes.length > 1 ? nodes[g[0]].type : ""} nodes
+                            <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={this.props.selectNodes.bind(null, "DELETE", null, i)}
+                            >
+                                del
+                            </Button>
+                        </div>
+                    ))}
+                    {selectedNodes.length > 0 && (
+                        <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={this.props.selectNodes.bind(null, "CLEAR", null, null)}
+                        >
+                            clear all
+                        </Button>
+                    )}
+                </div>
             </div>
         );
     }
@@ -166,6 +193,7 @@ const mapDispatchToProps = (dispatch) =>
             changeSelectedNodeType,
             changeHops,
             changeParam,
+            selectNodes,
         },
         dispatch
     );

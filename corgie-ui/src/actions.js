@@ -1,8 +1,9 @@
 import "whatwg-fetch";
 import { csvParseRows } from "d3-dsv";
+import { isPointInBox, getSelectedNeighbors } from "./utils";
 
 // eslint-disable-next-line import/no-webpack-loader-syntax
-import worker from 'workerize-loader!./worker'
+import worker from "workerize-loader!./worker";
 
 let workerInstance = new worker();
 
@@ -16,6 +17,8 @@ const ACTION_TYPES = {
     HIGHLIGHT_NEIGHBORS: "HIGHLIGHT_NEIGHBORS",
     CHANGE_SELECTED_NODE_TYPE: "CHANGE_SELECTED_NODE_TYPE",
     SELECT_NODES: "SELECT_NODES",
+    SELECT_NODES_PENDING: "SELECT_NODES_PENDING",
+    SELECT_NODES_DONE: "SELECT_NODES_DONE",
     SELECT_EDGE: "SELECT_EDGE",
     CHANGE_PARAM: "CHANGE_PARAM",
     CHANGE_HOPS: "CHANGE_HOPS",
@@ -106,8 +109,124 @@ export function highlightNeighbors(nodes) {
     return { type: ACTION_TYPES.HIGHLIGHT_NEIGHBORS, nodes };
 }
 
-export function selectNodes(nodeIdx, selectionBox = null, mode = "CREATE") {
-    return { type: ACTION_TYPES.SELECT_NODES, nodeIdx, selectionBox, mode };
+// Mode could be one of CREATE, APPEND, DELETE, or CLEAR
+export function selectNodes(mode, targetNodes, targetGroupIdx) {
+    // return { type: ACTION_TYPES.SELECT_NODES, nodeIdx, selectionBox, mode };
+    return async function (dispatch, getState) {
+        // Update state.selectedNodes before calling the layout in the worker
+        const state = getState();
+        const { selectedNodes } = state;
+        // Deep copy the selectedNodes to avoid side effects
+        let newSel = selectedNodes.map((x) => x.slice());
+
+        if (mode === "CREATE") {
+            // Create a new selection
+            newSel.push(targetNodes);
+        } else if (mode === "APPEND") {
+            // TODO append
+            console.assert(targetGroupIdx !== null);
+            newSel[targetGroupIdx] = newSel[targetGroupIdx].concat(targetGroupIdx);
+        } else if (mode === "DELETE") {
+            console.assert(targetGroupIdx !== null);
+            console.log("delete ", targetGroupIdx);
+            newSel.splice(targetGroupIdx, 1);
+        } else if (mode === "CLEAR") {
+            newSel = [];
+        } else {
+            console.error("action selectNodes encountered the wrong mode: ", mode);
+        }
+
+        const neighRes = getSelectedNeighbors(newSel, state.graph.neigh, state.param.hops);
+        dispatch(selectNodesPending(newSel, neighRes));
+
+        if (selectedNodes) {
+            const layoutRes = await callLocalLayoutFunc(
+                state.graph,
+                newSel,
+                neighRes,
+                state.param,
+                state.spec.graph
+            );
+            dispatch(selectNodesDone(layoutRes));
+        } else {
+            dispatch(selectNodesDone({}));
+        }
+    };
+}
+
+async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) {
+    console.log("Calling local layout function...");
+    // Compute the force layout for focal nodes (selected + k-hop neighbors)
+    if (selectedNodes.length === 0) {
+        return {};
+    } else {
+        // Serialize the bitset data structure to pass it to the web worker
+        const { neighMap } = neighRes;
+        let serializedNeighMap = {};
+        for (let id in neighMap)
+            if (neighMap.hasOwnProperty(id)) {
+                // TODO can use Unit8Array to compress it
+                serializedNeighMap[id] = neighMap[id].mask.toArray();
+            }
+
+        switch (param.focalGraph.layout) {
+            case "group-constraint-cola":
+                return await workerInstance.computeLocalLayoutWithCola(
+                    graph.nodes,
+                    graph.edges,
+                    param.hops,
+                    neighRes.isNodeSelected,
+                    neighRes.isNodeSelectedNeighbor,
+                    neighRes.neighGrp,
+                    serializedNeighMap,
+                    param.neighborDistanceMetric,
+                    spec.graph
+                );
+            case "umap":
+                return await workerInstance.computeLocalLayoutWithUMAP(
+                    graph.nodes,
+                    // graph.edges,
+                    param.hops,
+                    selectedNodes,
+                    neighRes.isNodeSelected,
+                    neighRes.isNodeSelectedNeighbor,
+                    neighRes.neighArr,
+                    // serializedNeighMap,   // Use local signature
+                    graph.neigh[0].map((x) => x.toArray()), // Use global signature
+                    param.neighborDistanceMetric,
+                    spec.graph
+                );
+            case "spiral":
+                return await workerInstance.computeSpaceFillingCurveLayout(
+                    graph.nodes,
+                    param.hops,
+                    neighRes.isNodeSelected,
+                    neighRes.isNodeSelectedNeighbor,
+                    neighRes.neighArr,
+                    serializedNeighMap,
+                    param.neighborDistanceMetric
+                );
+            default:
+                return await workerInstance.computeLocalLayoutWithD3(
+                    graph.nodes,
+                    graph.edges,
+                    param.hops,
+                    neighRes.isNodeSelected,
+                    neighRes.isNodeSelectedNeighbor,
+                    serializedNeighMap,
+                    param.neighborDistanceMetric,
+                    spec.graph
+                );
+        }
+    }
+}
+
+export function selectNodesPending(newSel, neighRes) {
+    return { type: ACTION_TYPES.SELECT_NODES_PENDING, newSel, neighRes };
+}
+
+export function selectNodesDone(layoutRes) {
+    return { type: ACTION_TYPES.SELECT_NODES_DONE, layoutRes };
 }
 
 export function selectEdge(eid) {

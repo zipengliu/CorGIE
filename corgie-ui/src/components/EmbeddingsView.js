@@ -6,7 +6,7 @@ import { Form } from "react-bootstrap";
 import { highlightNodes, selectNodes, changeParam } from "../actions";
 import SelectionBox from "./SelectionBox";
 import NodeRep from "./NodeRep";
-import { getNodeEmbeddingColor } from "../layouts";
+import { isPointInBox, getNodeEmbeddingColor } from "../utils";
 import Histogram from "./Histogram";
 
 class EmbeddingsView extends Component {
@@ -14,6 +14,21 @@ class EmbeddingsView extends Component {
     //     super(props);
     // }
     //
+
+    callSelectNodes(selectionBox) {
+        const { graph, selectedNodeType } = this.props;
+        const coords = this.props.latent.coords;
+        const targetNodes = [];
+        for (let i = 0; i < coords.length; i++) {
+            const c = coords[i];
+            if (graph.nodes[i].typeId === selectedNodeType && isPointInBox(c, selectionBox)) {
+                targetNodes.push(i);
+            }
+        }
+        if (targetNodes.length == 0) return;
+
+        this.props.selectNodes("CREATE", targetNodes, null);
+    }
 
     render() {
         // console.log('rendering EmbeddingView...');
@@ -111,7 +126,11 @@ class EmbeddingsView extends Component {
                                 </g>
                             ))}
                         </g>
-                        <SelectionBox width={width} height={height} selectedFunc={this.props.selectNodes} />
+                        <SelectionBox
+                            width={width}
+                            height={height}
+                            selectedFunc={this.callSelectNodes.bind(this)}
+                        />
                     </g>
                 </svg>
 

@@ -76,7 +76,7 @@ export class EdgeAttrView extends Component {
         } = this.props;
         const histSpec = { ...spec.histogram, width: 200 };
         const { nodes } = graph;
-        const { edgeLenBins, edgeLen, isComputing } = latent;
+        const { edgeLenBins, isComputing } = latent;
         const { filter } = param;
         const { edgeDistRange } = filter;
         const edgeTypes = edgeAttributes.type;

@@ -3,7 +3,6 @@ import initialState from "./initialState";
 import ACTION_TYPES, { highlightNodeType } from "./actions";
 import {
     computeForceLayoutWithD3,
-    coordsRescale,
     computeCircularLayout,
     computeDummyLayout,
     computeForceLayoutWithCola,
@@ -11,7 +10,6 @@ import {
     computeLocalLayoutWithD3,
     computeLocalLayoutWithUMAP,
     computeSpaceFillingCurveLayout,
-    getNeighborDistance,
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
@@ -24,7 +22,13 @@ import {
     interpolateGreys,
     scaleLinear,
 } from "d3";
-import { aggregateBinaryFeatures, compressFeatureValues } from "./utils";
+import {
+    aggregateBinaryFeatures,
+    compressFeatureValues,
+    coordsRescale,
+    getNeighborDistance,
+    isPointInBox,
+} from "./utils";
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -254,76 +258,16 @@ function countNeighborSets(neighborMasksByType, selectedNodes) {
     return { allCounts, allCountsMapping, bins: histos, countsByType };
 }
 
-function countSelectedNeighborsByHop(
-    neighborMasks,
-    selectedNodes,
-    hops,
-    isNodeSelected,
-    isNodeSelectedNeighbor
-) {
+function countSelectedNeighborsByHop(neighborMasks, selectedNodes, neighArr, neighMap) {
     if (selectedNodes.length === 0) return {};
 
-    let neighGrp = [],
-        neighArr = [],
-        neighMap = {};
+    let neighGrp = [];
     // Merge the selected nodes into an flat array
-    let prevHopNodes = [];
-    for (let g of selectedNodes) {
-        for (let id of g) prevHopNodes.push(id);
-    }
-
-    for (let h = 0; h < hops; h++) {
-        neighArr.push([]);
-    }
-    for (let nodeId in isNodeSelectedNeighbor)
-        if (isNodeSelectedNeighbor[nodeId] && !isNodeSelected[nodeId]) {
-            neighArr[isNodeSelectedNeighbor[nodeId] - 1].push(parseInt(nodeId));
-        }
+    let prevHopNodes = selectedNodes.flat();
 
     // iterate the masks for each hop
     let h = 0;
     for (let curHopNeigh of neighArr) {
-        // const curMasks = neighborMasks[h];
-        // compute a mask for the selected nodes
-        let prevHopNodesMask = bs(0);
-        for (let nodeId of prevHopNodes) {
-            prevHopNodesMask.set(nodeId, 1);
-        }
-
-        // Find out #connections to nodes in previous hop
-        for (let neighId of curHopNeigh) {
-            neighMap[neighId] = {
-                mask: neighborMasks[0][neighId].and(prevHopNodesMask),
-                h: h + 1,
-            };
-            neighMap[neighId].cnt = neighMap[neighId].mask.cardinality();
-        }
-
-        // for (let nodeId of prevHopNodes) {
-        //     const m = curMasks[nodeId].toArray();
-        //     for (let neighId of m) {
-        //         // Exclude the selected nodes
-        //         if (!isNodeSelected[neighId]) {
-        //             if (!neighMap.hasOwnProperty(neighId)) {
-        //                 curHopNeigh.push(neighId);
-        //                 neighMap[neighId] = {
-        //                     cnt: 0,
-        //                     mask: curMasks[neighId].and(prevHopNodesMask),
-        //                     h: h + 1,
-        //                 };
-        //             }
-        //             neighMap[neighId].cnt++;
-        //         }
-        //     }
-        // }
-
-        // Sort array by #conn
-        curHopNeigh.sort((a, b) => neighMap[b].cnt - neighMap[a].cnt);
-        // Populate the order of the node in that hop
-        for (let i = 0; i < curHopNeigh.length; i++) {
-            neighMap[curHopNeigh[i]].order = i;
-        }
-
         // Group the neighbors by frequency
         let idx = 0;
         let curGroups = [];
@@ -380,9 +324,9 @@ function countSelectedNeighborsByHop(
         h++;
     }
 
-    console.log({ neighMap, neighArr, neighGrp });
+    console.log({ neighGrp });
     // Note that cnts does not have info about hop
-    return { neighGrp, neighMap, neighArr };
+    return neighGrp;
 }
 
 function computeDistanceToCurrentFocus(distMatrix, focalNodes) {
@@ -399,12 +343,6 @@ function computeDistanceToCurrentFocus(distMatrix, focalNodes) {
     }
     console.log({ extent: extent(d) });
     return d;
-}
-
-function isPointInBox(p, box) {
-    const offX = p.x - box.x,
-        offY = p.y - box.y;
-    return 0 <= offX && offX <= box.width && 0 <= offY && offY <= box.height;
 }
 
 function callLayoutFunc(state) {
@@ -425,63 +363,6 @@ function callLayoutFunc(state) {
     state.spec.graph.height = layoutRes.height;
 
     return layoutRes.coords;
-}
-
-function callLocalLayoutFunc(state) {
-    console.log("Calling local layout function...");
-    // Compute the force layout for focal nodes (selected + k-hop neighbors)
-    if (state.selectedNodes.length === 0) {
-        return {};
-    } else {
-        if (state.param.focalGraph.layout === "group-constraint-cola") {
-            return computeLocalLayoutWithCola(
-                state.graph.nodes,
-                state.graph.edges,
-                state.param.hops,
-                state.isNodeSelected,
-                state.isNodeSelectedNeighbor,
-                state.neighGrp,
-                state.neighMap,
-                state.param.neighborDistanceMetric,
-                state.spec.graph
-            );
-        } else if (state.param.focalGraph.layout === "umap") {
-            return computeLocalLayoutWithUMAP(
-                state.graph.nodes,
-                state.graph.edges,
-                state.param.hops,
-                state.selectedNodes,
-                state.isNodeSelected,
-                state.isNodeSelectedNeighbor,
-                state.neighArr,
-                // state.neighMap,
-                state.graph.neigh[0], // Use global signature
-                state.param.neighborDistanceMetric,
-                state.spec.graph
-            );
-        } else if (state.param.focalGraph.layout === "spiral") {
-            return computeSpaceFillingCurveLayout(
-                state.graph.nodes,
-                state.param.hops,
-                state.isNodeSelected,
-                state.isNodeSelectedNeighbor,
-                state.neighArr,
-                state.neighMap,
-                state.param.neighborDistanceMetric
-            );
-        } else {
-            return computeLocalLayoutWithD3(
-                state.graph.nodes,
-                state.graph.edges,
-                state.param.hops,
-                state.isNodeSelected,
-                state.isNodeSelectedNeighbor,
-                state.neighMap,
-                state.param.neighborDistanceMetric,
-                state.spec.graph
-            );
-        }
-    }
 }
 
 // Note that attrs will be changed by calling this function
@@ -641,13 +522,6 @@ const reducers = produce((draft, action) => {
             draft.nodeAttrs = summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes);
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
-            draft.showEdges = draft.graph.edges
-                .filter(
-                    (e) =>
-                        draft.param.filter.edgeDistRange[0] <= e.d &&
-                        e.d <= draft.param.filter.edgeDistRange[1]
-                )
-                .sort((e1, e2) => e1.d - e2.d);
             return;
 
         case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
@@ -656,10 +530,17 @@ const reducers = produce((draft, action) => {
             for (let i = 0; i < draft.graph.edges.length; i++) {
                 draft.graph.edges[i].d = action.distData.edgeLen[i];
             }
-            // Compute the histogram bins 
+            draft.showEdges = draft.graph.edges
+                .filter(
+                    (e) =>
+                        draft.param.filter.edgeDistRange[0] <= e.d &&
+                        e.d <= draft.param.filter.edgeDistRange[1]
+                )
+                .sort((e1, e2) => e1.d - e2.d);
+            // Compute the histogram bins
             draft.latent.edgeLenBins = draft.latent.binGen(draft.latent.edgeLen);
             draft.latent.allDistBins = draft.latent.binGen(draft.latent.distArray.map((x) => x.d));
-            
+
             draft.latent.isComputing = false;
 
             return;
@@ -752,102 +633,45 @@ const reducers = produce((draft, action) => {
                 }
             }
             return;
-        case ACTION_TYPES.SELECT_NODES:
+        case ACTION_TYPES.SELECT_NODES_PENDING:
+            let { newSel, neighRes } = action;
+            draft.selectedNodes = newSel;
+            if (!newSel) {
+                // TODO Clear selection
+            } else {
+                draft.isNodeSelected = neighRes.isNodeSelected;
+                draft.isNodeSelectedNeighbor = neighRes.isNodeSelectedNeighbor;
+                draft.neighMap = neighRes.neighMap;
+                draft.neighArr = neighRes.neighArr;
+                // neighGrp is for the roll-up matrix of neighbor counts
+                draft.neighGrp = countSelectedNeighborsByHop(
+                    draft.graph.neigh,
+                    draft.selectedNodes,
+                    neighRes.neighArr,
+                    neighRes.neighMap
+                );
+            }
+
             // Clear the highlight nodes
+            // TODO determine what nodes to highlight
             draft.nodesToHighlight = [];
             draft.isNodeHighlighted = {};
 
-            if (action.selectionBox != null) {
-                let newSel = [];
-                for (let i = 0; i < draft.latent.coords.length; i++) {
-                    const c = draft.latent.coords[i];
-                    if (
-                        draft.graph.nodes[i].typeId === draft.selectedNodeType &&
-                        isPointInBox(c, action.selectionBox)
-                    ) {
-                        newSel.push(i);
-                        draft.isNodeSelected[i] = true;
-                    }
-                }
-                console.log("Selecting a new group of nodes: ", newSel);
-                if (!newSel) return;
-                if (action.mode === "CREATE") {
-                    draft.selectedNodes.push(newSel);
-                } else {
-                    // TODO append
-                }
-            } else {
-                // Deprecated
-                if (draft.graph.nodes[action.nodeIdx].typeId !== draft.selectedNodeType) {
-                    // If user wants to select a node that is not the selected node type, do nothing
-                    return;
-                }
-                if (draft.isNodeSelected[action.nodeIdx]) {
-                    // Deletion
-                    const p = draft.selectedNodes.indexOf(action.nodeIdx);
-                    draft.selectedNodes.splice(p, 1);
-                    draft.isNodeSelected[action.nodeIdx] = false;
-                } else {
-                    // Addition
-                    draft.selectedNodes.push(action.nodeIdx);
-                    draft.isNodeSelected[action.nodeIdx] = true;
-                }
-            }
-            // draft.selectedCountsByType = countNeighborsByType(
-            //     draft.graph.neighborMasksByType,
-            //     draft.selectedNodes
-            // );
-            // if (draft.selectedNodes.length <= draft.powerSetLimit) {
-            //     draft.neighborIntersections = computeIntersections(
-            //         draft.graph.neighborMasksByType,
-            //         draft.selectedNodes
-            //     );
-            // }
+            draft.focalGraphLayout.running = true;
 
             // draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
             //     draft.latent.distMatrix,
             //     draft.selectedNodes
             // );
-            // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
-            // The closest / smallest hop wins if it is neighbor of multiple selected nodes
-            draft.isNodeSelectedNeighbor = {};
-            for (let nodeIdx in draft.isNodeSelected)
-                if (draft.isNodeSelected.hasOwnProperty(nodeIdx) && draft.isNodeSelected[nodeIdx]) {
-                    for (let h = draft.param.hops - 1; h >= 0; h--) {
-                        const curNeigh = draft.graph.neigh[h][nodeIdx];
-                        for (let neighIdx of curNeigh.toArray()) {
-                            if (neighIdx !== nodeIdx) {
-                                if (draft.isNodeSelectedNeighbor.hasOwnProperty(neighIdx)) {
-                                    draft.isNodeSelectedNeighbor[neighIdx] = Math.min(
-                                        draft.isNodeSelectedNeighbor[neighIdx],
-                                        h + 1
-                                    );
-                                } else {
-                                    draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
-                                }
-                            }
-                        }
-                    }
-                }
-
-            const temp = countSelectedNeighborsByHop(
-                draft.graph.neigh,
-                draft.selectedNodes,
-                draft.param.hops,
-                draft.isNodeSelected,
-                draft.isNodeSelectedNeighbor
-            );
-            draft.neighGrp = temp.neighGrp;
-            draft.neighMap = temp.neighMap;
-            draft.neighArr = temp.neighArr;
-
-            draft.focalGraphLayout = callLocalLayoutFunc(draft);
 
             // Update the bounding box for the highlight group TODO
-            for (let h of draft.highlightNodeAttrs) {
-                h.boundingBox = computeBoundingBox(draft.focalGraphLayout.coords, h.nodes);
-            }
+            // for (let h of draft.highlightNodeAttrs) {
+            //     h.boundingBox = computeBoundingBox(draft.focalGraphLayout.coords, h.nodes);
+            // }
 
+            return;
+        case ACTION_TYPES.SELECT_NODES_DONE:
+            draft.focalGraphLayout = { ...action.layoutRes, running: false };
             return;
         case ACTION_TYPES.SELECT_EDGE:
             // Clear the highlight nodes
@@ -897,7 +721,7 @@ const reducers = produce((draft, action) => {
                     draft.neighMap = temp.neighMap;
                     draft.neighArr = temp.neighArr;
 
-                    draft.focalGraphLayout = callLocalLayoutFunc(draft);
+                    // draft.focalGraphLayout = callLocalLayoutFunc(draft);
                     // Update the bounding box for the highlight group TODO
                     for (let h of draft.highlightNodeAttrs) {
                         h.boundingBox = computeBoundingBox(draft.focalGraphLayout.coords, h.nodes);
@@ -906,17 +730,6 @@ const reducers = produce((draft, action) => {
             }
             return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
-            // if (
-            //     draft.selectedNodes.length > 0 &&
-            //     draft.graph.nodes[draft.selectedNodes[0]].typeId !== action.idx
-            // ) {
-            //     // TODO don't remove!
-            //     // Remove the current selection
-            //     draft.selectedNodes = [];
-            //     draft.isNodeSelected = {};
-            //     draft.isNodeSelectedNeighbor = {};
-            //     draft.focalGraphLayout = {};
-            // }
             draft.selectedNodeType = action.idx;
             return;
         case ACTION_TYPES.CHANGE_PARAM:
@@ -936,7 +749,8 @@ const reducers = produce((draft, action) => {
             if (action.param === "graph.layout") {
                 draft.graph.coords = callLayoutFunc(draft);
             } else if (action.param === "focalGraph.layout") {
-                draft.focalGraphLayout = callLocalLayoutFunc(draft);
+                // TODO
+                // draft.focalGraphLayout = callLocalLayoutFunc(draft);
             } else if (action.param === "colorBy") {
                 if (action.value === "position") {
                     draft.param.colorScale = null;

@@ -165,6 +165,17 @@
     border-radius: 6px;
 }
 
+.selection-info {
+    padding: 0 10px;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+.selection-info .selection-group {
+    margin-right: 25px;
+}
+
 /* Semantics space view */
 
 .combinations .dot {
