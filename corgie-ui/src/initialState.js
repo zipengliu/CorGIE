@@ -22,9 +22,10 @@ export default {
 
     powerSetLimit: 8,
 
-    nodeAttrs: null,        //  Attribute distributions for all nodes
-    highlightNodeAttrs: [],   // Attribute distributions for highlighted nodes
+    nodeAttrs: null,             // Attribute distributions for all nodes
+    selNodeAttrs: [],           // Attribute distributions for selected nodes, each selection group is an array in selNodeAttrs
     nodesToHighlight: [],
+    edgesToHighlight: [],
 
     edgeAttributes: {
         type: {
@@ -115,10 +116,16 @@ export default {
         },
         histogram: {
             margins: { top: 10, bottom: 30, left: 30, right: 10, betweenHist: 20 },
-            height: 100,
+            height: 60,
             width: 100,
             barWidth: 10,
             barGap: 2,
+        },
+        scatterplot: {
+            margins: { top: 20, bottom: 30, left: 30, right: 10 },
+            height: 200,
+            width: 200,
+            dotSize: 2,
         },
         feature: {
             cellSize: 6,

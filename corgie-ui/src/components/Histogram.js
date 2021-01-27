@@ -17,8 +17,9 @@ export default function renderHistogram({ bins, spec, xDomain, xLabel, yLabel, h
         .nice();
     const xTicks = xScale.ticks(3),
         xFormat = xScale.tickFormat(3, "s");
-    const yTicks = yScale.ticks(4),
-        yFormat = yScale.tickFormat(4, "s");
+    const numTicks = height >= 100? 4: 3;
+    const yTicks = yScale.ticks(numTicks),
+        yFormat = yScale.tickFormat(4, "~s");
 
     const topMargin = margins.top + (yLabel ? 10 : 0);
     const svgWidth = margins.left + margins.right + width;

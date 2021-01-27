@@ -47,7 +47,7 @@ class EmbeddingsView extends Component {
         const histSpec = { ...spec.histogram, width: 300 };
         const svgWidth = width + margins.left + margins.right,
             svgHeight = height + margins.top + margins.bottom;
-        const { coords, emb, isComputing } = latent;
+        const { coords, emb, isComputing, edgeLenBins } = latent;
         const { nodes, nodeTypes } = graph;
         const { colorBy, colorScale } = param;
 
@@ -147,6 +147,16 @@ class EmbeddingsView extends Component {
                                 xLabel="Cosine distance"
                                 yLabel="#node pairs"
                                 hVal={this.props.highlightDistSingle}
+                            />
+                        </div>
+                        <div>
+                            <h6 style={{marginTop: '10px'}}>of connected node pairs (aka. edges)</h6>
+                            <Histogram
+                                bins={edgeLenBins}
+                                spec={{ ...histSpec, height: histSpec.height / 2 }}
+                                xDomain={[0, 1]}
+                                xLabel={"Cosine distance"}
+                                yLabel={"#node pairs"}
                             />
                         </div>
                         {highlightDist.map((hd, i) => (

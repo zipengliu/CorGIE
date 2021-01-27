@@ -78,78 +78,76 @@ class NodeAttrView extends Component {
     }
 
     render() {
-        const {
-            param,
-            nodeAttrs,
-            nodesToHighlight,
-            highlightNodeAttrs,
-            featureVis,
-            hBinaryFeatures,
-        } = this.props;
+        const { param, nodeAttrs, nodesToHighlight, selNodeAttrs, featureVis, hBinaryFeatures } = this.props;
         const histSpec = this.props.spec.histogram;
         const { colorBy } = param;
         const { changeParam, toggleHighlightNodesAttr } = this.props;
-        const hasHighlight = nodesToHighlight && nodesToHighlight.length > 0;
+
+        let hNodeData;
+        if (nodesToHighlight.length == 1) {
+            hNodeData = this.props.graph.nodes[nodesToHighlight[0]];
+        }
 
         return (
             <div id="node-attr-view" className="view">
-                <h5 className="text-center">Nodes</h5>
-                <Button
+                <h5 className="text-center">Node attributes</h5>
+                {/* <Button
                     size="sm"
                     variant={hasHighlight ? "primary" : "secondary"}
                     disabled={!hasHighlight}
                     onClick={toggleHighlightNodesAttr.bind(null, null)}
                 >
                     Show attributes of highlighted nodes
-                </Button>
-                <div style={{ display: "flex" }}>
-                    <div className="histogram-column">
-                        {nodeAttrs.map((a, i) => (
-                            <div key={i} className="histogram-block">
-                                <div className="title">{a.name}</div>
-                                {/* <Form.Check
-                            inline
-                            type="radio"
-                            label="use for color"
-                            checked={colorBy === i}
-                            onChange={changeParam.bind(null, "colorBy", i, false)}
-                        /> */}
-                                <Histogram bins={a.bins} spec={histSpec} />
-                            </div>
-                        ))}
-                    </div>
-                    {highlightNodeAttrs.map((h, k) => (
-                        <div key={k} className="histogram-column" style={{ border: "1px dotted grey" }}>
-                            <div
+                </Button> */}
+                <div className="histogram-row">
+                    <div className="histogram-row-title">All</div>
+                    {nodeAttrs.map((a, i) => (
+                        <div key={i} className="histogram-block">
+                            <div className="title">{a.name}</div>
+                            <Histogram
+                                bins={a.bins}
+                                spec={histSpec}
+                                hVal={hNodeData && hNodeData.type === a.nodeType ? hNodeData[a.name] : null}
+                            />
+                        </div>
+                    ))}
+                </div>
+                {selNodeAttrs.map((h, k) => (
+                    <div key={k} className="histogram-row">
+                        {/* <div
                                 className="histogram-close-btn"
                                 onClick={toggleHighlightNodesAttr.bind(null, k)}
                             >
                                 x
+                            </div> */}
+                        {/* <div>Highlight grp {k}</div> */}
+                        <div className="histogram-row-title">sel-{k}</div>
+                        {h.map((a, i) => (
+                            <div key={i} className="histogram-block">
+                                <div className="title"></div>
+                                {a.values.length === 0 ? (
+                                    <div
+                                        style={{
+                                            width:
+                                                histSpec.width +
+                                                histSpec.margins.left +
+                                                histSpec.margins.right,
+                                        }}
+                                    >
+                                        N/A
+                                    </div>
+                                ) : (
+                                    <Histogram bins={a.bins} spec={histSpec} />
+                                )}
                             </div>
-                            <div>Highlight grp {k}</div>
-                            {h.attrs.map((a, i) => (
-                                <div key={i} className="histogram-block">
-                                    <div className="title"></div>
-                                    {a.values.length === 0 ? (
-                                        <div>N/A</div>
-                                    ) : (
-                                        <Histogram bins={a.bins} spec={histSpec} />
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                ))}
                 {featureVis.values && (
                     <div>
                         <h6>Binary attribute distribution</h6>
                         <div>(color: #nodes that have this attr.)</div>
-                        {featureMatrix(
-                            featureVis.values,
-                            "all",
-                            featureVis.scale,
-                            this.props.spec.feature
-                        )}
+                        {featureMatrix(featureVis.values, "all", featureVis.scale, this.props.spec.feature)}
                         <h6 style={{ marginTop: "10px" }}>Compressed barcode of matrix above</h6>
                         {this.renderFeatureBarcode()}
 
@@ -194,7 +192,9 @@ const mapStateToProps = (state) => {
             ];
             hBinaryFeatures.values = [];
             for (let i = 0; i < hBinaryFeatures.oriValues[0].length; i++) {
-                hBinaryFeatures.values.push(hBinaryFeatures.oriValues[0][i] - hBinaryFeatures.oriValues[1][i]);
+                hBinaryFeatures.values.push(
+                    hBinaryFeatures.oriValues[0][i] - hBinaryFeatures.oriValues[1][i]
+                );
             }
             const e = extent(hBinaryFeatures.values);
             const t = Math.max(Math.abs(e[0]), Math.abs(e[1]));

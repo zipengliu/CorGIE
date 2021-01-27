@@ -3,7 +3,7 @@
     flex-direction: row;
     /* align-items: center; */
     /*justify-content: center;*/
-    flex-wrap: wrap;
+    /* flex-wrap: wrap; */
 }
 
 .App .view {
@@ -247,10 +247,10 @@ rect.highlight-strip {
     font-size: 12px;
 }
 
-.node-pair-distribution {
+.scatterplot {
     font-size: 10px;
 }
-.node-pair-distribution .dot {
+.scatterplot .dot {
     color: grey;
     opacity: 0.5;
 }
@@ -269,7 +269,17 @@ rect.highlight-strip {
     stroke-width: 1px;
 }
 
-.histogram-column {
+.histogram-row {
+    display: flex;
+    flex-direction: row;
+    font-size: .9rem;
+}
+.histogram-row-title {
+    width: 35px;
+    align-self: center;
+}
+
+/* .histogram-column {
     margin: 10px;
     position: relative;
 }
@@ -282,9 +292,9 @@ rect.highlight-strip {
     cursor: pointer;
     font-size: 10px;
     padding: 0px 4px;
-}
+} */
 .histogram-block {
-    height: 160px;
+    /* height: 160px; */
 }
 .histogram-block .title {
     height: 20px;

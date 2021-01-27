@@ -7,6 +7,7 @@ import { highlightNodes, selectNodes, changeParam, layoutTick } from "../actions
 import { max, scaleLinear } from "d3";
 import NodeRep from "./NodeRep";
 import SelectionBox from "./SelectionBox";
+import Scatterplot from './Scatterplot';
 import { getNodeEmbeddingColor } from "../utils";
 
 class GraphView extends Component {
@@ -34,7 +35,6 @@ class GraphView extends Component {
             focalGraphLayout,
             edgeAttributes,
             nodeAttrs,
-            highlightNodeAttrs,
         } = this.props;
         const { colorBy, colorScale } = param;
         const layout = param.graph.layout;
@@ -174,6 +174,11 @@ class GraphView extends Component {
                                 </g>
                             </g>
                         </svg>
+
+                        <div style={{ marginTop: "10px" }}>
+                            <h6>Distance in graph topology vs. latent space</h6>
+                            <Scatterplot xData={edges.map(e => e.d)} yData={edges.map(e => e.dNei)} />
+                        </div>
                     </div>
 
                     {focalGraphLayout.running && <div>Computing layouts for selected nodes...</div>}
@@ -223,7 +228,7 @@ class GraphView extends Component {
                                             />
                                         ))}
                                     </g>
-                                    <g className="bounding-box">
+                                    {/* <g className="bounding-box">
                                         {highlightNodeAttrs.map((h, i) => (
                                             <g key={i}>
                                                 <text x={h.boundingBox.x} y={h.boundingBox.y - 10}>
@@ -232,7 +237,7 @@ class GraphView extends Component {
                                                 <rect {...h.boundingBox} />
                                             </g>
                                         ))}
-                                    </g>
+                                    </g> */}
                                     {focalGraphLayout.groups && (
                                         <g className="groups">
                                             {focalGraphLayout.groups.map((g, i) => (
