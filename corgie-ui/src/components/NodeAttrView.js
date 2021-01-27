@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Button } from "react-bootstrap";
 import { scaleSequential, interpolateRdBu, interpolateReds, extent, max } from "d3";
-import { changeParam, toggleHighlightNodesAttr } from "../actions";
+import { changeParam, highlightNodes, selectNodes } from "../actions";
 import Histogram from "./Histogram";
 import { aggregateBinaryFeatures } from "../utils";
 
@@ -77,11 +77,27 @@ class NodeAttrView extends Component {
         );
     }
 
+    findBrushedNodesAndDispatch(whichType, whichAttr, v1, v2) {
+        const { nodes } = this.props.graph;
+        const h = nodes
+            .filter((n) => whichType === n.type && v1 <= n[whichAttr] && n[whichAttr] <= v2)
+            .map((n) => n.id);
+        this.props.highlightNodes(null, h, [v1, v2], "node-attr", whichAttr);
+    }
+
     render() {
-        const { param, nodeAttrs, nodesToHighlight, selNodeAttrs, featureVis, hBinaryFeatures } = this.props;
+        const {
+            param,
+            nodeAttrs,
+            nodesToHighlight,
+            selNodeAttrs,
+            featureVis,
+            hBinaryFeatures,
+            highlightTrigger,
+        } = this.props;
         const histSpec = this.props.spec.histogram;
         const { colorBy } = param;
-        const { changeParam, toggleHighlightNodesAttr } = this.props;
+        const { changeParam } = this.props;
 
         let hNodeData;
         if (nodesToHighlight.length == 1) {
@@ -108,10 +124,23 @@ class NodeAttrView extends Component {
                                 bins={a.bins}
                                 spec={histSpec}
                                 hVal={hNodeData && hNodeData.type === a.nodeType ? hNodeData[a.name] : null}
+                                brushedFunc={this.findBrushedNodesAndDispatch.bind(this, a.nodeType, a.name)}
+                                brushedRange={
+                                    highlightTrigger &&
+                                    highlightTrigger.by === "node-attr" &&
+                                    highlightTrigger.which === a.name
+                                        ? highlightTrigger.brushedArea
+                                        : null
+                                }
                             />
                         </div>
                     ))}
                 </div>
+                {highlightTrigger && highlightTrigger.by === 'node-attr' && nodesToHighlight.length && (<div>
+                    <span>{nodesToHighlight.length} nodes highlighted.  Actions: </span>
+                    <Button size="sm" onClick={this.props.selectNodes.bind(null, 'CREATE', nodesToHighlight)}>Create a new selection</Button>
+                    <Button size="sm" onClick={this.props.highlightNodes.bind(null, null)}>Dehighlight</Button>
+                </div>)}
                 {selNodeAttrs.map((h, k) => (
                     <div key={k} className="histogram-row">
                         {/* <div
@@ -208,6 +237,6 @@ const mapStateToProps = (state) => {
 };
 
 const mapDispatchToProps = (dispatch) =>
-    bindActionCreators({ changeParam, toggleHighlightNodesAttr }, dispatch);
+    bindActionCreators({ changeParam, highlightNodes, selectNodes }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(NodeAttrView);

@@ -4,15 +4,13 @@ const initState = {
     mouseDown: false,
     startPoint: null, // page x and y of starting point
     endPoint: null,
-    selectionBox: null, // Coordinates for the selection box
-    appendMode: false
+    brushedArea: null, // Coordinates for the brushed area
 };
 
-class SelectionBox extends Component {
+export default class Brush extends Component {
     constructor(props) {
         super(props);
         this.boxRef = React.createRef();
-        // The UI state for the drag selection
         this.state = initState;
     }
 
@@ -21,11 +19,8 @@ class SelectionBox extends Component {
             mouseDown: true,
             startPoint: { x: e.pageX, y: e.pageY },
             mouseMoveFunc: this._onMouseMove.bind(this),
-            mouseUpFunc: this._onMouseUp.bind(this)
+            mouseUpFunc: this._onMouseUp.bind(this),
         };
-        if (e.shiftKey) {
-            nextState.appendMode = true;
-        }
         this.setState(nextState);
         window.document.addEventListener("mousemove", nextState.mouseMoveFunc);
         window.document.addEventListener("mouseup", nextState.mouseUpFunc);
@@ -34,10 +29,13 @@ class SelectionBox extends Component {
     _onMouseUp(e) {
         window.document.removeEventListener("mousemove", this.state.mouseMoveFunc);
         window.document.removeEventListener("mouseup", this.state.mouseUpFunc);
-        const selectionBox = { ...this.state.selectionBox };
-        const { appendMode } = this.state;
+        const brushedArea = { ...this.state.brushedArea };
         this.setState(initState);
-        this.props.selectedFunc(selectionBox);
+        if (this.props.isRange) {
+            this.props.brushedFunc(brushedArea.x, brushedArea.x + brushedArea.width);
+        } else {
+            this.props.brushedFunc(brushedArea);
+        }
     }
 
     _onMouseMove(e) {
@@ -46,12 +44,12 @@ class SelectionBox extends Component {
             let endPoint = { x: e.pageX, y: e.pageY };
             this.setState({
                 endPoint,
-                selectionBox: this._calcSelectionBox(this.state.startPoint, endPoint)
+                brushedArea: this._calcBrushedArea(this.state.startPoint, endPoint),
             });
         }
     }
 
-    _calcSelectionBox(startPoint, endPoint) {
+    _calcBrushedArea(startPoint, endPoint) {
         if (!this.state.mouseDown || startPoint == null || endPoint == null) {
             return null;
         }
@@ -66,36 +64,39 @@ class SelectionBox extends Component {
             x,
             y,
             width,
-            height
+            height,
         };
     }
 
     render() {
-        const { selectionBox } = this.state;
+        const { brushedArea } = this.state;
+        const { isRange } = this.props;
         return (
             <g>
-                {selectionBox != null && (
+                {brushedArea != null && (
                     <rect
-                        x={selectionBox.x}
-                        y={selectionBox.y}
-                        width={selectionBox.width}
-                        height={selectionBox.height}
-                        style={{ stroke: "#ccc", strokeWidth: "1px", fill: "blue", fillOpacity: ".3" }}
+                        className="brushed-area"
+                        x={brushedArea.x}
+                        y={isRange ? 0 : brushedArea.y}
+                        width={brushedArea.width}
+                        height={isRange ? this.props.height : brushedArea.height}
                     />
+                )}
+                {brushedArea == null && this.props.brushedArea !== null && (
+                    <rect className="brushed-area" {...this.props.brushedArea} />
                 )}
 
                 <rect
+                    className="brushable-area"
                     x={0}
                     y={0}
                     width={this.props.width}
                     height={this.props.height}
                     ref={this.boxRef}
                     onMouseDown={this._onMouseDown.bind(this)}
-                    style={{ fill: "#fff", stroke: "none", fillOpacity: 0 }}
+                    style={{ cursor: isRange ? "ew-resize" : "crosshair" }}
                 />
             </g>
         );
     }
 }
-
-export default SelectionBox;

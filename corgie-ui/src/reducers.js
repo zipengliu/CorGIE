@@ -567,33 +567,26 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.HIGHLIGHT_NODES:
             draft.showDetailNode = action.nodeIdx;
-            if (action.selectionBox !== null && action.selectionBoxView !== null) {
-                if (!action.appendMode) {
-                    draft.isNodeHighlighted = {};
+            if (action.brushedArea !== null && action.fromView !== null) {
+                draft.nodesToHighlight = action.nodeIndices;
+                draft.isNodeHighlighted = {};
+                for (let nid of action.nodeIndices) {
+                    draft.isNodeHighlighted[nid] = true;
                 }
-                const coords =
-                    action.selectionBoxView === "embedding-view"
-                        ? draft.latent.coords
-                        : draft.focalGraphLayout.coords;
-                draft.nodesToHighlight = [];
-                for (let i = 0; i < coords.length; i++) {
-                    if (isPointInBox(coords[i], action.selectionBox)) {
-                        draft.nodesToHighlight.push(i);
-                        draft.isNodeHighlighted[i] = true;
-                    }
-                }
-                const neighToHighlight = highlightNeighbors(
-                    draft.graph.nodes.length,
-                    draft.graph.neigh,
-                    draft.param.hopsHighlight,
-                    null,
-                    draft.nodesToHighlight
-                );
-                // Merge into draft.isNodeHighlighted
-                for (let neighId in neighToHighlight)
-                    if (neighToHighlight[neighId]) {
-                        draft.isNodeHighlighted[neighId] = true;
-                    }
+                draft.highlightTrigger = { by: action.fromView, which: action.whichAttr, brushedArea: action.brushedArea };
+                // Highlight the neighbors as well
+                // const neighToHighlight = highlightNeighbors(
+                //     draft.graph.nodes.length,
+                //     draft.graph.neigh,
+                //     draft.param.hopsHighlight,
+                //     null,
+                //     draft.nodesToHighlight
+                // );
+                // // Merge into draft.isNodeHighlighted
+                // for (let neighId in neighToHighlight)
+                //     if (neighToHighlight[neighId]) {
+                //         draft.isNodeHighlighted[neighId] = true;
+                //     }
             } else {
                 if (action.nodeIdx === null) {
                     draft.highlightTrigger = null;
@@ -658,12 +651,12 @@ const reducers = produce((draft, action) => {
                     )
                 );
                 draft.focalGraphLayout.running = true;
-                draft.selBoundingBox = newSel.map(s => computeBoundingBox(draft.latent.coords, s));
+                draft.selBoundingBox = newSel.map((s) => computeBoundingBox(draft.latent.coords, s));
             }
 
             // Clear the highlight (blinking) nodes
-            draft.nodesToHighlight = [];
-            draft.isNodeHighlighted = {};
+            // draft.nodesToHighlight = [];
+            // draft.isNodeHighlighted = {};
 
             // draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
             //     draft.latent.distMatrix,

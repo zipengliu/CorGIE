@@ -6,7 +6,7 @@ import { Form } from "react-bootstrap";
 import { highlightNodes, selectNodes, changeParam, layoutTick } from "../actions";
 import { max, scaleLinear } from "d3";
 import NodeRep from "./NodeRep";
-import SelectionBox from "./SelectionBox";
+import Brush from "./Brush";
 import Scatterplot from './Scatterplot';
 import { getNodeEmbeddingColor } from "../utils";
 
@@ -269,7 +269,7 @@ class GraphView extends Component {
                                     </g>
                                     {/* <text y={5}>#iterations: {focalGraphLayout.simulationTickNumber}</text> */}
 
-                                    <SelectionBox
+                                    <Brush
                                         width={focalGraphLayout.width}
                                         height={focalGraphLayout.height}
                                         selectedFunc={this.props.highlightNodes}

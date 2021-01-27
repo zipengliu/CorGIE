@@ -4,24 +4,19 @@ import { bindActionCreators } from "redux";
 import cn from "classnames";
 import { Form } from "react-bootstrap";
 import { highlightNodes, selectNodes, changeParam } from "../actions";
-import SelectionBox from "./SelectionBox";
+import Brush from "./Brush";
 import NodeRep from "./NodeRep";
 import { isPointInBox, getNodeEmbeddingColor } from "../utils";
 import Histogram from "./Histogram";
 
 class EmbeddingsView extends Component {
-    // constructor(props) {
-    //     super(props);
-    // }
-    //
-
-    callSelectNodes(selectionBox) {
+    callSelectNodes(brushedArea) {
         const { graph, selectedNodeType } = this.props;
         const coords = this.props.latent.coords;
         const targetNodes = [];
         for (let i = 0; i < coords.length; i++) {
             const c = coords[i];
-            if (graph.nodes[i].typeId === selectedNodeType && isPointInBox(c, selectionBox)) {
+            if (graph.nodes[i].typeId === selectedNodeType && isPointInBox(c, brushedArea)) {
                 targetNodes.push(i);
             }
         }
@@ -95,7 +90,7 @@ class EmbeddingsView extends Component {
                         <g className="bounding-box">
                             {selBoundingBox.map((h, i) => (
                                 <g key={i}>
-                                    <text x={h.x} y={h.y}>
+                                    <text x={h.x} y={h.y - 2}>
                                         sel-{i}
                                     </text>
                                     <rect {...h} />
@@ -137,10 +132,11 @@ class EmbeddingsView extends Component {
                                 </g>
                             ))}
                         </g>
-                        <SelectionBox
+                        <Brush
                             width={width}
                             height={height}
-                            selectedFunc={this.callSelectNodes.bind(this)}
+                            isRange={false}
+                            brushedFunc={this.callSelectNodes.bind(this)}
                         />
                     </g>
                 </svg>

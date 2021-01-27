@@ -97,8 +97,14 @@ export function highlightNodeType(nodeTypeIdx) {
     return { type: ACTION_TYPES.HIGHLIGHT_NODE_TYPE, nodeTypeIdx };
 }
 
-export function highlightNodes(nodeIdx, selectionBox = null, appendMode = false, selectionBoxView = null) {
-    return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIdx, selectionBox, selectionBoxView, appendMode };
+export function highlightNodes(
+    nodeIdx = null,
+    nodeIndices = null,
+    brushedArea = null,
+    fromView = null,
+    whichAttr = null
+) {
+    return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIdx, nodeIndices, brushedArea, fromView, whichAttr };
 }
 
 export function toggleHighlightNodesAttr(delIdx = null) {

@@ -72,7 +72,7 @@ export default {
             edgeType: "line",
             width: 1000,
             height: 1000,
-            margins: { top: 10, bottom: 10, left: 20, right: 20 },
+            margins: { top: 15, bottom: 15, left: 15, right: 15},
 
             neighborMarkerMaxHeight: 30,
             centralNodeSize: 4,
