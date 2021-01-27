@@ -12,6 +12,7 @@ export default {
 
     selectedNodeType: 0,
     selectedNodes: [],      // Array of array
+    selBoundingBox: [],
     isNodeSelected: {},     // Dict for ALL selected nodes
     isNodeSelectedNeighbor: {},
     neighborIntersections: null,

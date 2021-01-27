@@ -10,6 +10,7 @@ import EmbeddingsView from "./EmbeddingsView";
 import DetailView from "./DetailView";
 import AdjacencyMatrix from "./AdjacencyMatrix";
 import NodeAttrView from "./NodeAttrView";
+import SelectionInfo from "./SelectionInfo";
 import EdgeListView from "./EdgeListView";
 import GlobalControls from "./GlobalControls";
 import "./App.css";
@@ -37,7 +38,10 @@ class App extends Component {
 
                 <GlobalControls />
                 <div className="App">
-                    <EdgeListView />
+                    <div>
+                        <SelectionInfo />
+                        <EdgeListView />
+                    </div>
                     <EmbeddingsView />
                     <div>
                         <NodeAttrView />

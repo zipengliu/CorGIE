@@ -2,12 +2,12 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Dropdown, DropdownButton, Button } from "react-bootstrap";
-import { highlightNodeType, changeSelectedNodeType, changeHops, changeParam, selectNodes } from "../actions";
+import { highlightNodeType, changeHops, changeParam } from "../actions";
 import NodeRep from "./NodeRep";
 
 export class GlobalControls extends Component {
     render() {
-        const { graph, selectedNodeType, param, nodeAttrs, selectedNodes } = this.props;
+        const { graph, param, nodeAttrs } = this.props;
         const { nodes, edges, nodeTypes } = graph;
         const { colorBy } = param;
 
@@ -21,7 +21,7 @@ export class GlobalControls extends Component {
                     {/* <div># node types: {nodeTypes.length}</div> */}
                     {nodeTypes.length > 1 && (
                         <div>
-                            <svg id="legends" width="200" height="70">
+                            <svg id="legends" width="200" height="20">
                                 <g transform="translate(10,10)">
                                     {nodeTypes.map((nt, i) => (
                                         <g
@@ -69,29 +69,6 @@ export class GlobalControls extends Component {
                                 </text>
                             </g> */}
                             </svg>
-                        </div>
-                    )}
-                    {nodeTypes.length > 1 && (
-                        <div>
-                            <Form inline>
-                                <Form.Group controlId="select-node-type">
-                                    <Form.Label column="sm">Select node of type</Form.Label>
-                                    <Form.Control
-                                        as="select"
-                                        size="sm"
-                                        value={selectedNodeType}
-                                        onChange={(e) => {
-                                            this.props.changeSelectedNodeType(e.target.value);
-                                        }}
-                                    >
-                                        {nodeTypes.map((nt, i) => (
-                                            <option key={i} value={i}>
-                                                {nt.name}
-                                            </option>
-                                        ))}
-                                    </Form.Control>
-                                </Form.Group>
-                            </Form>
                         </div>
                     )}
 
@@ -154,29 +131,6 @@ export class GlobalControls extends Component {
                         </Dropdown>
                     </div>
                 </div>
-                <div className="selection-info">
-                    {selectedNodes.map((g, i) => (
-                        <div className="selection-group" key={i}>
-                            Group #{i}: {g.length} {nodeTypes.length > 1 ? nodes[g[0]].type : ""} nodes
-                            <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={this.props.selectNodes.bind(null, "DELETE", null, i)}
-                            >
-                                del
-                            </Button>
-                        </div>
-                    ))}
-                    {selectedNodes.length > 0 && (
-                        <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={this.props.selectNodes.bind(null, "CLEAR", null, null)}
-                        >
-                            clear all
-                        </Button>
-                    )}
-                </div>
             </div>
         );
     }
@@ -190,10 +144,8 @@ const mapDispatchToProps = (dispatch) =>
     bindActionCreators(
         {
             highlightNodeType,
-            changeSelectedNodeType,
             changeHops,
             changeParam,
-            selectNodes,
         },
         dispatch
     );

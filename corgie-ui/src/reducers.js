@@ -625,8 +625,16 @@ const reducers = produce((draft, action) => {
         case ACTION_TYPES.SELECT_NODES_PENDING:
             let { newSel, neighRes } = action;
             draft.selectedNodes = newSel;
-            if (!newSel) {
-                // TODO Clear selection
+            if (newSel.length == 0) {
+                // Clear selection
+                draft.neighArr = null;
+                draft.neighMap = null;
+                draft.isNodeSelected = {};
+                draft.isNodeSelectedNeighbor = {};
+                draft.neighGrp = null;
+                draft.selNodeAttrs = [];
+                draft.focalGraphLayout = { running: false };
+                draft.selBoundingBox = [];
             } else {
                 draft.isNodeSelected = neighRes.isNodeSelected;
                 draft.isNodeSelectedNeighbor = neighRes.isNodeSelectedNeighbor;
@@ -649,23 +657,18 @@ const reducers = produce((draft, action) => {
                         sel
                     )
                 );
+                draft.focalGraphLayout.running = true;
+                draft.selBoundingBox = newSel.map(s => computeBoundingBox(draft.latent.coords, s));
             }
 
             // Clear the highlight (blinking) nodes
             draft.nodesToHighlight = [];
             draft.isNodeHighlighted = {};
 
-            draft.focalGraphLayout.running = true;
-
             // draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
             //     draft.latent.distMatrix,
             //     draft.selectedNodes
             // );
-
-            // Update the bounding box for the highlight group TODO
-            // for (let h of draft.highlightNodeAttrs) {
-            //     h.boundingBox = computeBoundingBox(draft.focalGraphLayout.coords, h.nodes);
-            // }
 
             return;
         case ACTION_TYPES.SELECT_NODES_DONE:

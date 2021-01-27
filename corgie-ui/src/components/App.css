@@ -165,15 +165,15 @@
     border-radius: 6px;
 }
 
-.selection-info {
-    padding: 0 10px;
+#selection-info {
+    /* padding: 0 10px;
     width: 100%;
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: wrap; */
 }
-.selection-info .selection-group {
-    margin-right: 25px;
+#selection-info .selection-group {
+    margin-bottom: 10px;
 }
 
 /* Semantics space view */
@@ -272,27 +272,12 @@ rect.highlight-strip {
 .histogram-row {
     display: flex;
     flex-direction: row;
-    font-size: .9rem;
+    font-size: 0.9rem;
 }
 .histogram-row-title {
     width: 35px;
     align-self: center;
 }
-
-/* .histogram-column {
-    margin: 10px;
-    position: relative;
-}
-.histogram-column .histogram-close-btn {
-    position: absolute;
-    right: 5px;
-    top: 5px;
-    background-color: #666;
-    color: white;
-    cursor: pointer;
-    font-size: 10px;
-    padding: 0px 4px;
-} */
 .histogram-block {
     /* height: 160px; */
 }
@@ -300,12 +285,23 @@ rect.highlight-strip {
     height: 20px;
 }
 
-.bounding-box {
-    font: 10px;
+.bounding-box text {
+    font-size: 12px;
 }
 .bounding-box rect {
     stroke: #ccc;
     stroke-width: 1px;
     fill: blue;
     fill-opacity: 0.3;
+}
+
+.del-btn {
+    /* position: absolute;
+    right: 5px;
+    top: 5px; */
+    background-color: #666;
+    color: white;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 1px 4px;
 }

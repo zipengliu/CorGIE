@@ -228,16 +228,6 @@ class GraphView extends Component {
                                             />
                                         ))}
                                     </g>
-                                    {/* <g className="bounding-box">
-                                        {highlightNodeAttrs.map((h, i) => (
-                                            <g key={i}>
-                                                <text x={h.boundingBox.x} y={h.boundingBox.y - 10}>
-                                                    grp {i}
-                                                </text>
-                                                <rect {...h.boundingBox} />
-                                            </g>
-                                        ))}
-                                    </g> */}
                                     {focalGraphLayout.groups && (
                                         <g className="groups">
                                             {focalGraphLayout.groups.map((g, i) => (

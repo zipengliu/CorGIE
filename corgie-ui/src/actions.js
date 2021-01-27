@@ -139,7 +139,7 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
         const neighRes = getSelectedNeighbors(newSel, state.graph.neigh, state.param.hops);
         dispatch(selectNodesPending(newSel, neighRes));
 
-        if (selectedNodes) {
+        if (newSel.length) {
             const layoutRes = await callLocalLayoutFunc(
                 state.graph,
                 newSel,

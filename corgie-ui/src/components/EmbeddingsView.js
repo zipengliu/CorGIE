@@ -42,6 +42,7 @@ class EmbeddingsView extends Component {
             param,
             nodeAttrs,
             highlightDist,
+            selBoundingBox,
         } = this.props;
         const { width, height, margins } = spec.latent;
         const histSpec = { ...spec.histogram, width: 300 };
@@ -91,6 +92,16 @@ class EmbeddingsView extends Component {
                                 ))}
                             </g>
                         )}
+                        <g className="bounding-box">
+                            {selBoundingBox.map((h, i) => (
+                                <g key={i}>
+                                    <text x={h.x} y={h.y}>
+                                        sel-{i}
+                                    </text>
+                                    <rect {...h} />
+                                </g>
+                            ))}
+                        </g>
                         <g className="points">
                             {coords.map((c, i) => (
                                 <g
@@ -150,7 +161,7 @@ class EmbeddingsView extends Component {
                             />
                         </div>
                         <div>
-                            <h6 style={{marginTop: '10px'}}>of connected node pairs (aka. edges)</h6>
+                            <h6 style={{ marginTop: "10px" }}>of connected node pairs (aka. edges)</h6>
                             <Histogram
                                 bins={edgeLenBins}
                                 spec={{ ...histSpec, height: histSpec.height / 2 }}
