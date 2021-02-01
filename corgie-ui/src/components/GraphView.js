@@ -151,7 +151,7 @@ class GraphView extends Component {
                                                 style={{ fill: getNodeColor(i) }}
                                                 onMouseEnter={this.props.highlightNodes.bind(null, i)}
                                                 onMouseLeave={this.props.highlightNodes.bind(null, null)}
-                                                onClick={this.props.selectNodes.bind(null, i, null, true)}
+                                                onClick={this.props.selectNodes.bind(null, 'CREATE', [i], null)}
                                             >
                                                 <NodeRep
                                                     shape={nodes[i].typeId === 0 ? "triangle" : "circle"}
@@ -258,7 +258,6 @@ class GraphView extends Component {
                                                 style={{ fill: getNodeColor(i) }}
                                                 onMouseEnter={this.props.highlightNodes.bind(null, i)}
                                                 onMouseLeave={this.props.highlightNodes.bind(null, null)}
-                                                // onClick={this.props.selectNodes.bind(null, i, null, true)}
                                             >
                                                 <NodeRep
                                                     shape={nodes[i].typeId === 0 ? "triangle" : "circle"}

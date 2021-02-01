@@ -3,23 +3,22 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Button } from "react-bootstrap";
 import { scaleSequential, interpolateRdBu, interpolateReds, extent, max } from "d3";
+import cn from "classnames";
 import { changeParam, highlightNodes, selectNodes } from "../actions";
 import Histogram from "./Histogram";
 import { aggregateBinaryFeatures } from "../utils";
 
-function featureMatrix(values, mode, scale, spec) {
-    const { margins, cellSize, cellGap } = spec;
+function FeatureMatrix({ values, scale, spec }) {
+    const { margins, cellSize, cellGap, barcodeMaxWidth } = spec;
 
     const n = values.length;
-    // Make a square matrix instead of a long line
-    const m = Math.floor(Math.sqrt(n));
-    const e = scale.domain();
-
-    const legendHeight = 20;
-    const numRows = Math.ceil(n / m);
     const size = cellSize + cellGap;
-    const width = size * m + margins.left + margins.right,
-        height = size * numRows + legendHeight + margins.top + margins.bottom;
+    // Make a square matrix instead of a long line
+    const numCols = Math.floor(barcodeMaxWidth / size);
+    const numRows = Math.ceil(n / numCols);
+
+    const width = size * numCols + margins.left + margins.right,
+        height = size * numRows + margins.top + margins.bottom;
 
     return (
         <svg width={width} height={height} className="feature-matrix">
@@ -28,8 +27,8 @@ function featureMatrix(values, mode, scale, spec) {
                     <rect
                         key={i}
                         className="cell"
-                        x={(i % m) * size}
-                        y={Math.floor(i / m) * size}
+                        x={(i % numCols) * size}
+                        y={Math.floor(i / numCols) * size}
                         width={cellSize}
                         height={cellSize}
                         fill={scale(v)}
@@ -39,44 +38,78 @@ function featureMatrix(values, mode, scale, spec) {
                         </title>
                     </rect>
                 ))}
-                <g className="legend" transform={`translate(0,${size * numRows + 10})`}>
-                    <rect x={0} y={0} width={100} height={10} fill={`url(#feature-color-grad-${mode})`} />
-                    <text x={0} y={20}>
-                        {e[0]}
-                    </text>
-                    <text x={100} y={20}>
-                        {e[1]}
-                    </text>
-                </g>
             </g>
-            <defs>
-                <linearGradient id={`feature-color-grad-${mode}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" style={{ stopColor: scale(e[0]), stopOpacity: 1 }} />
-                    <stop offset="50%" style={{ stopColor: scale((e[1] + e[0]) / 2), stopOpacity: 1 }} />
-                    <stop offset="100%" style={{ stopColor: scale(e[1]), stopOpacity: 1 }} />
-                </linearGradient>
-            </defs>
         </svg>
     );
 }
+
+function FeatureStrips({ compressedCnts, colorScale, spec }) {
+    const { barcodeHeight, margins } = spec;
+    const width = compressedCnts.length + margins.left + margins.right;
+    const height = barcodeHeight + margins.top + margins.bottom;
+
+    return (
+        <svg width={width} height={height} className="feature-barcode">
+            <g transform={`translate(${margins.left},${margins.top})`}>
+                <g>
+                    {compressedCnts.map((v, i) => (
+                        <line key={i} x1={i} y1={0} x2={i} y2={barcodeHeight} stroke={colorScale(v)} />
+                    ))}
+                </g>
+                <rect
+                    x={-1}
+                    y={0}
+                    width={compressedCnts.length + 2}
+                    height={barcodeHeight}
+                    style={{ strokeWidth: "1px", stroke: "grey", strokeDasharray: "5,5", fill: "None" }}
+                />
+            </g>
+        </svg>
+    );
+}
+
+function FeatureComboVis({ data, collapsed, toggleFunc, spec, legendText }) {
+    const { cnts, compressedCnts, scale, mode } = data;
+    // const { margins, cellSize, cellGap, barcodeMaxWidth, barcodeHeight } = spec;
+    const e = scale.domain();
+    const colorMin = scale(e[0]),
+        colorMid = scale((e[0] + e[1]) / 2),
+        colorMax = scale(e[1]);
+
+    return (
+        <div>
+            <div>
+                <FeatureStrips compressedCnts={compressedCnts} colorScale={scale} spec={spec} />
+            </div>
+            {!collapsed && (
+                <div>
+                    <FeatureMatrix values={cnts} mode={mode} scale={scale} spec={spec} />
+                </div>
+            )}
+            <div style={{marginLeft: '10px'}}>
+                <span>
+                    <Button variant="outline-secondary" size="xs" onClick={toggleFunc}>
+                        {collapsed ? "Show" : "Hide"} feature matrix
+                    </Button>
+                </span>
+                <span style={{ marginLeft: "15px", marginRight: "10px" }}>strip / cell color: </span>
+                <span>{e[0]}</span>
+                <div
+                    style={{
+                        display: "inline-block",
+                        height: "10px",
+                        width: "100px",
+                        background: `linear-gradient(90deg, ${colorMin} 0%, ${colorMid} 50%, ${colorMax} 100%)`,
+                    }}
+                ></div>
+                <span>{e[1]}</span>
+                <span style={{marginLeft: '10px'}}>{legendText}</span>
+            </div>
+        </div>
+    );
+}
+
 class NodeAttrView extends Component {
-    renderFeatureBarcode() {
-        const { featureVis } = this.props;
-        const spec = this.props.spec.feature;
-        const { compValues, scale } = featureVis;
-        const { barcodeHeight } = spec;
-
-        const width = compValues.length;
-
-        return (
-            <svg width={width} height={barcodeHeight} className="feature-barcode">
-                {compValues.map((v, i) => (
-                    <line key={i} x1={i} y1={0} x2={i} y2={barcodeHeight} stroke={scale(v)} />
-                ))}
-            </svg>
-        );
-    }
-
     findBrushedNodesAndDispatch(whichType, whichAttr, v1, v2) {
         const { nodes } = this.props.graph;
         const h = nodes
@@ -91,9 +124,10 @@ class NodeAttrView extends Component {
             nodeAttrs,
             nodesToHighlight,
             selNodeAttrs,
-            featureVis,
-            hBinaryFeatures,
+            featureAgg,
+            selFeatures,
             highlightTrigger,
+            selectedNodes,
         } = this.props;
         const histSpec = this.props.spec.histogram;
         const { colorBy } = param;
@@ -106,135 +140,112 @@ class NodeAttrView extends Component {
 
         return (
             <div id="node-attr-view" className="view">
-                <h5 className="text-center">Node attributes</h5>
-                {/* <Button
-                    size="sm"
-                    variant={hasHighlight ? "primary" : "secondary"}
-                    disabled={!hasHighlight}
-                    onClick={toggleHighlightNodesAttr.bind(null, null)}
-                >
-                    Show attributes of highlighted nodes
-                </Button> */}
-                <div className="histogram-row">
-                    <div className="histogram-row-title">All</div>
-                    {nodeAttrs.map((a, i) => (
-                        <div key={i} className="histogram-block">
-                            <div className="title">{a.name}</div>
-                            <Histogram
-                                bins={a.bins}
-                                spec={histSpec}
-                                hVal={hNodeData && hNodeData.type === a.nodeType ? hNodeData[a.name] : null}
-                                brushedFunc={this.findBrushedNodesAndDispatch.bind(this, a.nodeType, a.name)}
-                                brushedRange={
-                                    highlightTrigger &&
-                                    highlightTrigger.by === "node-attr" &&
-                                    highlightTrigger.which === a.name
-                                        ? highlightTrigger.brushedArea
-                                        : null
-                                }
-                            />
-                        </div>
-                    ))}
-                </div>
-                {highlightTrigger && highlightTrigger.by === 'node-attr' && nodesToHighlight.length && (<div>
-                    <span>{nodesToHighlight.length} nodes highlighted.  Actions: </span>
-                    <Button size="sm" onClick={this.props.selectNodes.bind(null, 'CREATE', nodesToHighlight)}>Create a new selection</Button>
-                    <Button size="sm" onClick={this.props.highlightNodes.bind(null, null)}>Dehighlight</Button>
-                </div>)}
-                {selNodeAttrs.map((h, k) => (
-                    <div key={k} className="histogram-row">
-                        {/* <div
-                                className="histogram-close-btn"
-                                onClick={toggleHighlightNodesAttr.bind(null, k)}
-                            >
-                                x
-                            </div> */}
-                        {/* <div>Highlight grp {k}</div> */}
-                        <div className="histogram-row-title">sel-{k}</div>
-                        {h.map((a, i) => (
+                <h5 className="text-center">Node features</h5>
+                <div>
+                    <div className="attribute-row">
+                        <div className="attribute-row-title">All</div>
+                        {nodeAttrs.map((a, i) => (
                             <div key={i} className="histogram-block">
-                                <div className="title"></div>
-                                {a.values.length === 0 ? (
-                                    <div
-                                        style={{
-                                            width:
-                                                histSpec.width +
-                                                histSpec.margins.left +
-                                                histSpec.margins.right,
-                                        }}
-                                    >
-                                        N/A
-                                    </div>
-                                ) : (
-                                    <Histogram bins={a.bins} spec={histSpec} />
-                                )}
+                                <div className="title">{a.name}</div>
+                                <Histogram
+                                    bins={a.bins}
+                                    spec={histSpec}
+                                    hVal={
+                                        hNodeData && hNodeData.type === a.nodeType ? hNodeData[a.name] : null
+                                    }
+                                    brushedFunc={this.findBrushedNodesAndDispatch.bind(
+                                        this,
+                                        a.nodeType,
+                                        a.name
+                                    )}
+                                    brushedRange={
+                                        highlightTrigger &&
+                                        highlightTrigger.by === "node-attr" &&
+                                        highlightTrigger.which === a.name
+                                            ? highlightTrigger.brushedArea
+                                            : null
+                                    }
+                                />
                             </div>
                         ))}
-                    </div>
-                ))}
-                {featureVis.values && (
-                    <div>
-                        <h6>Binary attribute distribution</h6>
-                        <div>(color: #nodes that have this attr.)</div>
-                        {featureMatrix(featureVis.values, "all", featureVis.scale, this.props.spec.feature)}
-                        <h6 style={{ marginTop: "10px" }}>Compressed barcode of matrix above</h6>
-                        {this.renderFeatureBarcode()}
-
-                        {hBinaryFeatures.mode && (
-                            <div style={{ marginTop: "10px" }}>
-                                <h6>
-                                    Attributes of selected nodes{" "}
-                                    {hBinaryFeatures.mode == "diff" ? "(differences)" : ""}
-                                </h6>
-                                {featureMatrix(
-                                    hBinaryFeatures.values,
-                                    hBinaryFeatures.mode,
-                                    hBinaryFeatures.scale,
-                                    this.props.spec.feature
-                                )}
-                            </div>
+                        {featureAgg.cnts && (
+                            <FeatureComboVis
+                                data={featureAgg}
+                                spec={this.props.spec.feature}
+                                collapsed={param.features.collapsedAll}
+                                toggleFunc={changeParam.bind(this, "features.collapsedAll", null, true, null)}
+                                legendText={"# nodes that have this attribute"}
+                            />
                         )}
                     </div>
-                )}
+                    {highlightTrigger && highlightTrigger.by === "node-attr" && nodesToHighlight.length && (
+                        <div>
+                            <span>{nodesToHighlight.length} nodes highlighted. Actions: </span>
+                            <Button
+                                size="sm"
+                                onClick={this.props.selectNodes.bind(null, "CREATE", nodesToHighlight)}
+                            >
+                                Create a new selection
+                            </Button>
+                            <Button size="sm" onClick={this.props.highlightNodes.bind(null, null)}>
+                                Dehighlight
+                            </Button>
+                        </div>
+                    )}
+                    {selectedNodes.map((s, k) => (
+                        <div key={k} className="attribute-row">
+                            <div className="attribute-row-title">sel-{k}</div>
+                            {selNodeAttrs[k].map((a, i) => (
+                                <div key={i} className="histogram-block">
+                                    <div className="title"></div>
+                                    {a.values.length === 0 ? (
+                                        <div
+                                            style={{
+                                                width:
+                                                    histSpec.width +
+                                                    histSpec.margins.left +
+                                                    histSpec.margins.right,
+                                            }}
+                                        >
+                                            N/A
+                                        </div>
+                                    ) : (
+                                        <Histogram bins={a.bins} spec={histSpec} />
+                                    )}
+                                </div>
+                            ))}
+                            {featureAgg.cnts && (
+                                <FeatureComboVis
+                                    data={selFeatures[k]}
+                                    spec={this.props.spec.feature}
+                                    collapsed={param.features.collapsedSel[k]}
+                                    toggleFunc={changeParam.bind(this, "features.collapsedSel", null, true, k)}
+                                    legendText={"# nodes that have this attribute"}
+                                />
+                            )}
+                        </div>
+                    ))}
+                    {selectedNodes.length === 2 && (
+                        <div className="attribute-row">
+                            <div className="attribute-row-title">diff.</div>
+                            {featureAgg.cnts && (
+                                <FeatureComboVis
+                                    data={selFeatures[2]}
+                                    spec={this.props.spec.feature}
+                                    collapsed={param.features.collapsedSel[2]}
+                                    toggleFunc={changeParam.bind(this, "features.collapsedSel", null, true, 2)}
+                                    legendText={"Diff. b/w two selected groups"}
+                                />
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         );
     }
 }
 
-const mapStateToProps = (state) => {
-    // Compute the attribute values that need to be highlighted according to state.selectedNodes
-    // If there are no selection, check state.nodesToHighlight and state.isNodeHighlighted
-    const hAttrNodes = [];
-    let hBinaryFeatures = {};
-    if (state.graph.features) {
-        if (state.selectedNodes.length == 1) {
-            hBinaryFeatures.mode = "highlight";
-            hBinaryFeatures.values = aggregateBinaryFeatures(state.graph.features, state.selectedNodes[0]);
-            const maxVal = max(hBinaryFeatures.values);
-            hBinaryFeatures.scale = scaleSequential(interpolateReds).domain([0, maxVal]);
-            console.log(hBinaryFeatures);
-        } else if (state.selectedNodes.length == 2) {
-            hBinaryFeatures.mode = "diff";
-            hBinaryFeatures.oriValues = [
-                aggregateBinaryFeatures(state.graph.features, state.selectedNodes[0]),
-                aggregateBinaryFeatures(state.graph.features, state.selectedNodes[1]),
-            ];
-            hBinaryFeatures.values = [];
-            for (let i = 0; i < hBinaryFeatures.oriValues[0].length; i++) {
-                hBinaryFeatures.values.push(
-                    hBinaryFeatures.oriValues[0][i] - hBinaryFeatures.oriValues[1][i]
-                );
-            }
-            const e = extent(hBinaryFeatures.values);
-            const t = Math.max(Math.abs(e[0]), Math.abs(e[1]));
-            hBinaryFeatures.scale = scaleSequential(interpolateRdBu).domain([-t, t]);
-            console.log(hBinaryFeatures);
-        } else {
-            // TODO can't handle more than two selection groups for now
-        }
-    }
-    return { ...state, hBinaryFeatures };
-};
+const mapStateToProps = (state) => ({ ...state });
 
 const mapDispatchToProps = (dispatch) =>
     bindActionCreators({ changeParam, highlightNodes, selectNodes }, dispatch);

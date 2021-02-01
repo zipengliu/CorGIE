@@ -243,8 +243,8 @@ export function changeSelectedNodeType(idx) {
     return { type: ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE, idx: parseInt(idx, 10) };
 }
 
-export function changeParam(param, value, inverse = false) {
-    return { type: ACTION_TYPES.CHANGE_PARAM, param, value, inverse };
+export function changeParam(param, value, inverse = false, arrayIdx = null) {
+    return { type: ACTION_TYPES.CHANGE_PARAM, param, value, inverse, arrayIdx };
 }
 
 export function changeHops(hops) {

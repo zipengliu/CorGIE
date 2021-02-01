@@ -20,8 +20,8 @@ export function aggregateBinaryFeatures(features, highlightNodes) {
     return res;
 }
 
-export function compressFeatureValues(values, maxWidth) {
-    const sortedVal = values.slice().sort((a, b) => b - a);
+export function compressFeatureValues(values, maxWidth, sort=false) {
+    const sortedVal = sort? values.slice().sort((a, b) => b - a): values;
     const n = values.length;
     // Compression ratio
     const r = Math.ceil(n / maxWidth);
@@ -30,7 +30,7 @@ export function compressFeatureValues(values, maxWidth) {
     for (let i = 0; i < n; i += r) {
         let t = 0;
         for (let j = i; j < n && j < i + r; j++) {
-            t += sortedVal[j];
+            t = Math.max(t, sortedVal[j]);      // Use the max function to aggreagte
         }
         compValues.push(t / r);
     }

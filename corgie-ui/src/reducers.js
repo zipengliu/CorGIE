@@ -20,6 +20,7 @@ import {
     scaleSequential,
     interpolateGreens,
     interpolateGreys,
+    interpolateRdBu,
     scaleLinear,
 } from "d3";
 import {
@@ -486,20 +487,20 @@ const reducers = produce((draft, action) => {
                 nodeTypes: countNodesByType(graph.nodes),
                 features,
             };
-            draft.featureVis = {
-                values: null,
+            draft.featureAgg = {
+                cnts: null,
             };
             if (features && features[0][0] % 1 == 0) {
                 // is binary features
-                draft.featureVis.values = aggregateBinaryFeatures(features, null);
-                draft.featureVis.maxVal = max(draft.featureVis.values);
-                draft.featureVis.compValues = compressFeatureValues(
-                    draft.featureVis.values,
+                draft.featureAgg.cnts = aggregateBinaryFeatures(features, null);
+                draft.featureAgg.maxCnts = max(draft.featureAgg.cnts);
+                draft.featureAgg.compressedCnts = compressFeatureValues(
+                    draft.featureAgg.cnts,
                     draft.spec.feature.barcodeMaxWidth
                 );
-                draft.featureVis.scale = scaleSequential(interpolateGreys).domain([
+                draft.featureAgg.scale = scaleSequential(interpolateGreys).domain([
                     0,
-                    draft.featureVis.maxVal,
+                    draft.featureAgg.maxCnts,
                 ]);
             }
             draft.focalGraphLayout = {};
@@ -573,7 +574,11 @@ const reducers = produce((draft, action) => {
                 for (let nid of action.nodeIndices) {
                     draft.isNodeHighlighted[nid] = true;
                 }
-                draft.highlightTrigger = { by: action.fromView, which: action.whichAttr, brushedArea: action.brushedArea };
+                draft.highlightTrigger = {
+                    by: action.fromView,
+                    which: action.whichAttr,
+                    brushedArea: action.brushedArea,
+                };
                 // Highlight the neighbors as well
                 // const neighToHighlight = highlightNeighbors(
                 //     draft.graph.nodes.length,
@@ -626,6 +631,7 @@ const reducers = produce((draft, action) => {
                 draft.isNodeSelectedNeighbor = {};
                 draft.neighGrp = null;
                 draft.selNodeAttrs = [];
+                draft.selFeatures = [];
                 draft.focalGraphLayout = { running: false };
                 draft.selBoundingBox = [];
             } else {
@@ -652,7 +658,39 @@ const reducers = produce((draft, action) => {
                 );
                 draft.focalGraphLayout.running = true;
                 draft.selBoundingBox = newSel.map((s) => computeBoundingBox(draft.latent.coords, s));
+
+                if (draft.featureAgg.cnts) {
+                    draft.selFeatures = newSel.map((s) => {
+                        const cnts = aggregateBinaryFeatures(draft.graph.features, s);
+                        const maxCnts = max(cnts);
+                        const compressedCnts = compressFeatureValues(
+                            cnts,
+                            draft.spec.feature.barcodeMaxWidth
+                        );
+                        const scale = scaleSequential(interpolateGreys).domain([0, maxCnts]);
+                        return { mode: "highlight", cnts, compressedCnts, maxCnts, scale };
+                    });
+                    if (newSel.length == 2) {
+                        // Compute the diff feature data
+                        const diffCnts = draft.selFeatures[0].cnts.map(
+                            (c1, i) => c1 - draft.selFeatures[1].cnts[i]
+                        );
+                        const diffExtent = extent(diffCnts);
+                        const t = Math.max(Math.abs(diffExtent[0]), Math.abs(diffExtent[1]));
+                        const diffCompressedCnts = compressFeatureValues(
+                            diffCnts,
+                            draft.spec.feature.barcodeMaxWidth
+                        );
+                        draft.selFeatures.push({
+                            mode: "diff",
+                            cnts: diffCnts,
+                            compressedCnts: diffCompressedCnts,
+                            scale: scaleSequential(interpolateRdBu).domain([-t, t]),
+                        });
+                    }
+                }
             }
+            draft.param.features.collapsedSel = new Array(newSel.length + 1).fill(true);
 
             // Clear the highlight (blinking) nodes
             // draft.nodesToHighlight = [];
@@ -734,9 +772,17 @@ const reducers = produce((draft, action) => {
                 cur = cur[paramPath[i]];
             }
             if (action.inverse) {
-                cur[lastParam] = !cur[lastParam];
+                if (action.arrayIdx !== null) {
+                    cur[lastParam][action.arrayIdx] = !cur[lastParam][action.arrayIdx];
+                } else {
+                    cur[lastParam] = !cur[lastParam];
+                }
             } else {
-                cur[lastParam] = action.value;
+                if (action.arrayIdx !== null) {
+                    cur[lastParam][action.arrayIdx] = action.value;
+                } else {
+                    cur[lastParam] = action.value;
+                }
             }
 
             // Special param changes

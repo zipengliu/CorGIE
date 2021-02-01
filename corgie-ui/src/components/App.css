@@ -17,6 +17,12 @@
     text-align: right;
 }
 
+.btn.btn-xs {
+    font-size: .875rem;
+    padding: 0 .5rem;
+    border-radius: .2rem;
+}
+
 /* Adjacency matrix view */
 
 #adjacency-matrix-view rect.cell {
@@ -268,12 +274,18 @@ rect.highlight-strip {
     stroke-width: 1px;
 }
 
-.histogram-row {
+.attribute-row {
     display: flex;
     flex-direction: row;
     font-size: 0.9rem;
+    border-top: 1px solid grey;
+    margin: 5px 0;
+    padding: 3px;
 }
-.histogram-row-title {
+.attribute-row:first-child {
+    border: none;
+}
+.attribute-row-title {
     width: 35px;
     align-self: center;
 }

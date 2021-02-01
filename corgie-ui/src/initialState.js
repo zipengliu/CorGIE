@@ -25,6 +25,7 @@ export default {
 
     nodeAttrs: null,             // Attribute distributions for all nodes
     selNodeAttrs: [],           // Attribute distributions for selected nodes, each selection group is an array in selNodeAttrs
+    selFeatures: [],            // Binary feature distribution for each selected group
     nodesToHighlight: [],
     edgesToHighlight: [],
 
@@ -59,6 +60,11 @@ export default {
             layout: "umap",
             // layout: 'spiral',
             // layout: 'group-constraint-cola',
+        },
+
+        features: {
+            collapsedAll: false,
+            collapsedSel: [],
         },
 
         filter: {
@@ -131,8 +137,8 @@ export default {
         feature: {
             cellSize: 6,
             cellGap: 1,
-            margins: { top: 10, bottom: 10, left: 10, right: 10 },
-            barcodeMaxWidth: 250,
+            margins: { top: 5, bottom: 5, left: 10, right: 10 },
+            barcodeMaxWidth: 1000,
             barcodeHeight: 15,
         }
     },
