@@ -1,12 +1,9 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form, Button } from "react-bootstrap";
-import { scaleSequential, interpolateRdBu, interpolateReds, extent, max } from "d3";
-import cn from "classnames";
-import { changeParam, highlightNodes, selectNodes } from "../actions";
+import { Button } from "react-bootstrap";
+import { changeParam, highlightNodes } from "../actions";
 import Histogram from "./Histogram";
-import { aggregateBinaryFeatures } from "../utils";
 
 function FeatureMatrix({ values, scale, spec }) {
     const { margins, cellSize, cellGap, barcodeMaxWidth } = spec;
@@ -126,12 +123,12 @@ class NodeAttrView extends Component {
             selNodeAttrs,
             featureAgg,
             selFeatures,
-            highlightTrigger,
             hoveredNode,
             selectedNodes,
         } = this.props;
         const histSpec = this.props.spec.histogram;
         const { changeParam } = this.props;
+        const { nodeFilter } = param;
 
         let hNodeData;
         if (hoveredNode) {
@@ -159,11 +156,7 @@ class NodeAttrView extends Component {
                                         a.name
                                     )}
                                     brushedRange={
-                                        highlightTrigger &&
-                                        highlightTrigger.by === "node-attr" &&
-                                        highlightTrigger.which === a.name
-                                            ? highlightTrigger.brushedArea
-                                            : null
+                                        nodeFilter.whichAttr === a.name ? nodeFilter.brushedArea : null
                                     }
                                 />
                             </div>
@@ -178,20 +171,6 @@ class NodeAttrView extends Component {
                             />
                         )}
                     </div>
-                    {highlightTrigger && highlightTrigger.by === "node-attr" && highlightedNodes.length && (
-                        <div>
-                            <span>{highlightedNodes.length} nodes highlighted. Actions: </span>
-                            <Button
-                                size="sm"
-                                onClick={this.props.selectNodes.bind(null, "CREATE", highlightedNodes)}
-                            >
-                                Create a new selection
-                            </Button>
-                            <Button size="sm" onClick={this.props.highlightNodes.bind(null, null)}>
-                                Dehighlight
-                            </Button>
-                        </div>
-                    )}
                     {selectedNodes.map((s, k) => (
                         <div key={k} className="attribute-row">
                             <div className="attribute-row-title">foc-{k}</div>
@@ -259,7 +238,6 @@ class NodeAttrView extends Component {
 
 const mapStateToProps = (state) => ({ ...state });
 
-const mapDispatchToProps = (dispatch) =>
-    bindActionCreators({ changeParam, highlightNodes, selectNodes }, dispatch);
+const mapDispatchToProps = (dispatch) => bindActionCreators({ changeParam, highlightNodes }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(NodeAttrView);

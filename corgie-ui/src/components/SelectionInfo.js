@@ -2,9 +2,22 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Dropdown, DropdownButton, Button } from "react-bootstrap";
-import { selectNodes, highlightNodes } from "../actions";
+import { selectNodes, highlightNodes, searchNodes } from "../actions";
 
 export class SelectionInfo extends Component {
+    callSearch(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target),
+            { searchLabel, searchId } = Object.fromEntries(formData.entries());
+        if (searchLabel) {
+            this.props.searchNodes(searchLabel, null);
+        } else {
+            const t = parseInt(searchId);
+            if (!isNaN(t)) {
+                this.props.searchNodes(null, t);
+            }
+        }
+    }
     render() {
         const { graph, selectedNodes, highlightedNodes } = this.props;
         const { nodes, nodeTypes } = graph;
@@ -39,6 +52,35 @@ export class SelectionInfo extends Component {
 
                 <div className="section-divider"></div>
                 <h6>Highlight</h6>
+                <div style={{ marginBottom: "10px" }}>
+                    <div>Search nodes by</div>
+                    <Form inline onSubmit={this.callSearch.bind(this)}>
+                        <Form.Control
+                            className="search-text-box"
+                            id="search-node-label"
+                            placeholder="label"
+                            name="searchLabel"
+                            size="sm"
+                        ></Form.Control>
+                        <span style={{ margin: "0 5px" }}>or</span>
+                        <Form.Control
+                            className="search-text-box"
+                            id="search-node-id"
+                            placeholder="id"
+                            name="searchId"
+                            size="sm"
+                        ></Form.Control>
+                        <Button
+                            variant="outline-secondary"
+                            size="xs"
+                            style={{ marginLeft: "5px" }}
+                            type="submit"
+                        >
+                            search
+                        </Button>
+                    </Form>
+                </div>
+
                 <div>{highlightedNodes.length} nodes are highlighted (blinking).</div>
                 {highlightedNodes.length > 0 && (
                     <div>
@@ -98,6 +140,7 @@ const mapDispatchToProps = (dispatch) =>
         {
             selectNodes,
             highlightNodes,
+            searchNodes,
         },
         dispatch
     );

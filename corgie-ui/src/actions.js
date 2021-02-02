@@ -25,6 +25,7 @@ const ACTION_TYPES = {
     LAYOUT_TICK: "LAYOUT_TICK",
     CHANGE_EDGE_TYPE_STATE: "CHANGE_EDGE_TYPE_STATE",
     TOGGLE_HIGHLIGHT_NODES_ATTR: "TOGGLE_HIGHLIGHT_NODES_ATTR",
+    SEARCH_NODES: "SEARCH_NODES",
 };
 export default ACTION_TYPES;
 
@@ -94,7 +95,7 @@ function computeDistancesDone(distData) {
 }
 
 export function highlightNodes(nodeIndices, brushedArea = null, fromView = null, which = null) {
-    return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIndices, brushedArea, fromView, which};
+    return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIndices, brushedArea, fromView, which };
 }
 
 export function hoverNode(nodeIdx) {
@@ -251,4 +252,8 @@ export function layoutTick() {
 
 export function changeEdgeTypeState(idx) {
     return { type: ACTION_TYPES.CHANGE_EDGE_TYPE_STATE, idx };
+}
+
+export function searchNodes(label, nodeIdx) {
+    return { type: ACTION_TYPES.SEARCH_NODES, label, nodeIdx };
 }

@@ -18,16 +18,16 @@
 }
 
 .btn.btn-xs {
-    font-size: .875rem;
-    padding: 0 .5rem;
-    border-radius: .2rem;
+    font-size: 0.875rem;
+    padding: 0 0.5rem;
+    border-radius: 0.2rem;
 }
 .form-control.form-control-xs {
-    font-size: .875rem;
-    padding: 0 .5rem;
+    font-size: 0.875rem;
+    padding: 0 0.5rem;
     height: 1.5rem;
 }
-.form-label.col-form-label{
+.form-label.col-form-label {
     padding-top: 1px;
     padding-bottom: 1px;
 }
@@ -341,8 +341,12 @@ rect.highlight-strip {
     background-color: #666;
     color: white;
     cursor: pointer;
-    font-size: 0.875rem; 
+    font-size: 0.875rem;
     padding: 1px 4px;
+}
+
+.search-text-box {
+    max-width: 100px;
 }
 
 .brushable-area {

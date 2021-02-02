@@ -1,15 +1,11 @@
 import produce from "immer";
 import initialState from "./initialState";
-import ACTION_TYPES, { highlightNodeType } from "./actions";
+import ACTION_TYPES from "./actions";
 import {
     computeForceLayoutWithD3,
     computeCircularLayout,
     computeDummyLayout,
     computeForceLayoutWithCola,
-    computeLocalLayoutWithCola,
-    computeLocalLayoutWithD3,
-    computeLocalLayoutWithUMAP,
-    computeSpaceFillingCurveLayout,
 } from "./layouts";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import bs from "bitset";
@@ -23,13 +19,7 @@ import {
     interpolateRdBu,
     scaleLinear,
 } from "d3";
-import {
-    aggregateBinaryFeatures,
-    compressFeatureValues,
-    coordsRescale,
-    getNeighborDistance,
-    isPointInBox,
-} from "./utils";
+import { aggregateBinaryFeatures, compressFeatureValues, coordsRescale, getNeighborDistance } from "./utils";
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -542,31 +532,30 @@ const reducers = produce((draft, action) => {
             for (let i = 0; i < draft.graph.edges.length; i++) {
                 draft.graph.edges[i].d = action.distData.edgeLen[i];
             }
-            draft.showEdges = draft.graph.edges
-                .filter(
-                    (e) =>
-                        draft.param.filter.edgeDistRange[0] <= e.d &&
-                        e.d <= draft.param.filter.edgeDistRange[1]
-                )
-                .sort((e1, e2) => e1.d - e2.d);
             // Compute the histogram bins
             draft.latent.edgeLenBins = draft.latent.binGen(draft.latent.edgeLen);
             draft.latent.allDistBins = draft.latent.binGen(draft.latent.distArray.map((x) => x.d));
-
             draft.latent.isComputing = false;
+
+            // draft.showEdges = draft.graph.edges
+            //     .filter(
+            //         (e) =>
+            //             draft.param.filter.edgeDistRange[0] <= e.d &&
+            //             e.d <= draft.param.filter.edgeDistRange[1]
+            //     )
+            //     .sort((e1, e2) => e1.d - e2.d);
 
             return;
 
         case ACTION_TYPES.HIGHLIGHT_NODES:
             draft.highlightedNodes = action.nodeIndices;
+            draft.param.nodeFilter = {};
             switch (action.fromView) {
-                case "emb":
                 case "node-attr":
-                    draft.highlightTrigger = {
-                        by: action.fromView,
-                        which: action.which,
-                        brushedArea: action.brushedArea,
-                    };
+                    draft.param.nodeFilter.whichAttr = action.which;
+                    draft.param.nodeFilter.brushedArea = action.brushedArea;
+                // No break here
+                case "emb":
                     draft.isNodeHighlighted = {};
                     for (let nid of action.nodeIndices) {
                         draft.isNodeHighlighted[nid] = true;
@@ -574,7 +563,6 @@ const reducers = produce((draft, action) => {
                     break;
                 case "graph":
                     // Highlight their neighbors as well  TODO: is this good?
-                    draft.highlightTrigger = { by: "graph" };
                     draft.isNodeHighlighted = highlightNeighbors(
                         draft.graph.nodes.length,
                         draft.graph.neigh,
@@ -593,7 +581,6 @@ const reducers = produce((draft, action) => {
                     }
                     break;
                 case "node-type":
-                    draft.highlightTrigger = { by: "node-type", which: action.which };
                     draft.isNodeHighlighted = {};
                     draft.highlightedNodes = [];
                     for (let n of draft.graph.nodes) {
@@ -612,7 +599,6 @@ const reducers = produce((draft, action) => {
             ) {
                 draft.highlightedNodes = [];
                 draft.isNodeHighlighted = {};
-                draft.highlightTrigger = null;
             }
             return;
         case ACTION_TYPES.HOVER_NODE:
@@ -712,7 +698,7 @@ const reducers = produce((draft, action) => {
             draft.param.features.collapsedSel = new Array(newSel.length + 1).fill(true);
 
             // Clear the highlight (blinking) nodes
-            draft.highlightTrigger = null;
+            draft.param.nodeFilter = {};
             draft.highlightedNodes = [];
             draft.isNodeHighlighted = {};
 
@@ -890,6 +876,31 @@ const reducers = produce((draft, action) => {
 
         case ACTION_TYPES.CHANGE_EDGE_TYPE_STATE:
             draft.edgeAttributes.type.show[action.idx] = !draft.edgeAttributes.type.show[action.idx];
+            return;
+
+        case ACTION_TYPES.SEARCH_NODES:
+            // Remove other node filters, e.g. node attributes
+            draft.param.nodeFilter = { searchLabel: action.label, searchId: action.nodeIdx };
+            if (action.label) {
+                const l = action.label.toLowerCase();
+                draft.highlightedNodes = draft.graph.nodes
+                    .filter((n) => n.label && n.label.toString().toLowerCase().includes(l))
+                    .map((n) => n.id);
+                draft.isNodeHighlighted = {};
+                for (let nid of draft.highlightedNodes) {
+                    draft.isNodeHighlighted[nid] = true;
+                }
+            } else if (
+                action.nodeIdx !== null &&
+                0 <= action.nodeIdx &&
+                action.nodeIdx < draft.graph.nodes.length
+            ) {
+                draft.highlightedNodes = [action.nodeIdx];
+                draft.isNodeHighlighted = { [action.nodeIdx]: true };
+            } else {
+                draft.highlightedNodes = [];
+                draft.isNodeHighlighted = {};
+            }
             return;
 
         default:

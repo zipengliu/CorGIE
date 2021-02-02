@@ -16,7 +16,6 @@ export default {
 
     highlightedNodes: [],
     isNodeHighlighted: {}, // Either null or an array of booleans
-    highlightTrigger: null,
 
     hoveredNode: null,
     isNodeHovered: {},
@@ -66,9 +65,19 @@ export default {
             collapsedSel: [],
         },
 
-        filter: {
-            ascending: true,
-            edgeDistRange: [0.5, 0.6],
+        // Highlight nodes with the following filter in the node attributes
+        // Either use node attributes or search by labels, one or the other, not the same time.
+        nodeFilter: {
+            whichAttr: null,
+            brushedArea: null,
+            searchLabel: null,
+            searchId: null,
+        },
+
+        nodePairFilter: {
+            ascending: true, // sort the node pairs by latent distance in ascending order
+            which: null,    // 
+            edgeDistRange: null,
         },
     },
 
