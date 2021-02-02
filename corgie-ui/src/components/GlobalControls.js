@@ -2,20 +2,66 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Dropdown, DropdownButton, Button } from "react-bootstrap";
-import { highlightNodeType, changeHops, changeParam } from "../actions";
+import { format as d3Format } from "d3";
+import { highlightNodes, changeHops, changeParam } from "../actions";
 import NodeRep from "./NodeRep";
 
 export class GlobalControls extends Component {
     render() {
         const { graph, param, nodeAttrs } = this.props;
         const { nodes, edges, nodeTypes } = graph;
-        const { colorBy } = param;
+        const { colorBy, colorScale } = param;
+        let e, numberFormat, colorMin, colorMax;
+        if (colorBy !== "position") {
+            e = colorScale.domain();
+            colorMin = colorScale(e[0]);
+            colorMax = colorScale(e[1]);
+            numberFormat = e[0] < 1 ? d3Format("~g") : d3Format("~s");
+        }
 
         return (
             <div id="global-controls">
                 <div className="graph-info">
                     <div>
                         # nodes: {nodes.length}, # edges: {edges.length}
+                    </div>
+
+                    <div style={{ display: "flex" }}>
+                        <div>Node color: </div>
+                        <Dropdown
+                            onSelect={(k) => {
+                                this.props.changeParam("colorBy", k, false);
+                            }}
+                        >
+                            <Dropdown.Toggle id="color-by-toggle-btn" size="xs">
+                                {colorBy === "position" ? "UMAP position" : nodeAttrs[colorBy].name}
+                            </Dropdown.Toggle>
+
+                            <Dropdown.Menu>
+                                <Dropdown.Item eventKey={"position"}>UMAP position</Dropdown.Item>
+                                <Dropdown.Divider />
+                                {nodeAttrs.map((a, i) => (
+                                    <Dropdown.Item key={i} eventKey={i}>
+                                        {a.name}
+                                    </Dropdown.Item>
+                                ))}
+                            </Dropdown.Menu>
+                        </Dropdown>
+
+                        {colorBy !== "position" && (
+                            <div style={{ marginLeft: "10px" }}>
+                                <span style={{ marginRight: "3px" }}>{numberFormat(e[0])}</span>
+                                <div
+                                    style={{
+                                        display: "inline-block",
+                                        height: "10px",
+                                        width: "100px",
+                                        background: `linear-gradient(90deg, ${colorMin} 0%, ${colorMax} 100%)`,
+                                    }}
+                                ></div>
+                                <span style={{ marginLeft: "3px" }}>{numberFormat(e[1])}</span>
+                            </div>
+                        )}
                     </div>
                     {/* <div></div> */}
                     {/* <div># node types: {nodeTypes.length}</div> */}
@@ -28,8 +74,14 @@ export class GlobalControls extends Component {
                                             key={i}
                                             transform={`translate(${100 * i},0)`}
                                             className="node"
-                                            onMouseEnter={this.props.highlightNodeType.bind(this, i)}
-                                            onMouseLeave={this.props.highlightNodeType.bind(this, null)}
+                                            onClick={this.props.highlightNodes.bind(
+                                                null,
+                                                [],
+                                                null,
+                                                "node-type",
+                                                i
+                                            )}
+                                            style={{ cursor: "pointer" }}
                                         >
                                             <NodeRep
                                                 shape={i === 0 ? "triangle" : "circle"}
@@ -78,7 +130,7 @@ export class GlobalControls extends Component {
                                 <Form.Label column="sm"># hops considered </Form.Label>
                                 <Form.Control
                                     as="select"
-                                    size="sm"
+                                    size="xs"
                                     value={param.hops}
                                     onChange={(e) => {
                                         this.props.changeHops(parseInt(e.target.value));
@@ -94,7 +146,7 @@ export class GlobalControls extends Component {
                                 <Form.Label column="sm"># hops to highlight</Form.Label>
                                 <Form.Control
                                     as="select"
-                                    size="sm"
+                                    size="xs"
                                     value={param.hopsHighlight}
                                     onChange={(e) => {
                                         this.props.changeParam("hopsHighlight", parseInt(e.target.value));
@@ -106,29 +158,6 @@ export class GlobalControls extends Component {
                                 </Form.Control>
                             </Form.Group>
                         </Form>
-                    </div>
-
-                    <div style={{ display: "flex" }}>
-                        <div>Node color: </div>
-                        <Dropdown
-                            onSelect={(k) => {
-                                this.props.changeParam("colorBy", k, false);
-                            }}
-                        >
-                            <Dropdown.Toggle id="color-by-toggle-btn" size="sm">
-                                {colorBy === "position" ? "UMAP position" : nodeAttrs[colorBy].name}
-                            </Dropdown.Toggle>
-
-                            <Dropdown.Menu>
-                                <Dropdown.Item eventKey={"position"}>UMAP position</Dropdown.Item>
-                                <Dropdown.Divider />
-                                {nodeAttrs.map((a, i) => (
-                                    <Dropdown.Item key={i} eventKey={i}>
-                                        {a.name}
-                                    </Dropdown.Item>
-                                ))}
-                            </Dropdown.Menu>
-                        </Dropdown>
                     </div>
                 </div>
             </div>
@@ -143,7 +172,7 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) =>
     bindActionCreators(
         {
-            highlightNodeType,
+            highlightNodes,
             changeHops,
             changeParam,
         },

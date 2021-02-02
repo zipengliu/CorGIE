@@ -3,11 +3,11 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
 import { Form } from "react-bootstrap";
-import { highlightNodes, selectNodes, changeParam, layoutTick } from "../actions";
+import { highlightNodes, hoverNode, changeParam, layoutTick } from "../actions";
 import { max, scaleLinear } from "d3";
 import NodeRep from "./NodeRep";
 import Brush from "./Brush";
-import Scatterplot from './Scatterplot';
+import Scatterplot from "./Scatterplot";
 import { getNodeEmbeddingColor } from "../utils";
 
 class GraphView extends Component {
@@ -29,12 +29,13 @@ class GraphView extends Component {
             latent,
             isNodeHighlighted,
             isNodeSelected,
+            isNodeHovered,
             selectedNodes,
-            isNodeSelectedNeighbor,
             neighMap,
             focalGraphLayout,
             edgeAttributes,
             nodeAttrs,
+            hoveredNode,
         } = this.props;
         const { colorBy, colorScale } = param;
         const layout = param.graph.layout;
@@ -86,7 +87,7 @@ class GraphView extends Component {
 
                 <div style={{ display: "flex", flexDirection: "row" }}>
                     <div>
-                        <h6 className="text-center">Original graph</h6>
+                        <h6 className="text-center">Original layout</h6>
                         <div>
                             <Form inline>
                                 <Form.Group controlId="graph-layout-alg-global">
@@ -124,6 +125,13 @@ class GraphView extends Component {
                                                         highlighted:
                                                             isNodeHighlighted[e.source] &&
                                                             isNodeHighlighted[e.target],
+                                                        hovered:
+                                                            isNodeHovered[e.source] &&
+                                                            isNodeHovered[e.target],
+                                                        nonhovered:
+                                                            hoveredNode !== null &&
+                                                            (!isNodeHovered[e.source] ||
+                                                                !isNodeHovered[e.target]),
                                                     })}
                                                     x1={coords[e.source].x}
                                                     y1={coords[e.source].y}
@@ -145,13 +153,19 @@ class GraphView extends Component {
                                                 className={cn("node", {
                                                     highlighted: isNodeHighlighted[i],
                                                     selected: isNodeSelected[i],
-                                                    "hop-1": isNodeSelectedNeighbor[i] === 1,
-                                                    "hop-2": isNodeSelectedNeighbor[i] === 2,
+                                                    hovered: isNodeHovered[i],
+                                                    nonhovered: hoveredNode !== null && !isNodeHovered[i],
                                                 })}
                                                 style={{ fill: getNodeColor(i) }}
-                                                onMouseEnter={this.props.highlightNodes.bind(null, i)}
-                                                onMouseLeave={this.props.highlightNodes.bind(null, null)}
-                                                onClick={this.props.selectNodes.bind(null, 'CREATE', [i], null)}
+                                                onMouseEnter={this.props.hoverNode.bind(null, i)}
+                                                onMouseLeave={this.props.hoverNode.bind(null, null)}
+                                                onClick={this.props.highlightNodes.bind(
+                                                    null,
+                                                    [i],
+                                                    null,
+                                                    "graph",
+                                                    null
+                                                )}
                                             >
                                                 <NodeRep
                                                     shape={nodes[i].typeId === 0 ? "triangle" : "circle"}
@@ -177,14 +191,14 @@ class GraphView extends Component {
 
                         <div style={{ marginTop: "10px" }}>
                             <h6>Distance in graph topology vs. latent space</h6>
-                            <Scatterplot xData={edges.map(e => e.d)} yData={edges.map(e => e.dNei)} />
+                            <Scatterplot xData={edges.map((e) => e.d)} yData={edges.map((e) => e.dNei)} />
                         </div>
                     </div>
 
                     {focalGraphLayout.running && <div>Computing layouts for selected nodes...</div>}
                     {focalGraphLayout.coords && !focalGraphLayout.running && (
                         <div>
-                            <h6 className="text-center">Local graph</h6>
+                            <h6 className="text-center">Focus layout</h6>
                             <div>
                                 <Form inline>
                                     <Form.Group controlId="graph-layout-alg-local">
@@ -220,6 +234,12 @@ class GraphView extends Component {
                                                     highlighted:
                                                         isNodeHighlighted[e.source] &&
                                                         isNodeHighlighted[e.target],
+                                                    hovered:
+                                                        isNodeHovered[e.source] && isNodeHovered[e.target],
+                                                    nonhovered:
+                                                        hoveredNode !== null &&
+                                                        (!isNodeHovered[e.source] ||
+                                                            !isNodeHovered[e.target]),
                                                 })}
                                                 x1={focalGraphLayout.coords[e.source].x}
                                                 y1={focalGraphLayout.coords[e.source].y}
@@ -252,8 +272,8 @@ class GraphView extends Component {
                                                 className={cn("node", {
                                                     highlighted: isNodeHighlighted[i],
                                                     selected: isNodeSelected[i],
-                                                    "hop-1": isNodeSelectedNeighbor[i] === 1,
-                                                    "hop-2": isNodeSelectedNeighbor[i] === 2,
+                                                    hovered: isNodeHovered[i],
+                                                    nonhovered: hoveredNode !== null && !isNodeHovered[i],
                                                 })}
                                                 style={{ fill: getNodeColor(i) }}
                                                 onMouseEnter={this.props.highlightNodes.bind(null, i)}
@@ -290,7 +310,7 @@ const mapDispatchToProps = (dispatch) =>
     bindActionCreators(
         {
             highlightNodes,
-            selectNodes,
+            hoverNode,
             changeParam,
             layoutTick,
         },

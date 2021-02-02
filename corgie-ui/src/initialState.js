@@ -4,31 +4,30 @@ export default {
     homePath: "",
     // homePath: '/~zipeng/private/cofegrem-prototype',
 
-    isNodeHighlighted: {}, // Either null or an array of booleans
-    highlightTrigger: null,
-    showDetailNode: null,
-
     centralNodeType: 0,
 
     selectedNodeType: 0,
-    selectedNodes: [],      // Array of array
+    selectedNodes: [], // Array of array
     selBoundingBox: [],
-    isNodeSelected: {},     // Dict for ALL selected nodes
+    isNodeSelected: {}, // Dict for ALL selected nodes
+    selNodeAttrs: [], // Attribute distributions for selected nodes, each selection group is an array in selNodeAttrs
+    selFeatures: [], // Binary feature distribution for each selected group
     isNodeSelectedNeighbor: {},
+
+    highlightedNodes: [],
+    isNodeHighlighted: {}, // Either null or an array of booleans
+    highlightTrigger: null,
+
+    hoveredNode: null,
+    isNodeHovered: {},
+
     neighborIntersections: null,
 
     focalGraphLayout: {
         running: false,
     },
 
-    powerSetLimit: 8,
-
-    nodeAttrs: null,             // Attribute distributions for all nodes
-    selNodeAttrs: [],           // Attribute distributions for selected nodes, each selection group is an array in selNodeAttrs
-    selFeatures: [],            // Binary feature distribution for each selected group
-    nodesToHighlight: [],
-    edgesToHighlight: [],
-
+    nodeAttrs: null, // Attribute distributions for all nodes
     edgeAttributes: {
         type: {
             type: "categorical",
@@ -44,7 +43,7 @@ export default {
         hops: 2,
         hopsHighlight: 1,
 
-        colorBy: 'position',        // Could be "position" or index of nodeAttrs
+        colorBy: "position", // Could be "position" or index of nodeAttrs
         colorScale: null,
 
         // neighborDistanceMetric: 'hamming',
@@ -78,7 +77,7 @@ export default {
             edgeType: "line",
             width: 1000,
             height: 1000,
-            margins: { top: 15, bottom: 15, left: 15, right: 15},
+            margins: { top: 15, bottom: 15, left: 15, right: 15 },
 
             neighborMarkerMaxHeight: 30,
             centralNodeSize: 4,
@@ -140,6 +139,6 @@ export default {
             margins: { top: 5, bottom: 5, left: 10, right: 10 },
             barcodeMaxWidth: 1000,
             barcodeHeight: 15,
-        }
+        },
     },
 };

@@ -12,7 +12,7 @@ class DetailView extends Component {
 }
 
 const mapStateToProps = state => ({
-    nodeInfo: state.showDetailNode !== null ? state.graph.nodes[state.showDetailNode] : null
+    nodeInfo: state.hoveredNode !== null ? state.graph.nodes[state.hoveredNode] : null
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);

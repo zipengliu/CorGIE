@@ -557,68 +557,87 @@ const reducers = produce((draft, action) => {
 
             return;
 
-        case ACTION_TYPES.HIGHLIGHT_NODE_TYPE:
-            if (action.nodeTypeIdx === null) {
-                draft.highlightTrigger = null;
-                draft.isNodeHighlighted = {};
-            } else {
-                draft.highlightTrigger = { by: "type", which: action.nodeTypeIdx };
-                draft.isNodeHighlighted = draft.graph.nodes.map((n) => n.typeId === action.nodeTypeIdx);
-            }
-            return;
         case ACTION_TYPES.HIGHLIGHT_NODES:
-            draft.showDetailNode = action.nodeIdx;
-            if (action.brushedArea !== null && action.fromView !== null) {
-                draft.nodesToHighlight = action.nodeIndices;
-                draft.isNodeHighlighted = {};
-                for (let nid of action.nodeIndices) {
-                    draft.isNodeHighlighted[nid] = true;
-                }
-                draft.highlightTrigger = {
-                    by: action.fromView,
-                    which: action.whichAttr,
-                    brushedArea: action.brushedArea,
-                };
-                // Highlight the neighbors as well
-                // const neighToHighlight = highlightNeighbors(
-                //     draft.graph.nodes.length,
-                //     draft.graph.neigh,
-                //     draft.param.hopsHighlight,
-                //     null,
-                //     draft.nodesToHighlight
-                // );
-                // // Merge into draft.isNodeHighlighted
-                // for (let neighId in neighToHighlight)
-                //     if (neighToHighlight[neighId]) {
-                //         draft.isNodeHighlighted[neighId] = true;
-                //     }
-            } else {
-                if (action.nodeIdx === null) {
-                    draft.highlightTrigger = null;
+            draft.highlightedNodes = action.nodeIndices;
+            switch (action.fromView) {
+                case "emb":
+                case "node-attr":
+                    draft.highlightTrigger = {
+                        by: action.fromView,
+                        which: action.which,
+                        brushedArea: action.brushedArea,
+                    };
                     draft.isNodeHighlighted = {};
-                    draft.edgesToHighlight = [];
-                    draft.nodesToHighlight = [];
-                } else {
-                    draft.highlightTrigger = { by: "node", which: action.nodeIdx };
+                    for (let nid of action.nodeIndices) {
+                        draft.isNodeHighlighted[nid] = true;
+                    }
+                    break;
+                case "graph":
+                    // Highlight their neighbors as well  TODO: is this good?
+                    draft.highlightTrigger = { by: "graph" };
                     draft.isNodeHighlighted = highlightNeighbors(
                         draft.graph.nodes.length,
                         draft.graph.neigh,
                         draft.param.hopsHighlight,
-                        action.nodeIdx,
-                        null
+                        null,
+                        action.nodeIndices
                     );
-                    draft.isNodeHighlighted[action.nodeIdx] = true;
-                    draft.nodesToHighlight = [action.nodeIdx];
-                }
+                    for (let nid of action.nodeIndices) {
+                        draft.isNodeHighlighted[nid] = true;
+                    }
+                    draft.highlightedNodes = [];
+                    for (let i = 0; i < draft.isNodeHighlighted.length; i++) {
+                        if (draft.isNodeHighlighted[i]) {
+                            draft.highlightedNodes.push(i);
+                        }
+                    }
+                    break;
+                case "node-type":
+                    draft.highlightTrigger = { by: "node-type", which: action.which };
+                    draft.isNodeHighlighted = {};
+                    draft.highlightedNodes = [];
+                    for (let n of draft.graph.nodes) {
+                        if (n.typeId === action.which) {
+                            draft.highlightedNodes.push(n.id);
+                            draft.isNodeHighlighted[n.id] = true;
+                        }
+                    }
+                    break;
+                default:
+            }
+
+            if (
+                action.fromView === null &&
+                (action.nodeIndices === null || action.nodeIndices.length === 0)
+            ) {
+                draft.highlightedNodes = [];
+                draft.isNodeHighlighted = {};
+                draft.highlightTrigger = null;
             }
             return;
-        case ACTION_TYPES.HIGHLIGHT_NEIGHBORS:
-            draft.isNodeHighlighted = {};
-            if (action.nodes) {
-                for (let i of action.nodes) {
-                    draft.isNodeHighlighted[i] = true;
-                }
+        case ACTION_TYPES.HOVER_NODE:
+            if (action.nodeIdx === null) {
+                draft.isNodeHovered = {};
+            } else {
+                draft.isNodeHovered = highlightNeighbors(
+                    draft.graph.nodes.length,
+                    draft.graph.neigh,
+                    draft.param.hopsHighlight,
+                    action.nodeIdx,
+                    null
+                );
+                draft.isNodeHovered[action.nodeIdx] = true;
             }
+            draft.hoveredNode = action.nodeIdx;
+            return;
+        case ACTION_TYPES.HIGHLIGHT_NEIGHBORS:
+            // Deprecated
+            // draft.isNodeHighlighted = {};
+            // if (action.nodes) {
+            //     for (let i of action.nodes) {
+            //         draft.isNodeHighlighted[i] = true;
+            //     }
+            // }
             return;
         case ACTION_TYPES.SELECT_NODES_PENDING:
             let { newSel, neighRes } = action;
@@ -693,8 +712,9 @@ const reducers = produce((draft, action) => {
             draft.param.features.collapsedSel = new Array(newSel.length + 1).fill(true);
 
             // Clear the highlight (blinking) nodes
-            // draft.nodesToHighlight = [];
-            // draft.isNodeHighlighted = {};
+            draft.highlightTrigger = null;
+            draft.highlightedNodes = [];
+            draft.isNodeHighlighted = {};
 
             // draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
             //     draft.latent.distMatrix,
@@ -799,7 +819,7 @@ const reducers = produce((draft, action) => {
                     const attrDomain = [colorAttr.bins[0].x0, colorAttr.bins[colorAttr.bins.length - 1].x1];
                     const leftMargin = 0.2 * (attrDomain[1] - attrDomain[0]);
                     draft.param.colorScale = scaleSequential(interpolateGreens).domain([
-                        attrDomain[0] - leftMargin,
+                        attrDomain[0] > 0 ? Math.max(0, attrDomain[0] - leftMargin) : attrDomain[0],
                         attrDomain[1],
                     ]);
                 }

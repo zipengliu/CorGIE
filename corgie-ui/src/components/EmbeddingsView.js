@@ -3,14 +3,14 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
 import { Form } from "react-bootstrap";
-import { highlightNodes, selectNodes, changeParam } from "../actions";
+import { highlightNodes, changeParam, changeSelectedNodeType } from "../actions";
 import Brush from "./Brush";
 import NodeRep from "./NodeRep";
 import { isPointInBox, getNodeEmbeddingColor } from "../utils";
 import Histogram from "./Histogram";
 
 class EmbeddingsView extends Component {
-    callSelectNodes(brushedArea) {
+    callHighlightNodes(brushedArea) {
         const { graph, selectedNodeType } = this.props;
         const coords = this.props.latent.coords;
         const targetNodes = [];
@@ -22,7 +22,7 @@ class EmbeddingsView extends Component {
         }
         if (targetNodes.length == 0) return;
 
-        this.props.selectNodes("CREATE", targetNodes, null);
+        this.props.highlightNodes(targetNodes, brushedArea, "emb", null);
     }
 
     render() {
@@ -33,11 +33,13 @@ class EmbeddingsView extends Component {
             graph,
             isNodeHighlighted,
             isNodeSelected,
-            isNodeSelectedNeighbor,
+            isNodeHovered,
             param,
             nodeAttrs,
             highlightDist,
             selBoundingBox,
+            selectedNodeType,
+            hoveredNode,
         } = this.props;
         const { width, height, margins } = spec.latent;
         const histSpec = { ...spec.histogram, width: 300 };
@@ -91,7 +93,7 @@ class EmbeddingsView extends Component {
                             {selBoundingBox.map((h, i) => (
                                 <g key={i}>
                                     <text x={h.x} y={h.y - 2}>
-                                        sel-{i}
+                                        foc-{i}
                                     </text>
                                     <rect {...h} />
                                 </g>
@@ -104,16 +106,14 @@ class EmbeddingsView extends Component {
                                     className={cn("point", {
                                         highlighted: isNodeHighlighted[i],
                                         selected: isNodeSelected[i],
-                                        "hop-1": isNodeSelectedNeighbor[i] === 1,
-                                        "hop-2": isNodeSelectedNeighbor[i] === 2,
+                                        hovered: isNodeHovered[i],
+                                        nonhovered: hoveredNode !== null && !isNodeHovered[i],
                                     })}
                                     transform={`translate(${c.x},${c.y})`}
-                                    onMouseEnter={this.props.highlightNodes.bind(this, i)}
-                                    onMouseLeave={this.props.highlightNodes.bind(this, null)}
-                                    onClick={this.props.selectNodes.bind(null, i)}
+                                    // onMouseEnter={this.props.highlightNodes.bind(this, i)}
+                                    // onMouseLeave={this.props.highlightNodes.bind(this, null)}
+                                    // onClick={this.props.selectNodes.bind(null, i)}
                                     style={{
-                                        // fill: distToCurFoc ? colorScale(distToCurFoc[i]) : "grey",
-                                        // fill: "grey",
                                         fill:
                                             colorBy === "position"
                                                 ? "grey"
@@ -136,10 +136,35 @@ class EmbeddingsView extends Component {
                             width={width}
                             height={height}
                             isRange={false}
-                            brushedFunc={this.callSelectNodes.bind(this)}
+                            brushedFunc={this.callHighlightNodes.bind(this)}
                         />
                     </g>
                 </svg>
+
+                {nodeTypes.length > 1 && (
+                    <div>
+                        <Form inline>
+                            <Form.Group controlId="select-node-type">
+                                <Form.Label column="sm">Only brush nodes of type</Form.Label>
+                                <Form.Control
+                                    as="select"
+                                    size="xs"
+                                    value={selectedNodeType}
+                                    onChange={(e) => {
+                                        this.props.changeSelectedNodeType(e.target.value);
+                                    }}
+                                >
+                                    {nodeTypes.map((nt, i) => (
+                                        <option key={i} value={i}>
+                                            {nt.name}
+                                        </option>
+                                    ))}
+                                </Form.Control>
+                            </Form.Group>
+                        </Form>
+                    </div>
+                )}
+                <div className="section-divider"></div>
 
                 {isComputing ? (
                     <div>Computing distances...</div>
@@ -246,8 +271,8 @@ const mapDispatchToProps = (dispatch) =>
     bindActionCreators(
         {
             highlightNodes,
-            selectNodes,
             changeParam,
+            changeSelectedNodeType,
         },
         dispatch
     );

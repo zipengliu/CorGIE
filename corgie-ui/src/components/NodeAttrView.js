@@ -86,14 +86,14 @@ function FeatureComboVis({ data, collapsed, toggleFunc, spec, legendText }) {
                     <FeatureMatrix values={cnts} mode={mode} scale={scale} spec={spec} />
                 </div>
             )}
-            <div style={{marginLeft: '10px'}}>
+            <div style={{ marginLeft: "10px" }}>
                 <span>
                     <Button variant="outline-secondary" size="xs" onClick={toggleFunc}>
                         {collapsed ? "Show" : "Hide"} feature matrix
                     </Button>
                 </span>
                 <span style={{ marginLeft: "15px", marginRight: "10px" }}>strip / cell color: </span>
-                <span>{e[0]}</span>
+                <span style={{ marginRight: "3px" }}>{e[0]}</span>
                 <div
                     style={{
                         display: "inline-block",
@@ -102,8 +102,8 @@ function FeatureComboVis({ data, collapsed, toggleFunc, spec, legendText }) {
                         background: `linear-gradient(90deg, ${colorMin} 0%, ${colorMid} 50%, ${colorMax} 100%)`,
                     }}
                 ></div>
-                <span>{e[1]}</span>
-                <span style={{marginLeft: '10px'}}>{legendText}</span>
+                <span style={{ marginLeft: "3px" }}>{e[1]}</span>
+                <span style={{ marginLeft: "10px" }}>{legendText}</span>
             </div>
         </div>
     );
@@ -115,27 +115,27 @@ class NodeAttrView extends Component {
         const h = nodes
             .filter((n) => whichType === n.type && v1 <= n[whichAttr] && n[whichAttr] <= v2)
             .map((n) => n.id);
-        this.props.highlightNodes(null, h, [v1, v2], "node-attr", whichAttr);
+        this.props.highlightNodes(h, [v1, v2], "node-attr", whichAttr);
     }
 
     render() {
         const {
             param,
             nodeAttrs,
-            nodesToHighlight,
+            highlightedNodes,
             selNodeAttrs,
             featureAgg,
             selFeatures,
             highlightTrigger,
+            hoveredNode,
             selectedNodes,
         } = this.props;
         const histSpec = this.props.spec.histogram;
-        const { colorBy } = param;
         const { changeParam } = this.props;
 
         let hNodeData;
-        if (nodesToHighlight.length == 1) {
-            hNodeData = this.props.graph.nodes[nodesToHighlight[0]];
+        if (hoveredNode) {
+            hNodeData = this.props.graph.nodes[hoveredNode];
         }
 
         return (
@@ -178,12 +178,12 @@ class NodeAttrView extends Component {
                             />
                         )}
                     </div>
-                    {highlightTrigger && highlightTrigger.by === "node-attr" && nodesToHighlight.length && (
+                    {highlightTrigger && highlightTrigger.by === "node-attr" && highlightedNodes.length && (
                         <div>
-                            <span>{nodesToHighlight.length} nodes highlighted. Actions: </span>
+                            <span>{highlightedNodes.length} nodes highlighted. Actions: </span>
                             <Button
                                 size="sm"
-                                onClick={this.props.selectNodes.bind(null, "CREATE", nodesToHighlight)}
+                                onClick={this.props.selectNodes.bind(null, "CREATE", highlightedNodes)}
                             >
                                 Create a new selection
                             </Button>
@@ -194,7 +194,7 @@ class NodeAttrView extends Component {
                     )}
                     {selectedNodes.map((s, k) => (
                         <div key={k} className="attribute-row">
-                            <div className="attribute-row-title">sel-{k}</div>
+                            <div className="attribute-row-title">foc-{k}</div>
                             {selNodeAttrs[k].map((a, i) => (
                                 <div key={i} className="histogram-block">
                                     <div className="title"></div>
@@ -219,7 +219,13 @@ class NodeAttrView extends Component {
                                     data={selFeatures[k]}
                                     spec={this.props.spec.feature}
                                     collapsed={param.features.collapsedSel[k]}
-                                    toggleFunc={changeParam.bind(this, "features.collapsedSel", null, true, k)}
+                                    toggleFunc={changeParam.bind(
+                                        this,
+                                        "features.collapsedSel",
+                                        null,
+                                        true,
+                                        k
+                                    )}
                                     legendText={"# nodes that have this attribute"}
                                 />
                             )}
@@ -233,7 +239,13 @@ class NodeAttrView extends Component {
                                     data={selFeatures[2]}
                                     spec={this.props.spec.feature}
                                     collapsed={param.features.collapsedSel[2]}
-                                    toggleFunc={changeParam.bind(this, "features.collapsedSel", null, true, 2)}
+                                    toggleFunc={changeParam.bind(
+                                        this,
+                                        "features.collapsedSel",
+                                        null,
+                                        true,
+                                        2
+                                    )}
                                     legendText={"Diff. b/w two selected groups"}
                                 />
                             )}

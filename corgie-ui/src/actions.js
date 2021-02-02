@@ -12,8 +12,8 @@ const ACTION_TYPES = {
     FETCH_DATA_SUCCESS: "FETCH_DATA_SUCCESS",
     FETCH_DATA_ERROR: "FETCH_DATA_ERROR",
     COMPUTE_DISTANCES_DONE: "COMPUTE_DISTANCES_DONE",
-    HIGHLIGHT_NODE_TYPE: "HIGHLIGHT_NODE_TYPE",
     HIGHLIGHT_NODES: "HIGHLIGHT_NODES",
+    HOVER_NODE: "HOVER_NODE",
     HIGHLIGHT_NEIGHBORS: "HIGHLIGHT_NEIGHBORS",
     CHANGE_SELECTED_NODE_TYPE: "CHANGE_SELECTED_NODE_TYPE",
     SELECT_NODES: "SELECT_NODES",
@@ -93,18 +93,12 @@ function computeDistancesDone(distData) {
     return { type: ACTION_TYPES.COMPUTE_DISTANCES_DONE, distData };
 }
 
-export function highlightNodeType(nodeTypeIdx) {
-    return { type: ACTION_TYPES.HIGHLIGHT_NODE_TYPE, nodeTypeIdx };
+export function highlightNodes(nodeIndices, brushedArea = null, fromView = null, which = null) {
+    return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIndices, brushedArea, fromView, which};
 }
 
-export function highlightNodes(
-    nodeIdx = null,
-    nodeIndices = null,
-    brushedArea = null,
-    fromView = null,
-    whichAttr = null
-) {
-    return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIdx, nodeIndices, brushedArea, fromView, whichAttr };
+export function hoverNode(nodeIdx) {
+    return { type: ACTION_TYPES.HOVER_NODE, nodeIdx };
 }
 
 export function toggleHighlightNodesAttr(delIdx = null) {
