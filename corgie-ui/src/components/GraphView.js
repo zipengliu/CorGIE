@@ -3,12 +3,12 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
 import { Form } from "react-bootstrap";
-import { highlightNodes, hoverNode, changeParam, layoutTick } from "../actions";
+import { highlightNodes, hoverNode, changeParam, layoutTick, selectNodePair } from "../actions";
 import { max, scaleLinear } from "d3";
 import NodeRep from "./NodeRep";
 import Brush from "./Brush";
 import Scatterplot from "./Scatterplot";
-import { getNodeEmbeddingColor } from "../utils";
+import { getNodeEmbeddingColor, isPointInBox } from "../utils";
 
 class GraphView extends Component {
     // componentDidUpdate() {
@@ -20,6 +20,19 @@ class GraphView extends Component {
     //         }, 10);
     //     }
     // }
+    callHighlightNodes(brushedArea) {
+        const coords = this.props.focalGraphLayout.coords;
+        const targetNodes = [];
+        for (let i = 0; i < coords.length; i++) {
+            const c = coords[i];
+            if (isPointInBox(c, brushedArea)) {
+                targetNodes.push(i);
+            }
+        }
+        if (targetNodes.length == 0) return;
+
+        this.props.highlightNodes(targetNodes, brushedArea, "graph", null);
+    }
 
     render() {
         const {
@@ -83,7 +96,7 @@ class GraphView extends Component {
 
         return (
             <div id="graph-view" className="view">
-                <h5 className="text-center">Graph space</h5>
+                <h5 className="text-center">Graph topology</h5>
 
                 <div style={{ display: "flex", flexDirection: "row" }}>
                     <div>
@@ -137,6 +150,16 @@ class GraphView extends Component {
                                                     y1={coords[e.source].y}
                                                     x2={coords[e.target].x}
                                                     y2={coords[e.target].y}
+                                                    onMouseEnter={this.props.hoverNode.bind(null, [
+                                                        e.source,
+                                                        e.target,
+                                                    ])}
+                                                    onMouseLeave={this.props.hoverNode.bind(null, null)}
+                                                    onClick={this.props.selectNodePair.bind(
+                                                        null,
+                                                        e.source,
+                                                        e.target
+                                                    )}
                                                 />
                                             )
                                         )}
@@ -291,8 +314,7 @@ class GraphView extends Component {
                                     <Brush
                                         width={focalGraphLayout.width}
                                         height={focalGraphLayout.height}
-                                        selectedFunc={this.props.highlightNodes}
-                                        selectionBoxView="focal-graph"
+                                        brushedFunc={this.callHighlightNodes.bind(this)}
                                     />
                                 </g>
                             </svg>
@@ -313,6 +335,7 @@ const mapDispatchToProps = (dispatch) =>
             hoverNode,
             changeParam,
             layoutTick,
+            selectNodePair,
         },
         dispatch
     );

@@ -1,10 +1,18 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form, Dropdown, DropdownButton, Button } from "react-bootstrap";
-import { selectNodes, highlightNodes, searchNodes } from "../actions";
+import { Form, ButtonGroup, Button, ListGroup } from "react-bootstrap";
+import {
+    selectNodes,
+    highlightNodes,
+    searchNodes,
+    highlightNodePairs,
+    hoverNode,
+    selectNodePair,
+    changeParam,
+} from "../actions";
 
-export class SelectionInfo extends Component {
+export class HighlightControl extends Component {
     callSearch(e) {
         e.preventDefault();
         const formData = new FormData(e.target),
@@ -19,39 +27,14 @@ export class SelectionInfo extends Component {
         }
     }
     render() {
-        const { graph, selectedNodes, highlightedNodes } = this.props;
-        const { nodes, nodeTypes } = graph;
+        const { graph, selectedNodes, highlightedNodes, highlightedNodePairs } = this.props;
+        const { nodePairFilter } = this.props.param;
+        const { nodes } = graph;
+        const labelOrId = nodes && nodes[0].label ? "label" : "id";
         return (
-            <div className="view" id="selection-info">
-                <h5 className="text-center">Selections</h5>
-                <h6>Focus</h6>
-                {selectedNodes.length === 0 && <div>No focal group yet.</div>}
-                {selectedNodes.map((g, i) => (
-                    <div className="selection-group" key={i}>
-                        <span
-                            className="del-btn"
-                            style={{ marginRight: "5px" }}
-                            onClick={this.props.selectNodes.bind(null, "DELETE", null, i)}
-                        >
-                            X
-                        </span>
-                        <span>
-                            foc-{i}: {g.length} {nodeTypes.length > 1 ? nodes[g[0]].type : ""} nodes
-                        </span>
-                    </div>
-                ))}
-                {selectedNodes.length > 0 && (
-                    <Button
-                        variant="outline-danger"
-                        size="xs"
-                        onClick={this.props.selectNodes.bind(null, "CLEAR", null, null)}
-                    >
-                        clear focus
-                    </Button>
-                )}
-
-                <div className="section-divider"></div>
-                <h6>Highlight</h6>
+            <div className="view" id="highlight-control">
+                <h5 className="text-center">Highlight</h5>
+                <h6>Nodes</h6>
                 <div style={{ marginBottom: "10px" }}>
                     <div>Search nodes by</div>
                     <Form inline onSubmit={this.callSearch.bind(this)}>
@@ -84,7 +67,7 @@ export class SelectionInfo extends Component {
                 <div>{highlightedNodes.length} nodes are highlighted (blinking).</div>
                 {highlightedNodes.length > 0 && (
                     <div>
-                        <div>Actions:</div>
+                        {/* <div>Actions:</div> */}
                         <div>
                             <Button
                                 variant="outline-primary"
@@ -126,6 +109,68 @@ export class SelectionInfo extends Component {
                     </div>
                 )}
 
+                <div className="section-divider"></div>
+                <h6>Node pairs</h6>
+                <div>{highlightedNodePairs.length} node pairs are highlighted. Click to focus.</div>
+                {highlightedNodePairs.length > 0 && (
+                    <div>
+                        <div className="node-pair-list">
+                            <ListGroup>
+                                {highlightedNodePairs.map((p, i) => (
+                                    <ListGroup.Item
+                                        key={i}
+                                        onMouseEnter={this.props.hoverNode.bind(null, [p[1], p[2]])}
+                                        onMouseLeave={this.props.hoverNode.bind(null, null)}
+                                        onClick={this.props.selectNodePair.bind(null, p[1], p[2])}
+                                    >
+                                        {graph.nodes[p[1]][labelOrId]} - {graph.nodes[p[2]][labelOrId]}
+                                    </ListGroup.Item>
+                                ))}
+                            </ListGroup>
+                        </div>
+                        <div>
+                            <span>Order by distance:</span>
+                            <ButtonGroup size="xs">
+                                <Button
+                                    variant="outline-secondary"
+                                    active={nodePairFilter.ascending}
+                                    onClick={this.props.changeParam.bind(
+                                        this,
+                                        "nodePairFilter.ascending",
+                                        true,
+                                        false,
+                                        null
+                                    )}
+                                >
+                                    asc.
+                                </Button>
+                                <Button
+                                    variant="outline-secondary"
+                                    active={!nodePairFilter.ascending}
+                                    onClick={this.props.changeParam.bind(
+                                        this,
+                                        "nodePairFilter.ascending",
+                                        false,
+                                        false,
+                                        null
+                                    )}
+                                >
+                                    desc.
+                                </Button>
+                            </ButtonGroup>
+                        </div>
+                        <div>
+                            <Button
+                                variant="outline-secondary"
+                                size="xs"
+                                onClick={this.props.highlightNodePairs.bind(null, null, null)}
+                            >
+                                clear highlights
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {/* <div className="section-divider"></div>
                 <h6>Hover</h6> */}
             </div>
@@ -140,9 +185,13 @@ const mapDispatchToProps = (dispatch) =>
         {
             selectNodes,
             highlightNodes,
+            highlightNodePairs,
             searchNodes,
+            hoverNode,
+            selectNodePair,
+            changeParam,
         },
         dispatch
     );
 
-export default connect(mapStateToProps, mapDispatchToProps)(SelectionInfo);
+export default connect(mapStateToProps, mapDispatchToProps)(HighlightControl);

@@ -17,7 +17,8 @@
     text-align: right;
 }
 
-.btn.btn-xs {
+.btn.btn-xs,
+.btn-group-xs .btn {
     font-size: 0.875rem;
     padding: 0 0.5rem;
     border-radius: 0.2rem;
@@ -86,10 +87,12 @@
 }
 
 .node-group {
-    stroke: red;
-    stroke-width: 2px;
-    fill: #ddd;
-    fill-opacity: 0.3;
+    stroke: grey;
+    stroke-width: 1px;
+    stroke-dasharray: 5;
+    fill: none;
+    /* fill: #ddd;
+    fill-opacity: 0.3; */
 }
 
 .point text,
@@ -199,15 +202,21 @@
     border-radius: 6px;
 }
 
-#selection-info {
-    /* padding: 0 10px;
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap; */
-}
-#selection-info .selection-group {
+#focus-control .focal-group {
     margin-bottom: 10px;
+}
+
+#highlight-control .node-pair-list {
+    /* border: 1px solid grey; */
+    max-height: 400px;
+    /* max-width: 250px; */
+    overflow: scroll;
+    margin: 10px 0;
+    font-size: 12px;
+}
+#highlight-control .node-pair-list .list-group-item {
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
 }
 
 /* Semantics space view */
@@ -270,14 +279,6 @@ rect.highlight-strip {
 }
 .histogram .axis .value-marker text {
     fill: red;
-}
-
-.edge-list {
-    /* border: 1px solid grey; */
-    max-height: 400px;
-    max-width: 250px;
-    overflow: scroll;
-    font-size: 12px;
 }
 
 .scatterplot {

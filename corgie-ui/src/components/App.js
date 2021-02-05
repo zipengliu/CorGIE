@@ -8,10 +8,10 @@ import GraphView from "./GraphView";
 import EmbeddingsView from "./EmbeddingsView";
 // import PowerSetIntersectionView from "./PowerSetIntersectionView";
 import DetailView from "./DetailView";
-import AdjacencyMatrix from "./AdjacencyMatrix";
+// import AdjacencyMatrix from "./AdjacencyMatrix";
 import NodeAttrView from "./NodeAttrView";
-import SelectionInfo from "./SelectionInfo";
-import EdgeListView from "./EdgeListView";
+import HighlightControl from "./HighlightControl";
+import FocusControl from "./FocusControl";
 import GlobalControls from "./GlobalControls";
 import "./App.css";
 
@@ -31,7 +31,6 @@ class App extends Component {
             );
         }
 
-        const { numSelectedNodes, numNodes } = this.props;
         return (
             <div>
                 <AppNav datasetId={this.props.datasetId} homePath={this.props.homePath} />
@@ -39,18 +38,14 @@ class App extends Component {
                 <GlobalControls />
                 <div className="App">
                     <div>
-                        <SelectionInfo />
-                        <EdgeListView />
+                        <FocusControl />
+                        <HighlightControl />
                     </div>
                     <EmbeddingsView />
                     <div>
                         <NodeAttrView />
                         <GraphView />
                     </div>
-                    {/* {numSelectedNodes > 0 && <AdjacencyMatrix />}
-                    {numSelectedNodes > 1 && numSelectedNodes <= this.props.powerSetLimit && (
-                        <PowerSetIntersectionView />
-                    )} */}
                 </div>
                 <DetailView />
             </div>
@@ -63,8 +58,6 @@ const mapStateToProps = (state) => ({
     datasetId: state.datasetId,
     loaded: state.loaded,
     error: state.error,
-    numSelectedNodes: state.selectedNodes.length,
-    powerSetLimit: state.powerSetLimit,
 });
 
 const mapDispatchToProps = (dispatch) =>

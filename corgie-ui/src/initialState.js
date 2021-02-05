@@ -12,9 +12,11 @@ export default {
     isNodeSelected: {}, // Dict for ALL selected nodes
     selNodeAttrs: [], // Attribute distributions for selected nodes, each selection group is an array in selNodeAttrs
     selFeatures: [], // Binary feature distribution for each selected group
+    focalDistances: [],
     isNodeSelectedNeighbor: {},
 
     highlightedNodes: [],
+    highlightedNodePairs: [],
     isNodeHighlighted: {}, // Either null or an array of booleans
 
     hoveredNode: null,
@@ -35,8 +37,8 @@ export default {
             counts: [0, 0, 0],
         },
     },
-    showEdges: [],
-    selectedEdge: null,
+    // showEdges: [],
+    // selectedEdge: null,
 
     param: {
         hops: 2,
@@ -76,8 +78,8 @@ export default {
 
         nodePairFilter: {
             ascending: true, // sort the node pairs by latent distance in ascending order
-            which: null,    // 
-            edgeDistRange: null,
+            which: null,    // could be null, all, edge, 0 (for foc-0), 1 (for foc-1), 2 (for b/w)
+            brushedRange: null,
         },
     },
 

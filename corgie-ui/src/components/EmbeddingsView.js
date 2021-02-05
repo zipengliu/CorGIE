@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
 import { Form } from "react-bootstrap";
-import { highlightNodes, changeParam, changeSelectedNodeType } from "../actions";
+import { highlightNodes, changeParam, changeSelectedNodeType, highlightNodePairs } from "../actions";
 import Brush from "./Brush";
 import NodeRep from "./NodeRep";
 import { isPointInBox, getNodeEmbeddingColor } from "../utils";
@@ -36,10 +36,11 @@ class EmbeddingsView extends Component {
             isNodeHovered,
             param,
             nodeAttrs,
-            highlightDist,
             selBoundingBox,
             selectedNodeType,
             hoveredNode,
+            focalDistances,
+            highlightNodePairs,
         } = this.props;
         const { width, height, margins } = spec.latent;
         const histSpec = { ...spec.histogram, width: 300 };
@@ -47,7 +48,13 @@ class EmbeddingsView extends Component {
             svgHeight = height + margins.top + margins.bottom;
         const { coords, emb, isComputing, edgeLenBins } = latent;
         const { nodes, nodeTypes } = graph;
-        const { colorBy, colorScale } = param;
+        const { colorBy, colorScale, nodePairFilter } = param;
+        let highlightDistVal;
+        if (Array.isArray(hoveredNode)) {
+            highlightDistVal = latent.distMatrix[hoveredNode[0]][hoveredNode[1]];
+        } else if (focalDistances !== null && !Array.isArray(focalDistances)) {
+            highlightDistVal = focalDistances;
+        }
 
         // const colorScale = scaleSequential(interpolateGreens).domain([1, 0]);
         const tileNum = 100;
@@ -178,7 +185,11 @@ class EmbeddingsView extends Component {
                                 xDomain={[0, 1]}
                                 xLabel="Cosine distance"
                                 yLabel="#node pairs"
-                                hVal={this.props.highlightDistSingle}
+                                hVal={highlightDistVal}
+                                brushedFunc={highlightNodePairs.bind(null, "all")}
+                                brushedRange={
+                                    nodePairFilter.which === "all" ? nodePairFilter.brushedRange : null
+                                }
                             />
                         </div>
                         <div>
@@ -189,9 +200,13 @@ class EmbeddingsView extends Component {
                                 xDomain={[0, 1]}
                                 xLabel={"Cosine distance"}
                                 yLabel={"#node pairs"}
+                                brushedFunc={highlightNodePairs.bind(null, "edge")}
+                                brushedRange={
+                                    nodePairFilter.which === "edge" ? nodePairFilter.brushedRange : null
+                                }
                             />
                         </div>
-                        {highlightDist.map((hd, i) => (
+                        {focalDistances.length > 0 && focalDistances.map((hd, i) => (
                             <div key={i}>
                                 <h6>{hd.mode}</h6>
                                 <Histogram
@@ -200,6 +215,10 @@ class EmbeddingsView extends Component {
                                     xDomain={[0, 1]}
                                     xLabel="Cosine distance"
                                     yLabel="#node pairs"
+                                    brushedFunc={highlightNodePairs.bind(null, i)}
+                                    brushedRange={
+                                        nodePairFilter.which === i ? nodePairFilter.brushedRange : null
+                                    }
                                 />
                             </div>
                         ))}
@@ -210,62 +229,8 @@ class EmbeddingsView extends Component {
     }
 }
 
-const getIntraDistances = (nodes, distMatrix) => {
-    const n = nodes.length;
-    const d = [];
-    for (let i = 0; i < n; i++) {
-        for (let j = i + 1; j < n; j++) {
-            d.push(distMatrix[nodes[i]][nodes[j]]);
-        }
-    }
-    return d;
-};
-
 // TODO speed up with memorization
-const mapStateToProps = (state) => {
-    const highlightDist = [];
-    let highlightDistSingle;
-    const { selectedNodes } = state;
-    if (!state.latent.isComputing) {
-        if (selectedNodes.length == 1 && selectedNodes[0].length > 1) {
-            const d = {
-                mode: "witin selected",
-                values: getIntraDistances(selectedNodes[0], state.latent.distMatrix),
-            };
-            d.bins = state.latent.binGen(d.values);
-            highlightDist.push(d);
-        } else if (selectedNodes.length > 1) {
-            for (let k = 0; k < selectedNodes.length; k++) {
-                if (selectedNodes[k].length > 1) {
-                    const d = {
-                        mode: `within selected group ${k}`,
-                        values: getIntraDistances(selectedNodes[k], state.latent.distMatrix),
-                    };
-                    d.bins = state.latent.binGen(d.values);
-                    highlightDist.push(d);
-                }
-            }
-            if (selectedNodes.length == 2) {
-                const n1 = selectedNodes[0].length,
-                    n2 = selectedNodes[1].length;
-                if (n1 > 1 || n2 > 1) {
-                    const d2 = { mode: "between two selected groups", values: [] };
-                    for (let i = 0; i < n1; i++) {
-                        for (let j = 0; j < n2; j++) {
-                            d2.values.push(state.latent.distMatrix[selectedNodes[0][i]][selectedNodes[1][j]]);
-                        }
-                    }
-                    d2.bins = state.latent.binGen(d2.values);
-                    highlightDist.push(d2);
-                } else if (n1 == 1 && n2 == 1) {
-                    highlightDistSingle = state.latent.distMatrix[selectedNodes[0][0]][selectedNodes[1][0]];
-                }
-            }
-        }
-    }
-    console.log({ highlightDist, highlightDistSingle });
-    return { ...state, highlightDist, highlightDistSingle };
-};
+const mapStateToProps = (state) => ({ ...state });
 
 const mapDispatchToProps = (dispatch) =>
     bindActionCreators(
@@ -273,6 +238,7 @@ const mapDispatchToProps = (dispatch) =>
             highlightNodes,
             changeParam,
             changeSelectedNodeType,
+            highlightNodePairs,
         },
         dispatch
     );

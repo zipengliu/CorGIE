@@ -131,7 +131,7 @@ class NodeAttrView extends Component {
         const { nodeFilter } = param;
 
         let hNodeData;
-        if (hoveredNode) {
+        if (hoveredNode && Number.isInteger(hoveredNode)) {
             hNodeData = this.props.graph.nodes[hoveredNode];
         }
 

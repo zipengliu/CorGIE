@@ -1,5 +1,5 @@
 import bs from "bitset";
-import { scaleLinear, extent, lab } from 'd3';
+import { scaleLinear, extent, lab } from "d3";
 
 export function aggregateBinaryFeatures(features, highlightNodes) {
     const m = features[0].length;
@@ -20,8 +20,8 @@ export function aggregateBinaryFeatures(features, highlightNodes) {
     return res;
 }
 
-export function compressFeatureValues(values, maxWidth, sort=false) {
-    const sortedVal = sort? values.slice().sort((a, b) => b - a): values;
+export function compressFeatureValues(values, maxWidth, sort = false) {
+    const sortedVal = sort ? values.slice().sort((a, b) => b - a) : values;
     const n = values.length;
     // Compression ratio
     const r = Math.ceil(n / maxWidth);
@@ -30,7 +30,7 @@ export function compressFeatureValues(values, maxWidth, sort=false) {
     for (let i = 0; i < n; i += r) {
         let t = 0;
         for (let j = i; j < n && j < i + r; j++) {
-            t = Math.max(t, sortedVal[j]);      // Use the max function to aggreagte
+            t = Math.max(t, sortedVal[j]); // Use the max function to aggreagte
         }
         compValues.push(t / r);
     }
@@ -165,4 +165,22 @@ export function getSelectedNeighbors(selectedNodes, neighborMasks, hops) {
     }
 
     return { isNodeSelected, isNodeSelectedNeighbor, neighArr, neighMap };
+}
+
+export function binarySearch(arr, v) {
+    let l = 0,
+        r = arr.length - 1;
+    while (l <= r) {
+        let m = Math.floor((l + r) / 2);
+        // Access the 0-th element.  This is particularly for the node pair data struct
+        const t = arr[m][0];
+        if (t === v) {
+            return m;
+        } else if (t < v) {
+            l = m + 1;
+        } else {
+            r = m - 1;
+        }
+    }
+    return l;
 }

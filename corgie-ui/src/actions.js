@@ -13,13 +13,14 @@ const ACTION_TYPES = {
     FETCH_DATA_ERROR: "FETCH_DATA_ERROR",
     COMPUTE_DISTANCES_DONE: "COMPUTE_DISTANCES_DONE",
     HIGHLIGHT_NODES: "HIGHLIGHT_NODES",
+    HIGHLIGHT_NODE_PAIRS: "HIGHLIGHT_NODE_PAIRS",
     HOVER_NODE: "HOVER_NODE",
     HIGHLIGHT_NEIGHBORS: "HIGHLIGHT_NEIGHBORS",
     CHANGE_SELECTED_NODE_TYPE: "CHANGE_SELECTED_NODE_TYPE",
     SELECT_NODES: "SELECT_NODES",
     SELECT_NODES_PENDING: "SELECT_NODES_PENDING",
     SELECT_NODES_DONE: "SELECT_NODES_DONE",
-    SELECT_EDGE: "SELECT_EDGE",
+    SELECT_NODE_PAIR: "SELECT_NODE_PAIR",
     CHANGE_PARAM: "CHANGE_PARAM",
     CHANGE_HOPS: "CHANGE_HOPS",
     LAYOUT_TICK: "LAYOUT_TICK",
@@ -70,7 +71,7 @@ export function fetchGraphData(homePath, datasetId) {
 
             dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features }));
 
-            let distData = await workerInstance.getDistancesOfAllPairs(emb, graph.links);
+            let distData = await workerInstance.getDistancesOfAllPairs(emb);
             dispatch(computeDistancesDone(distData));
         } catch (e) {
             dispatch(fetchDataError(e));
@@ -96,6 +97,10 @@ function computeDistancesDone(distData) {
 
 export function highlightNodes(nodeIndices, brushedArea = null, fromView = null, which = null) {
     return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIndices, brushedArea, fromView, which };
+}
+
+export function highlightNodePairs(which, v1, v2) {
+    return { type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS, brushedRange: [v1, v2], which };
 }
 
 export function hoverNode(nodeIdx) {
@@ -152,6 +157,25 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
         } else {
             dispatch(selectNodesDone({}));
         }
+    };
+}
+
+export function selectNodePair(node1, node2) {
+    return async function (dispatch, getState) {
+        const state = getState();
+        let newSel = [[node1], [node2]];
+
+        const neighRes = getSelectedNeighbors(newSel, state.graph.neigh, state.param.hops);
+        dispatch(selectNodesPending(newSel, neighRes));
+
+        const layoutRes = await callLocalLayoutFunc(
+            state.graph,
+            newSel,
+            neighRes,
+            state.param,
+            state.spec.graph
+        );
+        dispatch(selectNodesDone(layoutRes));
     };
 }
 
@@ -228,10 +252,6 @@ export function selectNodesPending(newSel, neighRes) {
 
 export function selectNodesDone(layoutRes) {
     return { type: ACTION_TYPES.SELECT_NODES_DONE, layoutRes };
-}
-
-export function selectEdge(eid) {
-    return { type: ACTION_TYPES.SELECT_EDGE, eid };
 }
 
 export function changeSelectedNodeType(idx) {

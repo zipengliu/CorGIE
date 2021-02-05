@@ -4,17 +4,8 @@ import { UMAP } from "umap-js";
 import bs from "bitset";
 import { getNeighborDistance, getCosineDistance } from "./utils";
 
-export function getDistancesOfAllPairs(emb, edges) {
-    let f = [];
+export function getDistancesOfAllPairs(emb) {
     console.log("Getting distances of all node pairs...", emb.length);
-    for (let i = 0; i < emb.length; i++) {
-        f.push(new Array(emb.length).fill(false));
-    }
-    for (let e of edges) {
-        f[e.source][e.target] = true;
-        f[e.target][e.source] = true;
-    }
-
     let d = [];
     let m = [];
     for (let i = 0; i < emb.length; i++) {
@@ -23,7 +14,7 @@ export function getDistancesOfAllPairs(emb, edges) {
         for (let j = i + 1; j < emb.length; j++) {
             const cosD = getCosineDistance(emb[i], emb[j]);
             // TODO do I really need them or just the cosD?
-            d.push({ i, j, d: cosD, p: f[i][j] });
+            d.push([cosD, i, j]);
             m[i][j] = cosD;
         }
         for (let j = 0; j < i; j++) {
@@ -31,10 +22,9 @@ export function getDistancesOfAllPairs(emb, edges) {
         }
         m[i][i] = 0;
     }
+    d.sort((x1, x2) => x1[0] - x2[0]);
 
-    const edgeLen = edges.map((e) => getCosineDistance(emb[e.source], emb[e.target]));
-
-    return { distArray: d, distMatrix: m, edgeLen };
+    return { distArray: d, distMatrix: m };
 }
 
 // The bitset class functions are not copied from the main thread,
@@ -111,6 +101,7 @@ export function computeLocalLayoutWithUMAP(
     const selectedNodesSep = 40;
     let groups = [];
     let yOffset = gap;
+    const marginLR = 8;
 
     // Rescale the UMAP embeddings to a width x height rectangular space
     let rescale = (nodes, emb, width, height, xOffset, yOffset) => {
@@ -120,19 +111,24 @@ export function computeLocalLayoutWithUMAP(
         yExtent = extent(emb.map((e) => e[1]));
         xRange = xExtent[1] - xExtent[0];
         yRange = yExtent[1] - yExtent[0];
-        console.log({ nodes: nodes.slice(), xExtent, yExtent });
+        // console.log({ nodes: nodes.slice(), xExtent, yExtent });
         if (xRange < Number.EPSILON) {
             xRange = 1;
         }
         if (yRange < Number.EPSILON) {
             yRange = 1;
         }
-        for (let j = 0; j < nodes.length; j++) {
-            const nodeId = nodes[j];
-            coords[nodeId] = {
-                x: xOffset + ((emb[j][0] - xExtent[0]) * width) / xRange,
-                y: yOffset + ((emb[j][1] - yExtent[0]) * height) / yRange,
-            };
+        if (nodes.length === 1) {
+            // Only one node, place it in the middle
+            coords[nodes[0]] = { x: xOffset + width / 2, y: yOffset + height / 2 };
+        } else {
+            for (let j = 0; j < nodes.length; j++) {
+                const nodeId = nodes[j];
+                coords[nodeId] = {
+                    x: xOffset + ((emb[j][0] - xExtent[0]) * (width - marginLR)) / xRange + marginLR / 2,
+                    y: yOffset + ((emb[j][1] - yExtent[0]) * height) / yRange,
+                };
+            }
         }
     };
 
@@ -145,11 +141,16 @@ export function computeLocalLayoutWithUMAP(
         } else {
             height *= 0.5;
         }
-        const b = { x: 0, y: yOffset - gap / 3, width: canvasSize, height: height + (gap / 3) * 2 };
+        const b = {
+            x: 0,
+            y: yOffset - gap / 3,
+            width: canvasSize,
+            height: height + (gap / 3) * 2,
+        };
         if (i == 0 && selectedNodes.length > 1) {
             // Seperate the two selected groups
             width = (canvasSize - selectedNodesSep) / 2;
-            groups.push({ bounds: { ...b, width } });
+            groups.push({ bounds: { ...b, width} });
             groups.push({ bounds: { ...b, x: width + selectedNodesSep, width } });
         } else {
             groups.push({ bounds: b });

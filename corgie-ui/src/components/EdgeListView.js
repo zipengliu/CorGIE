@@ -10,7 +10,6 @@ export class EdgeListView extends Component {
         const { param, edgeAttributes, changeParam, spec, graph, showEdges, selectedEdge } = this.props;
         const { nodes } = graph;
         const edgeTypes = edgeAttributes.type;
-        const labelOrId = nodes && nodes[0].label ? "label" : "id";
         return (
             <div id="edge-list-view" className="view">
                 <h5 className="text-center">Highlighted node pairs</h5>
@@ -27,7 +26,7 @@ export class EdgeListView extends Component {
                         onChange={this.props.changeEdgeTypeState.bind(null, i)}
                     />
                 ))}
-                <div>{showEdges.length} node pairs</div>
+                {/* <div>{showEdges.length} node pairs</div> */}
                 <div>order by dist. (asc.)</div>
                 {/* <Form.Check
                         type="switch"
@@ -36,23 +35,6 @@ export class EdgeListView extends Component {
                         label="ascending order"
                         onChange={changeParam.bind(null, "filter.ascending", null, true)}
                     /> */}
-                <div className="edge-list">
-                    <ListGroup>
-                        {showEdges.map((e, i) => (
-                            <ListGroup.Item
-                                key={i}
-                                active={selectedEdge === e.eid}
-                                onClick={this.props.selectEdge.bind(null, e.eid)}
-                            >
-                                {graph.nodes[e.source][labelOrId]} - {graph.nodes[e.target][labelOrId]}{" "}
-                                {e.weight
-                                    ? `(w=
-                                ${e.weight})`
-                                    : ""}
-                            </ListGroup.Item>
-                        ))}
-                    </ListGroup>
-                </div>
 
                 <div>TODO: add controls for the edges</div>
                 {/* <Form
