@@ -274,11 +274,11 @@ rect.highlight-strip {
     font-size: 10px;
 }
 .histogram .axis .value-marker line {
-    stroke: red;
+    stroke: black;
     stroke-width: 1px;
 }
 .histogram .axis .value-marker text {
-    fill: red;
+    fill: black;
 }
 
 .scatterplot {

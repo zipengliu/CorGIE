@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { memo } from "react";
 import { scaleLinear, max } from "d3";
 import Brush from "./Brush";
 
@@ -7,7 +7,7 @@ import Brush from "./Brush";
 //   spec is the specification for rendering: {margins: {left: 10, ...}, width: xxx, height: xxx}
 //   xDomain (optional) is the domain of x axis.  If not specified, it will use first and last bin to compute the min and max value
 //   hVal is the value to highlight in this histogram
-export default function renderHistogram({
+function Histogram({
     bins,
     spec,
     xDomain,
@@ -26,9 +26,9 @@ export default function renderHistogram({
         .nice();
     const xTicks = xScale.ticks(3),
         xFormat = xScale.tickFormat(3, "s");
-    const numTicks = height >= 100 ? 4 : 3;
+    const numTicks = Math.max(1, Math.floor(height / 20));
     const yTicks = yScale.ticks(numTicks),
-        yFormat = yScale.tickFormat(4, "~s");
+        yFormat = yScale.tickFormat(numTicks, "~s");
 
     const callBrushed = (x1, x2) => {
         const xVal1 = xScale.invert(x1),
@@ -76,7 +76,7 @@ export default function renderHistogram({
                                 x1={xScale(hVal)}
                                 y1={15}
                                 x2={xScale(hVal)}
-                                y2={7}
+                                y2={8}
                                 markerEnd="url(#arrowhead)"
                             />
                             <text x={xScale(hVal)} y={25} textAnchor="middle">
@@ -120,9 +120,11 @@ export default function renderHistogram({
             </g>
             <defs>
                 <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="0" refY="5" orient="auto">
-                    <polygon points="0 0, 10 5, 0 10" fill="red" />
+                    <polygon points="0 0, 10 5, 0 10" fill="black" />
                 </marker>
             </defs>
         </svg>
     );
 }
+
+export default memo(Histogram);

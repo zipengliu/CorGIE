@@ -3,7 +3,13 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
 import { Form } from "react-bootstrap";
-import { highlightNodes, changeParam, changeSelectedNodeType, highlightNodePairs } from "../actions";
+import {
+    highlightNodes,
+    changeParam,
+    changeSelectedNodeType,
+    highlightNodePairs,
+    hoverNode,
+} from "../actions";
 import Brush from "./Brush";
 import NodeRep from "./NodeRep";
 import { isPointInBox, getNodeEmbeddingColor } from "../utils";
@@ -50,10 +56,12 @@ class EmbeddingsView extends Component {
         const { nodes, nodeTypes } = graph;
         const { colorBy, colorScale, nodePairFilter } = param;
         let highlightDistVal;
-        if (Array.isArray(hoveredNode)) {
-            highlightDistVal = latent.distMatrix[hoveredNode[0]][hoveredNode[1]];
-        } else if (focalDistances !== null && !Array.isArray(focalDistances)) {
-            highlightDistVal = focalDistances;
+        if (!latent.isComputing) {
+            if (Array.isArray(hoveredNode)) {
+                highlightDistVal = latent.distMatrix[hoveredNode[0]][hoveredNode[1]];
+            } else if (focalDistances !== null && !Array.isArray(focalDistances)) {
+                highlightDistVal = focalDistances;
+            }
         }
 
         // const colorScale = scaleSequential(interpolateGreens).domain([1, 0]);
@@ -96,16 +104,12 @@ class EmbeddingsView extends Component {
                                 ))}
                             </g>
                         )}
-                        <g className="bounding-box">
-                            {selBoundingBox.map((h, i) => (
-                                <g key={i}>
-                                    <text x={h.x} y={h.y - 2}>
-                                        foc-{i}
-                                    </text>
-                                    <rect {...h} />
-                                </g>
-                            ))}
-                        </g>
+                        <Brush
+                            width={width}
+                            height={height}
+                            isRange={false}
+                            brushedFunc={this.callHighlightNodes.bind(this)}
+                        />
                         <g className="points">
                             {coords.map((c, i) => (
                                 <g
@@ -117,8 +121,8 @@ class EmbeddingsView extends Component {
                                         nonhovered: hoveredNode !== null && !isNodeHovered[i],
                                     })}
                                     transform={`translate(${c.x},${c.y})`}
-                                    // onMouseEnter={this.props.highlightNodes.bind(this, i)}
-                                    // onMouseLeave={this.props.highlightNodes.bind(this, null)}
+                                    onMouseEnter={this.props.hoverNode.bind(null, i)}
+                                    onMouseLeave={this.props.hoverNode.bind(null, null)}
                                     // onClick={this.props.selectNodes.bind(null, i)}
                                     style={{
                                         fill:
@@ -139,12 +143,16 @@ class EmbeddingsView extends Component {
                                 </g>
                             ))}
                         </g>
-                        <Brush
-                            width={width}
-                            height={height}
-                            isRange={false}
-                            brushedFunc={this.callHighlightNodes.bind(this)}
-                        />
+                        <g className="bounding-box">
+                            {selBoundingBox.map((h, i) => (
+                                <g key={i}>
+                                    <text x={h.x} y={h.y - 2}>
+                                        foc-{i}
+                                    </text>
+                                    <rect {...h} />
+                                </g>
+                            ))}
+                        </g>
                     </g>
                 </svg>
 
@@ -206,22 +214,23 @@ class EmbeddingsView extends Component {
                                 }
                             />
                         </div>
-                        {focalDistances.length > 0 && focalDistances.map((hd, i) => (
-                            <div key={i}>
-                                <h6>{hd.mode}</h6>
-                                <Histogram
-                                    bins={hd.bins}
-                                    spec={{ ...histSpec, height: histSpec.height / 2 }}
-                                    xDomain={[0, 1]}
-                                    xLabel="Cosine distance"
-                                    yLabel="#node pairs"
-                                    brushedFunc={highlightNodePairs.bind(null, i)}
-                                    brushedRange={
-                                        nodePairFilter.which === i ? nodePairFilter.brushedRange : null
-                                    }
-                                />
-                            </div>
-                        ))}
+                        {focalDistances.length > 0 &&
+                            focalDistances.map((hd, i) => (
+                                <div key={i}>
+                                    <h6>{hd.mode}</h6>
+                                    <Histogram
+                                        bins={hd.bins}
+                                        spec={{ ...histSpec, height: histSpec.height / 2 }}
+                                        xDomain={[0, 1]}
+                                        xLabel="Cosine distance"
+                                        yLabel="#node pairs"
+                                        brushedFunc={highlightNodePairs.bind(null, i)}
+                                        brushedRange={
+                                            nodePairFilter.which === i ? nodePairFilter.brushedRange : null
+                                        }
+                                    />
+                                </div>
+                            ))}
                     </div>
                 )}
             </div>
@@ -239,6 +248,7 @@ const mapDispatchToProps = (dispatch) =>
             changeParam,
             changeSelectedNodeType,
             highlightNodePairs,
+            hoverNode,
         },
         dispatch
     );

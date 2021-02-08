@@ -119,7 +119,6 @@ class NodeAttrView extends Component {
         const {
             param,
             nodeAttrs,
-            highlightedNodes,
             selNodeAttrs,
             featureAgg,
             selFeatures,
@@ -127,11 +126,12 @@ class NodeAttrView extends Component {
             selectedNodes,
         } = this.props;
         const histSpec = this.props.spec.histogram;
+        const partialHistSpec = {...histSpec, height: histSpec.height / 2};
         const { changeParam } = this.props;
         const { nodeFilter } = param;
 
         let hNodeData;
-        if (hoveredNode && Number.isInteger(hoveredNode)) {
+        if (hoveredNode !== null && Number.isInteger(hoveredNode)) {
             hNodeData = this.props.graph.nodes[hoveredNode];
         }
 
@@ -189,7 +189,7 @@ class NodeAttrView extends Component {
                                             N/A
                                         </div>
                                     ) : (
-                                        <Histogram bins={a.bins} spec={histSpec} />
+                                        <Histogram bins={a.bins} spec={partialHistSpec} />
                                     )}
                                 </div>
                             ))}

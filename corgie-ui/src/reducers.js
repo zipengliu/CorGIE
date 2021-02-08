@@ -346,15 +346,25 @@ function callLayoutFunc(state) {
     const { graph } = state;
     const copiedEdges = graph.edges.map((e) => ({ ...e }));
     let layoutRes;
-    if (state.param.graph.layout === "force-directed-d3") {
-        // Make a copy of the edges to prevent them from changes by the force simulation
-        layoutRes = computeForceLayoutWithD3(graph.nodes, copiedEdges);
-    } else if (state.param.graph.layout === "force-directed-cola") {
-        layoutRes = computeForceLayoutWithCola(graph.nodes, copiedEdges, state.spec.graph);
-    } else if (state.param.graph.layout === "circular") {
-        layoutRes = computeCircularLayout(graph.nodes, copiedEdges, state.spec.graph, state.centralNodeType);
-    } else {
+    // No point of computing any global layout for a large graph
+    if (graph.nodes.length > 1000) {
         layoutRes = computeDummyLayout(graph.nodes);
+    } else {
+        if (state.param.graph.layout === "force-directed-d3") {
+            // Make a copy of the edges to prevent them from changes by the force simulation
+            layoutRes = computeForceLayoutWithD3(graph.nodes, copiedEdges);
+        } else if (state.param.graph.layout === "force-directed-cola") {
+            layoutRes = computeForceLayoutWithCola(graph.nodes, copiedEdges, state.spec.graph);
+        } else if (state.param.graph.layout === "circular") {
+            layoutRes = computeCircularLayout(
+                graph.nodes,
+                copiedEdges,
+                state.spec.graph,
+                state.centralNodeType
+            );
+        } else {
+            layoutRes = computeDummyLayout(graph.nodes);
+        }
     }
     state.spec.graph.width = layoutRes.width;
     state.spec.graph.height = layoutRes.height;
@@ -453,7 +463,7 @@ function computeEdgeLengthTopo(edges, masks, distMetric) {
     for (let e of edges) {
         const m1 = masks[e.source],
             m2 = masks[e.target];
-        e.dNei = getNeighborDistance(m1, m2, distMetric);
+        e.dTopo = getNeighborDistance(m1, m2, distMetric);
     }
     return;
 }
@@ -604,15 +614,15 @@ const reducers = produce((draft, action) => {
 
         case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
             Object.assign(draft.latent, action.distData);
-            // Populate the edge length data to the graph.edges
-            // for (let i = 0; i < draft.graph.edges.length; i++) {
-            //     draft.graph.edges[i].d = action.distData.edgeLen[i];
-            // }
             draft.latent.distEdgeArray = draft.graph.edges.map((e) => [
                 draft.latent.distMatrix[e.source][e.target],
                 e.source,
                 e.target,
             ]);
+            // Populate the edge length data to the graph.edges
+            for (let i = 0; i < draft.graph.edges.length; i++) {
+                draft.graph.edges[i].dLat = draft.latent.distEdgeArray[i][0];
+            }
             draft.latent.distEdgeArray.sort((x1, x2) => x1[0] - x2[0]);
 
             // Compute the histogram bins

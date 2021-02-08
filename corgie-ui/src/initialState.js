@@ -81,6 +81,11 @@ export default {
             which: null,    // could be null, all, edge, 0 (for foc-0), 1 (for foc-1), 2 (for b/w)
             brushedRange: null,
         },
+
+        topoVsLatent: {
+            topoDistFunc: null, // We are going to have different metrics to measure topo difference
+            shownNodePairs: 'edge', // Could be all, edge, highlighted, and by types (e.g movie-movie, movie-user)
+        }
     },
 
     spec: {

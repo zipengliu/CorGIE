@@ -36,6 +36,10 @@ function reconstructBitsets(neighMap) {
         }
 }
 
+function getCanvasSize(n) {
+    return Math.ceil(Math.sqrt(n * 500));
+}
+
 export function computeLocalLayoutWithUMAP(
     nodes,
     hops,
@@ -92,15 +96,17 @@ export function computeLocalLayoutWithUMAP(
 
     // Embeddings of other nodes
 
-    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 1000));
+    const canvasSize = getCanvasSize(nodes.length);
     // Resize the embeddings for the four different groups of nodes: selected, 1-hop, 2-hop, others
-    const weightedN = (n1a + n1b + n2 + n3) * 1.5 + 0.5 * n4;
+    const weights = [4, 6, 4, 1];
+    const weightedSum = (n1a + n1b) * weights[0] + n2 * weights[1] + n3 * weights[2] + n4 * weights[3];
+    // const weightedN = n1a + n1b + n2 + n3 + n4;
     const nums = [n1a + n1b, n2, n3, n4];
     const coords = new Array(n);
     const gap = 30;
     const selectedNodesSep = 40;
     let groups = [];
-    let yOffset = gap;
+    let yOffset = 0;
     const marginLR = 8;
 
     // Rescale the UMAP embeddings to a width x height rectangular space
@@ -134,13 +140,8 @@ export function computeLocalLayoutWithUMAP(
 
     for (let i = 0; i < 4; i++) {
         // The allocated height for this group of nodes
-        let height = ((canvasSize - 4 * gap) / weightedN) * nums[i],
+        let height = ((canvasSize - 3 * gap) / weightedSum) * nums[i] * weights[i],
             width = canvasSize;
-        if (i < 3) {
-            height *= 1.5;
-        } else {
-            height *= 0.5;
-        }
         const b = {
             x: 0,
             y: yOffset - gap / 3,
@@ -150,7 +151,7 @@ export function computeLocalLayoutWithUMAP(
         if (i == 0 && selectedNodes.length > 1) {
             // Seperate the two selected groups
             width = (canvasSize - selectedNodesSep) / 2;
-            groups.push({ bounds: { ...b, width} });
+            groups.push({ bounds: { ...b, width } });
             groups.push({ bounds: { ...b, x: width + selectedNodesSep, width } });
         } else {
             groups.push({ bounds: b });

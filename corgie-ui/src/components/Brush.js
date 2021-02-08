@@ -94,7 +94,7 @@ export default class Brush extends Component {
                     height={this.props.height}
                     ref={this.boxRef}
                     onMouseDown={this._onMouseDown.bind(this)}
-                    style={{ cursor: isRange ? "ew-resize" : "crosshair" }}
+                    style={{ cursor: "crosshair" }}
                 />
             </g>
         );

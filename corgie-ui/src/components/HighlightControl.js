@@ -129,7 +129,7 @@ export class HighlightControl extends Component {
                             </ListGroup>
                         </div>
                         <div>
-                            <span>Order by distance:</span>
+                            <span style={{marginRight: '5px'}}>Order by distance:</span>
                             <ButtonGroup size="xs">
                                 <Button
                                     variant="outline-secondary"

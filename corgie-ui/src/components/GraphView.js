@@ -214,7 +214,7 @@ class GraphView extends Component {
 
                         <div style={{ marginTop: "10px" }}>
                             <h6>Distance in graph topology vs. latent space</h6>
-                            <Scatterplot xData={edges.map((e) => e.d)} yData={edges.map((e) => e.dNei)} />
+                            <Scatterplot xData={edges.map((e) => e.dLat)} yData={edges.map((e) => e.dTopo)} />
                         </div>
                     </div>
 
