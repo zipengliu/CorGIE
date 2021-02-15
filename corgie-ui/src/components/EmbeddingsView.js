@@ -49,47 +49,6 @@ class EmbeddingsView extends Component {
 
                 <h6>UMAP 2D node embeddings</h6>
                 <Embeddings2D />
-                {/* <svg width={svgWidth} height={svgHeight}>
-                    <g transform={`translate(${margins.left},${margins.top})`}>
-                        <rect
-                            x={-margins.left / 2}
-                            y={-margins.top / 2}
-                            width={width + (margins.left + margins.right) / 2}
-                            height={height + (margins.top + margins.bottom) / 2}
-                            style={{ stroke: "#000", strokeWidth: "1px", fill: "none" }}
-                        />
-                        <Brush
-                            width={width}
-                            height={height}
-                            isRange={false}
-                            brushedFunc={this.callHighlightNodes.bind(this)}
-                        />
-                        <g className="points">
-                            {coords.map((c, i) => (
-                                <g
-                                    key={i}
-                                    className={cn("point", {
-                                        selected: isNodeSelected[i],
-                                    })}
-                                    transform={`translate(${c.x},${c.y})`}
-                                    onMouseEnter={this.props.hoverNode.bind(null, i)}
-                                    onMouseLeave={this.props.hoverNode.bind(null, null)}
-                                    // onClick={this.props.selectNodes.bind(null, i)}
-                                    style={{
-                                        fill:
-                                            colorBy === -1
-                                                ? "grey"
-                                                : nodes[i].hasOwnProperty(colorBy)
-                                                ? colorScale(nodes[i][colorBy])
-                                                : "grey",
-                                    }}
-                                >
-                                    <NodeRep shape={nodes[i].typeId === 0 ? "triangle" : "circle"} r={3} />
-                                </g>
-                            ))}
-                        </g>
-                    </g>
-                </svg> */}
 
                 {nodeTypes.length > 1 && (
                     <div>

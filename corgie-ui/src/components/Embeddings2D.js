@@ -1,7 +1,8 @@
-import React, { Component, memo } from "react";
+import React, { Component, memo, useCallback } from "react";
 import { connect, ReactReduxContext, Provider } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Stage, Layer, Group, Rect } from "react-konva";
+import debounce from "lodash.debounce";
 import NodeRep from "./NodeRep";
 import { FocusLayer, HighlightLayer, HoverLayer } from "./NodeLayers";
 import { getNodeEmbeddingColor } from "../utils";
@@ -22,12 +23,15 @@ class Embeddings2D extends Component {
         this.state = initState;
     }
     callHighlightNodes(brushedArea) {
-        const { nodes, selectedNodeType, coords } = this.props;
+        const { nodes, selectedNodeType } = this.props;
+        const candidates = this.props.qt.retrieve(brushedArea);
         const targetNodes = [];
-        for (let i = 0; i < coords.length; i++) {
-            const c = coords[i];
-            if (nodes[i].typeId === selectedNodeType && isPointInBox(c, brushedArea)) {
-                targetNodes.push(i);
+        for (let c of candidates) {
+            if (
+                nodes[c.id].typeId === selectedNodeType &&
+                isPointInBox({ x: c.x + 0.5, y: c.y + 0.5 }, brushedArea)
+            ) {
+                targetNodes.push(c.id);
             }
         }
         if (targetNodes.length == 0) return;
@@ -148,6 +152,7 @@ class Embeddings2D extends Component {
 const mapStateToProps = (state) => ({
     nodes: state.graph.nodes,
     coords: state.latent.coords,
+    qt: state.latent.qt,
     spec: state.spec.latent,
     nodeColors: state.nodeColors,
     colorBy: state.param.colorBy,
@@ -169,37 +174,35 @@ const mapDispatchToProps = (dispatch) =>
 
 export default connect(mapStateToProps, mapDispatchToProps)(Embeddings2D);
 
-class BaseLayerUnconnected extends Component {
-    render() {
-        console.log("Embeddings2D BaseLayer render()");
-        const { nodeColors, colorBy, spec, coords, nodes } = this.props;
-        const { nodeSize } = spec;
+function BaseLayerUnconnected({ nodeColors, colorBy, spec, coords, nodes, hoverNode, highlightNodes }) {
+    console.log("Embeddings2D BaseLayer render()");
+    const { nodeSize } = spec;
+    const debouncedHover = useCallback(debounce((i) => hoverNode(i), 300));
 
-        return (
-            <Layer>
-                <Group>
-                    {coords.map((c, i) => (
-                        <NodeRep
-                            key={i}
-                            x={c.x}
-                            y={c.y}
-                            radius={nodeSize}
-                            typeId={nodes[i].typeId}
-                            style={{
-                                fill: colorBy === -1 ? "grey" : nodeColors[i],
-                                strokeEnabled: false,
-                            }}
-                            events={{
-                                onMouseOver: this.props.hoverNode.bind(null, i),
-                                onMouseOut: this.props.hoverNode.bind(null, null),
-                                onClick: this.props.highlightNodes.bind(null, [i], null, "emb", null),
-                            }}
-                        />
-                    ))}
-                </Group>
-            </Layer>
-        );
-    }
+    return (
+        <Layer>
+            <Group>
+                {coords.map((c, i) => (
+                    <NodeRep
+                        key={i}
+                        x={c.x}
+                        y={c.y}
+                        radius={nodeSize}
+                        typeId={nodes[i].typeId}
+                        style={{
+                            fill: colorBy === -1 ? "grey" : nodeColors[i],
+                            strokeEnabled: false,
+                        }}
+                        events={{
+                            onMouseOver: debouncedHover.bind(null, i),
+                            onMouseOut: debouncedHover.bind(null, null),
+                            onClick: highlightNodes.bind(null, [i], null, "emb", null),
+                        }}
+                    />
+                ))}
+            </Group>
+        </Layer>
+    );
 }
 
 const mapStateToPropsBaseLayer = (state) => ({
@@ -208,7 +211,6 @@ const mapStateToPropsBaseLayer = (state) => ({
     spec: state.spec.latent,
     nodeColors: state.nodeColors,
     colorBy: state.param.colorBy,
-    selectedNodeType: state.selectedNodeType,
 });
 
 const BaseLayer = connect(mapStateToPropsBaseLayer, mapDispatchToProps)(BaseLayerUnconnected);

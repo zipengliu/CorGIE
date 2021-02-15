@@ -1,12 +1,7 @@
 import produce from "immer";
 import initialState from "./initialState";
 import ACTION_TYPES from "./actions";
-import {
-    computeForceLayoutWithD3,
-    computeCircularLayout,
-    computeDummyLayout,
-    computeForceLayoutWithCola,
-} from "./layouts";
+import { computeForceLayoutWithD3, computeDummyLayout, computeForceLayoutWithCola } from "./layouts";
 import { schemeCategory10 } from "d3";
 import bs from "bitset";
 import {
@@ -19,6 +14,7 @@ import {
     interpolateRdBu,
     scaleLinear,
 } from "d3";
+import Quadtree from "@timohausmann/quadtree-js";
 import {
     aggregateBinaryFeatures,
     compressFeatureValues,
@@ -511,7 +507,7 @@ function computeDistancesFocal(selectedNodes, distMatrix, binGen) {
     let res = [];
     if (selectedNodes.length == 1 && selectedNodes[0].length > 1) {
         const d = {
-            mode: "witin focal group",
+            mode: "within focal group",
             nodePairs: getIntraDistances(selectedNodes[0], distMatrix),
         };
         d.bins = binGen(d.nodePairs.map((x) => x[0]));
@@ -657,9 +653,20 @@ const reducers = produce((draft, action) => {
                     draft.spec.latent.height,
                     draft.spec.coordRescaleMargin
                 ),
+                qt: new Quadtree({
+                    x: 0,
+                    y: 0,
+                    width: draft.spec.latent.width,
+                    height: draft.spec.latent.height,
+                }),
                 binGen: histogram().domain([0, 1]).thresholds(40),
                 isComputing: true,
             };
+            // Build quadtree for the embedding 2D coordinates
+            for (let i = 0; i < draft.latent.coords.length; i++) {
+                const c = draft.latent.coords[i];
+                draft.latent.qt.insert({ id: i, x: c.x - 0.5, y: c.y - 0.5, width: 1, height: 1 });
+            }
             draft.latent.posColor = draft.latent.coords.map((c) =>
                 getNodeEmbeddingColor(c.x / draft.spec.latent.width, c.y / draft.spec.latent.height)
             );
@@ -879,7 +886,26 @@ const reducers = produce((draft, action) => {
 
             return;
         case ACTION_TYPES.SELECT_NODES_DONE:
-            draft.focalLayout = { ...action.layoutRes, running: false };
+            draft.focalLayout = {
+                ...action.layoutRes,
+                running: false,
+                qt: new Quadtree({
+                    x: 0,
+                    y: 0,
+                    width: action.layoutRes.width,
+                    height: action.layoutRes.height,
+                }),
+            };
+            for (let i = 0; i < action.layoutRes.coords.length; i++) {
+                const c = action.layoutRes.coords[i];
+                draft.focalLayout.qt.insert({
+                    id: i,
+                    x: c.x - 0.5,
+                    y: c.y - 0.5,
+                    width: 1,
+                    height: 1,
+                });
+            }
             return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
             draft.selectedNodeType = action.idx;
