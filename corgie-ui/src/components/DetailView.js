@@ -1,20 +1,23 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
-import { bindActionCreators } from "redux";
 
 class DetailView extends Component {
     render() {
         const { nodeInfo } = this.props;
-        if (nodeInfo === null) return <div />;
+        if (!nodeInfo.length) return <div />;
 
-        return <div id="detail-view">{JSON.stringify(nodeInfo)}</div>;
+        return (
+            <div id="detail-view">
+                {nodeInfo.map((info, i) => (
+                    <p key={i}>{JSON.stringify(info)}</p>
+                ))}
+            </div>
+        );
     }
 }
 
-const mapStateToProps = state => ({
-    nodeInfo: state.hoveredNode !== null ? state.graph.nodes[state.hoveredNode] : null
+const mapStateToProps = (state) => ({
+    nodeInfo: state.hoveredNodes.map((n) => state.graph.nodes[n]),
 });
 
-const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);
-
-export default connect(mapStateToProps, mapDispatchToProps)(DetailView);
+export default connect(mapStateToProps)(DetailView);

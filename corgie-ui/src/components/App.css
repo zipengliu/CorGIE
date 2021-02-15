@@ -362,3 +362,8 @@ rect.highlight-strip {
     fill: blue;
     fill-opacity: 0.3;
 }
+
+#embeddings-view canvas:nth-child(n+3),
+#graph-view canvas:not(:first-child) {
+    pointer-events: none;
+}

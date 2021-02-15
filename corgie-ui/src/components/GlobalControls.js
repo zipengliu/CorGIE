@@ -8,11 +8,11 @@ import NodeRep from "./NodeRep";
 
 export class GlobalControls extends Component {
     render() {
-        const { graph, param, nodeAttrs } = this.props;
+        const { graph, param, nodeAttrs, attrMeta } = this.props;
         const { nodes, edges, nodeTypes } = graph;
         const { colorBy, colorScale } = param;
         let e, numberFormat, colorMin, colorMax;
-        if (colorBy !== "position") {
+        if (colorBy !== -1) {
             e = colorScale.domain();
             colorMin = colorScale(e[0]);
             colorMax = colorScale(e[1]);
@@ -30,25 +30,25 @@ export class GlobalControls extends Component {
                         <div>Node color: </div>
                         <Dropdown
                             onSelect={(k) => {
-                                this.props.changeParam("colorBy", k, false);
+                                this.props.changeParam("colorBy", parseInt(k), false);
                             }}
                         >
                             <Dropdown.Toggle id="color-by-toggle-btn" size="xs">
-                                {colorBy === "position" ? "UMAP position" : nodeAttrs[colorBy].name}
+                                {colorBy === -1 ? "UMAP position" : colorBy}
                             </Dropdown.Toggle>
 
                             <Dropdown.Menu>
-                                <Dropdown.Item eventKey={"position"}>UMAP position</Dropdown.Item>
+                                <Dropdown.Item eventKey={-1}>UMAP position</Dropdown.Item>
                                 <Dropdown.Divider />
-                                {nodeAttrs.map((a, i) => (
+                                {attrMeta.map((a, i) => (
                                     <Dropdown.Item key={i} eventKey={i}>
-                                        {a.name}
+                                        {a.nodeType}: {a.name}
                                     </Dropdown.Item>
                                 ))}
                             </Dropdown.Menu>
                         </Dropdown>
 
-                        {colorBy !== "position" && (
+                        {colorBy !== -1 && (
                             <div style={{ marginLeft: "10px" }}>
                                 <span style={{ marginRight: "3px" }}>{numberFormat(e[0])}</span>
                                 <div

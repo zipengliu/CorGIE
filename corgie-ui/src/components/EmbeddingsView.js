@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, memo } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
@@ -11,62 +11,35 @@ import {
     hoverNode,
 } from "../actions";
 import Brush from "./Brush";
-import NodeRep from "./NodeRep";
-import { isPointInBox, getNodeEmbeddingColor } from "../utils";
+import Embeddings2D from './Embeddings2D';
 import Histogram from "./Histogram";
 
+
 class EmbeddingsView extends Component {
-    callHighlightNodes(brushedArea) {
-        const { graph, selectedNodeType } = this.props;
-        const coords = this.props.latent.coords;
-        const targetNodes = [];
-        for (let i = 0; i < coords.length; i++) {
-            const c = coords[i];
-            if (graph.nodes[i].typeId === selectedNodeType && isPointInBox(c, brushedArea)) {
-                targetNodes.push(i);
-            }
-        }
-        if (targetNodes.length == 0) return;
-
-        this.props.highlightNodes(targetNodes, brushedArea, "emb", null);
-    }
-
     render() {
         // console.log('rendering EmbeddingView...');
         const {
             spec,
             latent,
             graph,
-            isNodeHighlighted,
-            isNodeSelected,
-            isNodeHovered,
             param,
-            nodeAttrs,
-            selBoundingBox,
             selectedNodeType,
-            hoveredNode,
+            hoveredNodes,
             focalDistances,
             highlightNodePairs,
         } = this.props;
-        const { width, height, margins } = spec.latent;
         const histSpec = { ...spec.histogram, width: 300 };
-        const svgWidth = width + margins.left + margins.right,
-            svgHeight = height + margins.top + margins.bottom;
-        const { coords, emb, isComputing, edgeLenBins } = latent;
-        const { nodes, nodeTypes } = graph;
-        const { colorBy, colorScale, nodePairFilter } = param;
+        const { emb, isComputing, edgeLenBins } = latent;
+        const { nodeTypes } = graph;
+        const { nodePairFilter } = param;
         let highlightDistVal;
         if (!latent.isComputing) {
-            if (Array.isArray(hoveredNode)) {
-                highlightDistVal = latent.distMatrix[hoveredNode[0]][hoveredNode[1]];
+            if (!!hoveredNodes && hoveredNodes.length === 2) {
+                highlightDistVal = latent.distMatrix[hoveredNodes[0]][hoveredNodes[1]];
             } else if (focalDistances !== null && !Array.isArray(focalDistances)) {
                 highlightDistVal = focalDistances;
             }
         }
-
-        // const colorScale = scaleSequential(interpolateGreens).domain([1, 0]);
-        const tileNum = 100;
-        const tileArr = new Array(tileNum).fill(0);
 
         return (
             <div id="embeddings-view" className="view">
@@ -74,8 +47,9 @@ class EmbeddingsView extends Component {
                     Latent space <small>(#dim={emb[0].length})</small>
                 </h5>
 
-                <h6>UMAP 2D embeddings</h6>
-                <svg width={svgWidth} height={svgHeight}>
+                <h6>UMAP 2D node embeddings</h6>
+                <Embeddings2D />
+                {/* <svg width={svgWidth} height={svgHeight}>
                     <g transform={`translate(${margins.left},${margins.top})`}>
                         <rect
                             x={-margins.left / 2}
@@ -84,26 +58,6 @@ class EmbeddingsView extends Component {
                             height={height + (margins.top + margins.bottom) / 2}
                             style={{ stroke: "#000", strokeWidth: "1px", fill: "none" }}
                         />
-                        {colorBy === "position" && (
-                            <g className="background-color-tiles">
-                                {tileArr.map((dummyX, i) => (
-                                    <g key={i}>
-                                        {tileArr.map((dummyY, j) => (
-                                            <rect
-                                                key={j}
-                                                x={(i / tileNum) * width}
-                                                y={(j / tileNum) * height}
-                                                width={width / tileNum}
-                                                height={height / tileNum}
-                                                style={{
-                                                    fill: getNodeEmbeddingColor(i / tileNum, j / tileNum),
-                                                }}
-                                            />
-                                        ))}
-                                    </g>
-                                ))}
-                            </g>
-                        )}
                         <Brush
                             width={width}
                             height={height}
@@ -115,10 +69,7 @@ class EmbeddingsView extends Component {
                                 <g
                                     key={i}
                                     className={cn("point", {
-                                        highlighted: isNodeHighlighted[i],
                                         selected: isNodeSelected[i],
-                                        hovered: isNodeHovered[i],
-                                        nonhovered: hoveredNode !== null && !isNodeHovered[i],
                                     })}
                                     transform={`translate(${c.x},${c.y})`}
                                     onMouseEnter={this.props.hoverNode.bind(null, i)}
@@ -126,35 +77,19 @@ class EmbeddingsView extends Component {
                                     // onClick={this.props.selectNodes.bind(null, i)}
                                     style={{
                                         fill:
-                                            colorBy === "position"
+                                            colorBy === -1
                                                 ? "grey"
-                                                : nodes[i].hasOwnProperty(nodeAttrs[colorBy].name)
-                                                ? colorScale(nodes[i][nodeAttrs[colorBy].name])
+                                                : nodes[i].hasOwnProperty(colorBy)
+                                                ? colorScale(nodes[i][colorBy])
                                                 : "grey",
                                     }}
                                 >
                                     <NodeRep shape={nodes[i].typeId === 0 ? "triangle" : "circle"} r={3} />
-                                    {/* <circle
-                                    cx={c.x}
-                                    cy={c.y}
-                                    r={3}
-                                    style={{ fill: nodeTypes[nodes[i].typeId].color }}
-                                /> */}
-                                </g>
-                            ))}
-                        </g>
-                        <g className="bounding-box">
-                            {selBoundingBox.map((h, i) => (
-                                <g key={i}>
-                                    <text x={h.x} y={h.y - 2}>
-                                        foc-{i}
-                                    </text>
-                                    <rect {...h} />
                                 </g>
                             ))}
                         </g>
                     </g>
-                </svg>
+                </svg> */}
 
                 {nodeTypes.length > 1 && (
                     <div>

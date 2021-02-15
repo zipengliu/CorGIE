@@ -9,13 +9,9 @@ import {
     forceCenter,
     forceX,
     forceY,
-    linkRadial,
-    transition,
 } from "d3";
 import { Layout as cola } from "webcola";
 // import tSNE from "./tsne";
-import { selectNodes } from "./actions";
-import { getNeighborDistance } from "./utils";
 
 // Input: a distance matrix
 // Output: an array of coordinates (x, y)
@@ -58,14 +54,16 @@ import { getNeighborDistance } from "./utils";
 //     return nodes.map((d) => ({ x: d.x, y: d.y }));
 // }
 
+// TODO move this to a background worker thread
 export function computeForceLayoutWithD3(nodes, edges) {
     // const constrainCoord = (v, min, max) => Math.max(min, Math.min(v, max));
     let coords = nodes.map((n, i) => ({ index: i }));
+    let edgesCopied = edges.map(e => ({...e}));
 
     const canvasSize = Math.ceil(Math.sqrt(nodes.length * 800));
 
     let simulation = forceSimulation(coords)
-        .force("link", forceLink(edges))
+        .force("link", forceLink(edgesCopied))
         .force("charge", forceManyBody().strength(-40))
         .force("x", forceX(canvasSize / 2))
         .force("y", forceY(canvasSize / 2))

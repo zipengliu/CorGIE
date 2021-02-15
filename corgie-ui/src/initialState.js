@@ -5,6 +5,7 @@ export default {
     // homePath: '/~zipeng/private/cofegrem-prototype',
 
     centralNodeType: 0,
+    nodeColors: [],
 
     selectedNodeType: 0,
     selectedNodes: [], // Array of array
@@ -17,14 +18,18 @@ export default {
 
     highlightedNodes: [],
     highlightedNodePairs: [],
-    isNodeHighlighted: {}, // Either null or an array of booleans
+    highlightedEdges: [], // list of edges between highlighted nodes
 
-    hoveredNode: null,
-    isNodeHovered: {},
+    hoveredNodes: [], // either one or two nodes (when hovering on an edge)
+    hoveredNeighbors: [], // neighbors of hovered nodes + hovered nodes
+    hoveredEdges: [], // list of edges between hovered nodes and their neighbors
 
     neighborIntersections: null,
 
-    focalGraphLayout: {
+    initialLayout: {
+        running: true,
+    },
+    focalLayout: {
         running: false,
     },
 
@@ -44,7 +49,7 @@ export default {
         hops: 2,
         hopsHighlight: 1,
 
-        colorBy: "position", // Could be "position" or index of nodeAttrs
+        colorBy: -1, // Could be -1 (for emb 2d postion) or a name of the attribute
         colorScale: null,
 
         // neighborDistanceMetric: 'hamming',
@@ -78,37 +83,33 @@ export default {
 
         nodePairFilter: {
             ascending: true, // sort the node pairs by latent distance in ascending order
-            which: null,    // could be null, all, edge, 0 (for foc-0), 1 (for foc-1), 2 (for b/w)
+            which: null, // could be null, all, edge, 0 (for foc-0), 1 (for foc-1), 2 (for b/w)
             brushedRange: null,
         },
 
         topoVsLatent: {
             topoDistFunc: null, // We are going to have different metrics to measure topo difference
-            shownNodePairs: 'edge', // Could be all, edge, highlighted, and by types (e.g movie-movie, movie-user)
-        }
+            shownNodePairs: "edge", // Could be all, edge, highlighted, and by types (e.g movie-movie, movie-user)
+        },
     },
 
     spec: {
+        coordRescaleMargin: 6, // must be smaller than node radius
         graph: {
             edgeType: "line",
-            width: 1000,
-            height: 1000,
-            margins: { top: 15, bottom: 15, left: 15, right: 15 },
+            margin: 15,
+            margins: { top: 10, bottom: 10, left: 10, right: 10 },
 
             neighborMarkerMaxHeight: 30,
-            centralNodeSize: 4,
-            auxNodeSize: 3,
+            nodeSize: 4,
             innerRingNodeGap: 10,
             outerRingNodeGap: 2,
             minRingGap: 50, // Minimum gap between the two rings (along the radius axis)
         },
-        focalGraph: {
-            width: 300,
-            height: 300,
-        },
         latent: {
             width: 400,
             height: 400,
+            nodeSize: 3,
             margins: { top: 10, bottom: 10, left: 10, right: 10 },
             histSize: { width: 200, height: 100 },
             histMargins: { top: 10, bottom: 30, left: 30, right: 10 },

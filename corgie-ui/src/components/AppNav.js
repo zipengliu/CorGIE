@@ -6,7 +6,7 @@ export default function AppNav({ datasetId, homePath }) {
     return (
         <Navbar bg="dark" variant="dark" expand="md">
             {/* <Navbar.Brand href="/">Corresponding Features between Graph and Embeddings</Navbar.Brand> */}
-            <Navbar.Brand href={p}>CoFeGrEm</Navbar.Brand>
+            <Navbar.Brand href={p}>CorGIE</Navbar.Brand>
             <Navbar.Toggle aria-controls="responsive-navbar-nav" />
             <Navbar.Collapse id="responsive-navbar-nav">
                 <Nav className="mr-auto">

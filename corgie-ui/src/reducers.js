@@ -7,7 +7,7 @@ import {
     computeDummyLayout,
     computeForceLayoutWithCola,
 } from "./layouts";
-import { schemeCategory10 } from "d3-scale-chromatic";
+import { schemeCategory10 } from "d3";
 import bs from "bitset";
 import {
     histogram,
@@ -25,6 +25,7 @@ import {
     coordsRescale,
     getNeighborDistance,
     binarySearch,
+    getNodeEmbeddingColor,
 } from "./utils";
 
 function mapColorToNodeType(nodeTypes) {
@@ -129,21 +130,57 @@ function getNeighborMasksByHops(nodes, edges, hops) {
     return masksByHops;
 }
 
-// Two mode: either highlight neighbors of a single node, or the neighbors of multiple nodes
-function highlightNeighbors(n, neighborMasks, hops, targetNodeIdx, targetNodeArr) {
-    let h = new Array(n).fill(false);
-    const targetNodes = targetNodeIdx === null ? targetNodeArr : [targetNodeIdx];
+function computeEdgeDict(nodes, edges) {
+    const d = {};
+    for (let i = 0; i < nodes.length; i++) {
+        d[i] = [];
+    }
+    for (let e of edges) {
+        d[e.source].push(e.target);
+        d[e.target].push(e.source);
+    }
+    return d;
+}
+
+function getNeighbors(neighborMasks, hops, edgeDict, targetNodes, incTargets = true) {
+    const hash = {};
+    if (incTargets) {
+        for (let tar of targetNodes) {
+            hash[tar] = true;
+        }
+    }
 
     for (let i = 0; i < hops; i++) {
         // Iterate the hops
         // Flatten all hops / treating all hops the same
         for (let tar of targetNodes) {
             for (let id of neighborMasks[i][tar].toArray()) {
-                h[id] = true;
+                hash[id] = true;
             }
         }
     }
-    return h;
+    const nodes = Object.keys(hash).map((x) => parseInt(x));
+    return { nodes, edges: getEdgesWithinGroup(edgeDict, nodes, hash) };
+}
+
+function getEdgesWithinGroup(edgeDict, nodes, nodeHash = null) {
+    let h = nodeHash;
+    if (nodeHash === null) {
+        h = {};
+        for (let id of nodes) {
+            h[id] = true;
+        }
+    }
+
+    const edges = [];
+    for (let id of nodes) {
+        for (let id2 of edgeDict[id]) {
+            if (id < id2 && h[id2]) {
+                edges.push({ source: id, target: id2 });
+            }
+        }
+    }
+    return edges;
 }
 
 // Return an array of all combinations of intersection, represented as bitsets of the selectedNodes
@@ -342,34 +379,22 @@ function computeDistanceToCurrentFocus(distMatrix, focalNodes) {
     return d;
 }
 
-function callLayoutFunc(state) {
-    const { graph } = state;
-    const copiedEdges = graph.edges.map((e) => ({ ...e }));
+function callLayoutFunc(nodes, edges, whichLayout, spec) {
     let layoutRes;
     // No point of computing any global layout for a large graph
-    if (graph.nodes.length > 1000) {
-        layoutRes = computeDummyLayout(graph.nodes);
+    if (nodes.length > 1000) {
+        layoutRes = computeDummyLayout(nodes);
     } else {
-        if (state.param.graph.layout === "force-directed-d3") {
+        if (whichLayout === "force-directed-d3") {
             // Make a copy of the edges to prevent them from changes by the force simulation
-            layoutRes = computeForceLayoutWithD3(graph.nodes, copiedEdges);
-        } else if (state.param.graph.layout === "force-directed-cola") {
-            layoutRes = computeForceLayoutWithCola(graph.nodes, copiedEdges, state.spec.graph);
-        } else if (state.param.graph.layout === "circular") {
-            layoutRes = computeCircularLayout(
-                graph.nodes,
-                copiedEdges,
-                state.spec.graph,
-                state.centralNodeType
-            );
+            layoutRes = computeForceLayoutWithD3(nodes, edges);
+        } else if (whichLayout === "force-directed-cola") {
+            layoutRes = computeForceLayoutWithCola(nodes, edges, spec);
         } else {
-            layoutRes = computeDummyLayout(graph.nodes);
+            layoutRes = computeDummyLayout(nodes);
         }
     }
-    state.spec.graph.width = layoutRes.width;
-    state.spec.graph.height = layoutRes.height;
-
-    return layoutRes.coords;
+    return layoutRes;
 }
 
 // Note that attrs will be changed by calling this function
@@ -538,7 +563,27 @@ function findNodePairs(distArr, range) {
     }
 }
 
+function setNodeColors(draft, colorBy) {
+    if (colorBy === -1) {
+        draft.nodeColors = draft.latent.posColor;
+        draft.param.colorScale = null;
+    } else {
+        const colorAttr = draft.nodeAttrs[colorBy];
+        const attrDomain = [colorAttr.bins[0].x0, colorAttr.bins[colorAttr.bins.length - 1].x1];
+        const leftMargin = 0.2 * (attrDomain[1] - attrDomain[0]);
+        draft.param.colorScale = scaleSequential(interpolateGreens).domain([
+            attrDomain[0] > 0 ? Math.max(0, attrDomain[0] - leftMargin) : attrDomain[0],
+            attrDomain[1],
+        ]);
+        draft.param.colorBy = colorAttr.name; // Use the attribute name as colorBy for convinience
+        draft.nodeColors = draft.graph.nodes.map((n) =>
+            n.hasOwnProperty(colorAttr.name) ? draft.param.colorScale(n[colorAttr.name]) : "grey"
+        );
+    }
+}
+
 const reducers = produce((draft, action) => {
+    let neiRes;
     switch (action.type) {
         case ACTION_TYPES.FETCH_DATA_PENDING:
             draft.loaded = false;
@@ -560,6 +605,7 @@ const reducers = produce((draft, action) => {
             draft.graph = {
                 nodes: graph.nodes,
                 edges: graph.links.map((e, i) => ({ ...e, eid: i })),
+                edgeDict: computeEdgeDict(graph.nodes, graph.links),
                 nodeTypes: countNodesByType(graph.nodes),
                 features,
             };
@@ -579,10 +625,14 @@ const reducers = produce((draft, action) => {
                     draft.featureAgg.maxCnts,
                 ]);
             }
-            draft.focalGraphLayout = {};
             populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
             mapColorToNodeType(draft.graph.nodeTypes);
-            draft.graph.coords = callLayoutFunc(draft);
+            draft.initialLayout = callLayoutFunc(
+                draft.graph.nodes,
+                draft.graph.edges,
+                draft.param.graph.layout,
+                draft.spec.graph
+            ); // TODO make this async
             draft.graph.neigh = getNeighborMasksByHops(graph.nodes, graph.links, draft.param.hops);
             draft.graph.neighborMasksByType = getNeighborMasks(
                 graph.nodes,
@@ -601,13 +651,22 @@ const reducers = produce((draft, action) => {
 
             draft.latent = {
                 emb,
-                coords: coordsRescale(emb2d, draft.spec.latent.width, draft.spec.latent.height),
+                coords: coordsRescale(
+                    emb2d,
+                    draft.spec.latent.width,
+                    draft.spec.latent.height,
+                    draft.spec.coordRescaleMargin
+                ),
                 binGen: histogram().domain([0, 1]).thresholds(40),
                 isComputing: true,
             };
+            draft.latent.posColor = draft.latent.coords.map((c) =>
+                getNodeEmbeddingColor(c.x / draft.spec.latent.width, c.y / draft.spec.latent.height)
+            );
 
             draft.attrMeta = attrs;
             draft.nodeAttrs = summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes);
+            setNodeColors(draft, draft.param.colorBy);
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
             return;
@@ -648,39 +707,37 @@ const reducers = produce((draft, action) => {
                     draft.param.nodeFilter.brushedArea = action.brushedArea;
                 // No break here
                 case "emb":
-                    draft.isNodeHighlighted = {};
-                    for (let nid of action.nodeIndices) {
-                        draft.isNodeHighlighted[nid] = true;
-                    }
+                    draft.highlightedNodes = action.nodeIndices;
+                    draft.highlightedEdges = getEdgesWithinGroup(
+                        draft.graph.edgeDict,
+                        draft.highlightedNodes,
+                        null
+                    );
                     break;
                 case "graph":
-                    // Highlight their neighbors as well  TODO: is this good?
-                    draft.isNodeHighlighted = highlightNeighbors(
-                        draft.graph.nodes.length,
+                    // Highlight their neighbors as well
+                    neiRes = getNeighbors(
                         draft.graph.neigh,
                         draft.param.hopsHighlight,
-                        null,
-                        action.nodeIndices
+                        draft.graph.edgeDict,
+                        action.nodeIndices,
+                        true
                     );
-                    for (let nid of action.nodeIndices) {
-                        draft.isNodeHighlighted[nid] = true;
-                    }
-                    draft.highlightedNodes = [];
-                    for (let i = 0; i < draft.isNodeHighlighted.length; i++) {
-                        if (draft.isNodeHighlighted[i]) {
-                            draft.highlightedNodes.push(i);
-                        }
-                    }
+                    draft.highlightedNodes = neiRes.nodes;
+                    draft.highlightedEdges = neiRes.edges;
                     break;
                 case "node-type":
-                    draft.isNodeHighlighted = {};
                     draft.highlightedNodes = [];
                     for (let n of draft.graph.nodes) {
                         if (n.typeId === action.which) {
                             draft.highlightedNodes.push(n.id);
-                            draft.isNodeHighlighted[n.id] = true;
                         }
                     }
+                    draft.highlightedEdges = getEdgesWithinGroup(
+                        draft.graph.edgeDict,
+                        draft.highlightedNodes,
+                        null
+                    );
                     break;
                 default:
             }
@@ -690,7 +747,7 @@ const reducers = produce((draft, action) => {
                 (action.nodeIndices === null || action.nodeIndices.length === 0)
             ) {
                 draft.highlightedNodes = [];
-                draft.isNodeHighlighted = {};
+                draft.highlightedEdges = [];
             }
             return;
         case ACTION_TYPES.HIGHLIGHT_NODE_PAIRS:
@@ -712,31 +769,23 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.HOVER_NODE:
             if (action.nodeIdx === null) {
-                draft.isNodeHovered = {};
+                draft.hoveredNodes = [];
             } else if (Number.isInteger(action.nodeIdx)) {
                 // Hover on a node
-                draft.isNodeHovered = highlightNeighbors(
-                    draft.graph.nodes.length,
-                    draft.graph.neigh,
-                    draft.param.hopsHighlight,
-                    action.nodeIdx,
-                    null
-                );
-                draft.isNodeHovered[action.nodeIdx] = true;
+                draft.hoveredNodes = [action.nodeIdx];
             } else {
                 // Hover on a node pair
-                draft.isNodeHovered = { [action.nodeIdx[0]]: true, [action.nodeIdx[1]]: true };
+                draft.hoveredNodes = action.nodeIdx;
             }
-            draft.hoveredNode = action.nodeIdx;
-            return;
-        case ACTION_TYPES.HIGHLIGHT_NEIGHBORS:
-            // Deprecated
-            // draft.isNodeHighlighted = {};
-            // if (action.nodes) {
-            //     for (let i of action.nodes) {
-            //         draft.isNodeHighlighted[i] = true;
-            //     }
-            // }
+            neiRes = getNeighbors(
+                draft.graph.neigh,
+                draft.param.hopsHighlight,
+                draft.graph.edgeDict,
+                draft.hoveredNodes,
+                true
+            );
+            draft.hoveredNeighbors = neiRes.nodes;
+            draft.hoveredEdges = neiRes.edges;
             return;
         case ACTION_TYPES.SELECT_NODES_PENDING:
             let { newSel, neighRes } = action;
@@ -750,7 +799,7 @@ const reducers = produce((draft, action) => {
                 draft.neighGrp = null;
                 draft.selNodeAttrs = [];
                 draft.selFeatures = [];
-                draft.focalGraphLayout = { running: false };
+                draft.focalLayout = { running: false };
                 draft.selBoundingBox = [];
                 draft.focalDistances = [];
             } else {
@@ -775,7 +824,7 @@ const reducers = produce((draft, action) => {
                         sel
                     )
                 );
-                draft.focalGraphLayout.running = true;
+                draft.focalLayout.running = true;
                 draft.selBoundingBox = newSel.map((s) => computeBoundingBox(draft.latent.coords, s));
 
                 // Compute the features for the focal nodes
@@ -822,7 +871,6 @@ const reducers = produce((draft, action) => {
             // Clear the highlight (blinking) nodes
             draft.param.nodeFilter = {};
             draft.highlightedNodes = [];
-            draft.isNodeHighlighted = {};
 
             // draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
             //     draft.latent.distMatrix,
@@ -831,64 +879,8 @@ const reducers = produce((draft, action) => {
 
             return;
         case ACTION_TYPES.SELECT_NODES_DONE:
-            draft.focalGraphLayout = { ...action.layoutRes, running: false };
+            draft.focalLayout = { ...action.layoutRes, running: false };
             return;
-        // case ACTION_TYPES.SELECT_EDGE:
-        //     // Clear the highlight nodes
-        //     draft.nodesToHighlight = [];
-        //     draft.isNodeHighlighted = {};
-
-        //     if (draft.selectedEdge !== action.eid) {
-        //         draft.selectedEdge = action.eid;
-        //         if (action.eid !== null) {
-        //             draft.selectedNodes = [
-        //                 [draft.graph.edges[action.eid].source],
-        //                 [draft.graph.edges[action.eid].target],
-        //             ];
-        //             draft.isNodeSelected = {};
-        //             draft.isNodeSelected[draft.selectedNodes[0]] = true;
-        //             draft.isNodeSelected[draft.selectedNodes[1]] = true;
-
-        //             // TODO dup code
-        //             draft.isNodeSelectedNeighbor = {};
-        //             for (let nodeIdx in draft.isNodeSelected)
-        //                 if (draft.isNodeSelected[nodeIdx]) {
-        //                     for (let h = draft.param.hops - 1; h >= 0; h--) {
-        //                         const curNeigh = draft.graph.neigh[h][nodeIdx];
-        //                         for (let neighIdx of curNeigh.toArray()) {
-        //                             if (neighIdx !== nodeIdx) {
-        //                                 if (draft.isNodeSelectedNeighbor.hasOwnProperty(neighIdx)) {
-        //                                     draft.isNodeSelectedNeighbor[neighIdx] = Math.min(
-        //                                         draft.isNodeSelectedNeighbor[neighIdx],
-        //                                         h + 1
-        //                                     );
-        //                                 } else {
-        //                                     draft.isNodeSelectedNeighbor[neighIdx] = h + 1;
-        //                                 }
-        //                             }
-        //                         }
-        //                     }
-        //                 }
-
-        //             const temp = countSelectedNeighborsByHop(
-        //                 draft.graph.neigh,
-        //                 draft.selectedNodes,
-        //                 draft.param.hops,
-        //                 draft.isNodeSelected,
-        //                 draft.isNodeSelectedNeighbor
-        //             );
-        //             draft.neighGrp = temp.neighGrp;
-        //             draft.neighMap = temp.neighMap;
-        //             draft.neighArr = temp.neighArr;
-
-        //             // draft.focalGraphLayout = callLocalLayoutFunc(draft);
-        //             // Update the bounding box for the highlight group TODO
-        //             // for (let h of draft.highlightNodeAttrs) {
-        //             //     h.boundingBox = computeBoundingBox(draft.focalGraphLayout.coords, h.nodes);
-        //             // }
-        //         }
-        //     }
-        //     return;
         case ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE:
             draft.selectedNodeType = action.idx;
             return;
@@ -914,23 +906,8 @@ const reducers = produce((draft, action) => {
             }
 
             // Special param changes
-            if (action.param === "graph.layout") {
-                draft.graph.coords = callLayoutFunc(draft);
-            } else if (action.param === "focalGraph.layout") {
-                // TODO
-                // draft.focalGraphLayout = callLocalLayoutFunc(draft);
-            } else if (action.param === "colorBy") {
-                if (action.value === "position") {
-                    draft.param.colorScale = null;
-                } else {
-                    const colorAttr = draft.nodeAttrs[action.value];
-                    const attrDomain = [colorAttr.bins[0].x0, colorAttr.bins[colorAttr.bins.length - 1].x1];
-                    const leftMargin = 0.2 * (attrDomain[1] - attrDomain[0]);
-                    draft.param.colorScale = scaleSequential(interpolateGreens).domain([
-                        attrDomain[0] > 0 ? Math.max(0, attrDomain[0] - leftMargin) : attrDomain[0],
-                        attrDomain[1],
-                    ]);
-                }
+            if (action.param === "colorBy") {
+                setNodeColors(draft, action.value);
             } else if (action.param === "nodePairFilter.ascending") {
                 const ascFunc = (x1, x2) => x1[0] - x2[0],
                     descFunc = (x1, x2) => x2[0] - x1[0];
@@ -960,35 +937,35 @@ const reducers = produce((draft, action) => {
                 draft.selectedNodes = [];
                 draft.isNodeSelected = {};
                 draft.isNodeSelectedNeighbor = {};
-                draft.focalGraphLayout = {};
+                draft.focalLayout = {};
             }
             return;
         case ACTION_TYPES.LAYOUT_TICK:
             // Note that in D3, the tick function returns the simulation object itself
             // In web-cola, the tick function returns whether the simulation has converged
-            if (draft.focalGraphLayout && draft.focalGraphLayout.simulation) {
-                const converged = draft.focalGraphLayout.simulation.tick();
-                draft.focalGraphLayout.coords = draft.focalGraphLayout.simulation.nodes().map((d) => ({
+            if (draft.focalLayout && draft.focalLayout.simulation) {
+                const converged = draft.focalLayout.simulation.tick();
+                draft.focalLayout.coords = draft.focalLayout.simulation.nodes().map((d) => ({
                     x: d.x,
                     y: d.y,
                     g: d.group,
                 }));
                 if (draft.param.focalGraph.layout === "group-constraint-cola") {
                     // This is only a dirty way for quick check
-                    draft.focalGraphLayout.groups = draft.focalGraphLayout.simulation._groups.map((g) => ({
+                    draft.focalLayout.groups = draft.focalLayout.simulation._groups.map((g) => ({
                         id: g.id,
                         bounds: g.bounds,
                     }));
-                    if (converged || draft.focalGraphLayout.simulationTickNumber > 20) {
+                    if (converged || draft.focalLayout.simulationTickNumber > 20) {
                         // if (converged) {
-                        draft.focalGraphLayout.running = false;
+                        draft.focalLayout.running = false;
                     }
                 } else {
-                    if (draft.focalGraphLayout.simulationTickNumber === 50) {
-                        draft.focalGraphLayout.running = false;
+                    if (draft.focalLayout.simulationTickNumber === 50) {
+                        draft.focalLayout.running = false;
                     }
                 }
-                draft.focalGraphLayout.simulationTickNumber += 1;
+                draft.focalLayout.simulationTickNumber += 1;
             }
             return;
 
@@ -1004,20 +981,14 @@ const reducers = produce((draft, action) => {
                 draft.highlightedNodes = draft.graph.nodes
                     .filter((n) => n.label && n.label.toString().toLowerCase().includes(l))
                     .map((n) => n.id);
-                draft.isNodeHighlighted = {};
-                for (let nid of draft.highlightedNodes) {
-                    draft.isNodeHighlighted[nid] = true;
-                }
             } else if (
                 action.nodeIdx !== null &&
                 0 <= action.nodeIdx &&
                 action.nodeIdx < draft.graph.nodes.length
             ) {
                 draft.highlightedNodes = [action.nodeIdx];
-                draft.isNodeHighlighted = { [action.nodeIdx]: true };
             } else {
                 draft.highlightedNodes = [];
-                draft.isNodeHighlighted = {};
             }
             return;
 

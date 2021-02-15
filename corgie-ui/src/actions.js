@@ -1,5 +1,5 @@
 import "whatwg-fetch";
-import { csvParseRows } from "d3-dsv";
+import { csvParseRows } from "d3";
 import { isPointInBox, getSelectedNeighbors } from "./utils";
 
 // eslint-disable-next-line import/no-webpack-loader-syntax
@@ -15,7 +15,6 @@ const ACTION_TYPES = {
     HIGHLIGHT_NODES: "HIGHLIGHT_NODES",
     HIGHLIGHT_NODE_PAIRS: "HIGHLIGHT_NODE_PAIRS",
     HOVER_NODE: "HOVER_NODE",
-    HIGHLIGHT_NEIGHBORS: "HIGHLIGHT_NEIGHBORS",
     CHANGE_SELECTED_NODE_TYPE: "CHANGE_SELECTED_NODE_TYPE",
     SELECT_NODES: "SELECT_NODES",
     SELECT_NODES_PENDING: "SELECT_NODES_PENDING",
@@ -109,10 +108,6 @@ export function hoverNode(nodeIdx) {
 
 export function toggleHighlightNodesAttr(delIdx = null) {
     return { type: ACTION_TYPES.TOGGLE_HIGHLIGHT_NODES_ATTR, delIdx };
-}
-
-export function highlightNeighbors(nodes) {
-    return { type: ACTION_TYPES.HIGHLIGHT_NEIGHBORS, nodes };
 }
 
 // Mode could be one of CREATE, APPEND, DELETE, or CLEAR

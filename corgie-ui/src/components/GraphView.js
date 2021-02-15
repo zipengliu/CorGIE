@@ -1,27 +1,35 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
-import { bindActionCreators } from "redux";
-import cn from "classnames";
-import { Form } from "react-bootstrap";
-import { highlightNodes, hoverNode, changeParam, layoutTick, selectNodePair } from "../actions";
-import { max, scaleLinear } from "d3";
-import NodeRep from "./NodeRep";
-import Brush from "./Brush";
-import Scatterplot from "./Scatterplot";
-import { getNodeEmbeddingColor, isPointInBox } from "../utils";
+import { Spinner } from "react-bootstrap";
+import GraphLayout from "./GraphLayout";
+import { isPointInBox } from "../utils";
 
-class GraphView extends Component {
-    // componentDidUpdate() {
-    //     const { focalGraphLayout } = this.props;
+function GraphView({ initialLayout, focalLayout }) {
+    return (
+        <div className="view" id="graph-view">
+            <h5 className="text-center">Graph topology</h5>
+            <GraphLayout layoutData={initialLayout} />
+            {focalLayout.running && (
+                <div>
+                    <Spinner animation="border" role="status" />
+                    <span style={{ marginLeft: "10px" }}>Computing layouts for selected nodes...</span>
+                </div>
+            )}
+            {focalLayout.coords && !focalLayout.running && <GraphLayout layoutData={focalLayout} />}
+        </div>
+    );
+}
 
-    //     if (focalGraphLayout.running) {
-    //         setTimeout(() => {
-    //             this.props.layoutTick();
-    //         }, 10);
-    //     }
-    // }
+const mapStateToProps = (state) => ({
+    initialLayout: state.initialLayout,
+    focalLayout: state.focalLayout,
+});
+
+export default connect(mapStateToProps)(GraphView);
+
+class GraphView_x extends Component {
     callHighlightNodes(brushedArea) {
-        const coords = this.props.focalGraphLayout.coords;
+        const coords = this.props.focalLayout.coords;
         const targetNodes = [];
         for (let i = 0; i < coords.length; i++) {
             const c = coords[i];
@@ -35,245 +43,37 @@ class GraphView extends Component {
     }
 
     render() {
-        const {
-            spec,
-            param,
-            graph,
-            latent,
-            isNodeHighlighted,
-            isNodeSelected,
-            isNodeHovered,
-            selectedNodes,
-            neighMap,
-            focalGraphLayout,
-            edgeAttributes,
-            nodeAttrs,
-            hoveredNode,
-        } = this.props;
-        const { colorBy, colorScale } = param;
-        const layout = param.graph.layout;
-        const focalLayout = param.focalGraph.layout;
-        const { width, height, margins, edgeType, centralNodeSize, auxNodeSize } = spec.graph;
-        const svgWidth = width + margins.left + margins.right,
-            svgHeight = height + margins.top + margins.bottom;
-        const { coords, nodes, edges } = graph;
-
-        if (nodes.length > 5000) {
-            return <div />;
-        }
-
-        const edgeTypes = edgeAttributes.type;
-        const showAllEdges = edgeTypes.show[0] && edgeTypes.show[1] && edgeTypes.show[2];
-        let filteredEdges;
-        if (showAllEdges) {
-            filteredEdges = edges;
-        } else {
-            filteredEdges = edges.filter((e) => edgeTypes.show[e.type]);
-        }
-
-        const latentCoords = latent.coords;
-        const latentWidth = spec.latent.width,
-            latentHeight = spec.latent.height;
-
-        const markerScale = scaleLinear()
-            .domain([0, selectedNodes.length + 1])
-            .range([0, spec.graph.neighborMarkerMaxHeight]);
-
-        function getNodeColor(i) {
-            if (colorBy === "position") {
-                return getNodeEmbeddingColor(
-                    latentCoords[i].x / latentWidth,
-                    latentCoords[i].y / latentHeight
-                );
-            } else {
-                return nodes[i].hasOwnProperty(nodeAttrs[colorBy].name)
-                    ? colorScale(nodes[i][nodeAttrs[colorBy].name])
-                    : "grey";
-            }
-        }
-
-        console.log("rendering graphs...");
-
         return (
-            <div id="graph-view" className="view">
-                <h5 className="text-center">Graph topology</h5>
+            // <div style={{ marginTop: "10px" }}>
+            //     <h6>Distance in graph topology vs. latent space</h6>
+            //     <Scatterplot xData={edges.map((e) => e.dLat)} yData={edges.map((e) => e.dTopo)} />
+            // </div>
 
-                <div style={{ display: "flex", flexDirection: "row" }}>
-                    <div>
-                        <h6 className="text-center">Original layout</h6>
+            {
+                /* {focalLayout.coords && !focalLayout.running && (
                         <div>
-                            <Form inline>
-                                <Form.Group controlId="graph-layout-alg-global">
-                                    <Form.Label column="sm">Layout:</Form.Label>
-                                    <Form.Control
-                                        as="select"
-                                        size="sm"
-                                        value={layout}
-                                        onChange={(e) => {
-                                            this.props.changeParam("graph.layout", e.target.value);
-                                        }}
-                                    >
-                                        <option value="force-directed-d3">force-directed (D3)</option>
-                                        <option value="force-directed-cola">force-directed (WebCola)</option>
-                                        <option value="circular">circular</option>
-                                    </Form.Control>
-                                </Form.Group>
-                            </Form>
-                        </div>
-                        <svg width={svgWidth} height={svgHeight}>
-                            <g transform={`translate(${margins.left},${margins.top})`}>
-                                <g
-                                    transform={
-                                        layout === "circular" ? `translate(${width / 2},${height / 2})` : ""
-                                    }
-                                >
-                                    <g className="edges">
-                                        {filteredEdges.map((e, i) =>
-                                            edgeType === "curve" ? (
-                                                <path key={i} className="edge" d={e.curvePath} />
-                                            ) : (
-                                                <line
-                                                    key={i}
-                                                    className={cn("edge", {
-                                                        highlighted:
-                                                            isNodeHighlighted[e.source] &&
-                                                            isNodeHighlighted[e.target],
-                                                        hovered:
-                                                            isNodeHovered[e.source] &&
-                                                            isNodeHovered[e.target],
-                                                        nonhovered:
-                                                            hoveredNode !== null &&
-                                                            (!isNodeHovered[e.source] ||
-                                                                !isNodeHovered[e.target]),
-                                                    })}
-                                                    x1={coords[e.source].x}
-                                                    y1={coords[e.source].y}
-                                                    x2={coords[e.target].x}
-                                                    y2={coords[e.target].y}
-                                                    onMouseEnter={this.props.hoverNode.bind(null, [
-                                                        e.source,
-                                                        e.target,
-                                                    ])}
-                                                    onMouseLeave={this.props.hoverNode.bind(null, null)}
-                                                    onClick={this.props.selectNodePair.bind(
-                                                        null,
-                                                        e.source,
-                                                        e.target
-                                                    )}
-                                                />
-                                            )
-                                        )}
-                                    </g>
-
-                                    <g className="nodes">
-                                        {coords.map((c, i) => (
-                                            <g
-                                                key={i}
-                                                transform={
-                                                    (layout === "circular" ? `rotate(${c.a})` : "") +
-                                                    `translate(${c.x},${c.y})`
-                                                }
-                                                className={cn("node", {
-                                                    highlighted: isNodeHighlighted[i],
-                                                    selected: isNodeSelected[i],
-                                                    hovered: isNodeHovered[i],
-                                                    nonhovered: hoveredNode !== null && !isNodeHovered[i],
-                                                })}
-                                                style={{ fill: getNodeColor(i) }}
-                                                onMouseEnter={this.props.hoverNode.bind(null, i)}
-                                                onMouseLeave={this.props.hoverNode.bind(null, null)}
-                                                onClick={this.props.highlightNodes.bind(
-                                                    null,
-                                                    [i],
-                                                    null,
-                                                    "graph",
-                                                    null
-                                                )}
-                                            >
-                                                <NodeRep
-                                                    shape={nodes[i].typeId === 0 ? "triangle" : "circle"}
-                                                    r={nodes[i].typeId === 0 ? centralNodeSize : auxNodeSize}
-                                                />
-                                                {layout === "circular" &&
-                                                    neighMap &&
-                                                    neighMap.hasOwnProperty(i) && (
-                                                        <line
-                                                            className="selected-neighbor-glyph"
-                                                            x1={0}
-                                                            y1={0}
-                                                            x2={markerScale(neighMap[i])}
-                                                            y2={0}
-                                                        />
-                                                    )}
-                                            </g>
-                                        ))}
-                                    </g>
-                                </g>
-                            </g>
-                        </svg>
-
-                        <div style={{ marginTop: "10px" }}>
-                            <h6>Distance in graph topology vs. latent space</h6>
-                            <Scatterplot xData={edges.map((e) => e.dLat)} yData={edges.map((e) => e.dTopo)} />
-                        </div>
-                    </div>
-
-                    {focalGraphLayout.running && <div>Computing layouts for selected nodes...</div>}
-                    {focalGraphLayout.coords && !focalGraphLayout.running && (
-                        <div>
-                            <h6 className="text-center">Focus layout</h6>
-                            <div>
-                                <Form inline>
-                                    <Form.Group controlId="graph-layout-alg-local">
-                                        <Form.Label column="sm">Layout:</Form.Label>
-                                        <Form.Control
-                                            as="select"
-                                            size="sm"
-                                            value={focalLayout}
-                                            onChange={(e) => {
-                                                this.props.changeParam("focalGraph.layout", e.target.value);
-                                            }}
-                                        >
-                                            <option value="force-directed-d3">force-directed (D3)</option>
-                                            <option value="group-constraint-cola">
-                                                group constraint (WebCola)
-                                            </option>
-                                            <option value="umap">umap for neighbors</option>
-                                            <option value="spiral">spiral</option>
-                                        </Form.Control>
-                                    </Form.Group>
-                                </Form>
-                            </div>
+                            <h6 className="text-center">Focal layout</h6>
                             <svg
-                                width={focalGraphLayout.width + margins.left + margins.right}
-                                height={focalGraphLayout.height + margins.top + margins.bottom}
+                                width={focalLayout.width + margins.left + margins.right}
+                                height={focalLayout.height + margins.top + margins.bottom}
                             >
                                 <g transform={`translate(${margins.left},${margins.top})`}>
                                     <g className="edges">
-                                        {filteredEdges.map((e, i) => (
+                                        {edges.map((e, i) => (
                                             <line
                                                 key={i}
                                                 className={cn("edge", {
-                                                    highlighted:
-                                                        isNodeHighlighted[e.source] &&
-                                                        isNodeHighlighted[e.target],
-                                                    hovered:
-                                                        isNodeHovered[e.source] && isNodeHovered[e.target],
-                                                    nonhovered:
-                                                        hoveredNode !== null &&
-                                                        (!isNodeHovered[e.source] ||
-                                                            !isNodeHovered[e.target]),
                                                 })}
-                                                x1={focalGraphLayout.coords[e.source].x}
-                                                y1={focalGraphLayout.coords[e.source].y}
-                                                x2={focalGraphLayout.coords[e.target].x}
-                                                y2={focalGraphLayout.coords[e.target].y}
+                                                x1={focalLayout.coords[e.source].x}
+                                                y1={focalLayout.coords[e.source].y}
+                                                x2={focalLayout.coords[e.target].x}
+                                                y2={focalLayout.coords[e.target].y}
                                             />
                                         ))}
                                     </g>
-                                    {focalGraphLayout.groups && (
+                                    {focalLayout.groups && (
                                         <g className="groups">
-                                            {focalGraphLayout.groups.map((g, i) => (
+                                            {focalLayout.groups.map((g, i) => (
                                                 <rect
                                                     key={i}
                                                     className="node-group"
@@ -288,15 +88,12 @@ class GraphView extends Component {
                                         </g>
                                     )}
                                     <g className="nodes">
-                                        {focalGraphLayout.coords.map((c, i) => (
+                                        {focalLayout.coords.map((c, i) => (
                                             <g
                                                 key={i}
                                                 transform={`translate(${c.x},${c.y})`}
                                                 className={cn("node", {
-                                                    highlighted: isNodeHighlighted[i],
                                                     selected: isNodeSelected[i],
-                                                    hovered: isNodeHovered[i],
-                                                    nonhovered: hoveredNode !== null && !isNodeHovered[i],
                                                 })}
                                                 style={{ fill: getNodeColor(i) }}
                                                 onMouseEnter={this.props.highlightNodes.bind(null, i)}
@@ -309,35 +106,17 @@ class GraphView extends Component {
                                             </g>
                                         ))}
                                     </g>
-                                    {/* <text y={5}>#iterations: {focalGraphLayout.simulationTickNumber}</text> */}
 
                                     <Brush
-                                        width={focalGraphLayout.width}
-                                        height={focalGraphLayout.height}
+                                        width={focalLayout.width}
+                                        height={focalLayout.height}
                                         brushedFunc={this.callHighlightNodes.bind(this)}
                                     />
                                 </g>
                             </svg>
                         </div>
-                    )}
-                </div>
-            </div>
+                    )} */
+            }
         );
     }
 }
-
-const mapStateToProps = (state) => ({ ...state });
-
-const mapDispatchToProps = (dispatch) =>
-    bindActionCreators(
-        {
-            highlightNodes,
-            hoverNode,
-            changeParam,
-            layoutTick,
-            selectNodePair,
-        },
-        dispatch
-    );
-
-export default connect(mapStateToProps, mapDispatchToProps)(GraphView);
