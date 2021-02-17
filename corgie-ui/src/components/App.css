@@ -208,15 +208,16 @@
 
 #highlight-control .node-pair-list {
     /* border: 1px solid grey; */
-    max-height: 400px;
+    /* max-height: 400px; */
     /* max-width: 250px; */
-    overflow: scroll;
+    /* overflow: scroll; */
     margin: 10px 0;
     font-size: 12px;
 }
 #highlight-control .node-pair-list .list-group-item {
     padding: 0.2rem 0.5rem;
     cursor: pointer;
+    text-overflow: ellipsis;
 }
 
 /* Semantics space view */
@@ -273,11 +274,12 @@ rect.highlight-strip {
 .histogram .axis text {
     font-size: 10px;
 }
-.histogram .axis .value-marker line {
+.histogram .value-marker line {
     stroke: black;
     stroke-width: 1px;
+    stroke-dasharray: 5;
 }
-.histogram .axis .value-marker text {
+.histogram .value-marker text {
     fill: black;
 }
 
@@ -366,4 +368,16 @@ rect.highlight-strip {
 #embeddings-view canvas:nth-child(n+3),
 #graph-view canvas:not(:first-child) {
     pointer-events: none;
+}
+
+.scatter-hist-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+.scatter-hist-container>div {
+    margin: 5px;
+}
+.scatter-hist-container .title {
+    font-size: 14px;;
 }

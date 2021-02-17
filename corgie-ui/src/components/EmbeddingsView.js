@@ -1,66 +1,67 @@
-import React, { Component, memo } from "react";
+import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import cn from "classnames";
-import { Form } from "react-bootstrap";
-import {
-    highlightNodes,
-    changeParam,
-    changeSelectedNodeType,
-    highlightNodePairs,
-    hoverNode,
-} from "../actions";
-import Brush from "./Brush";
-import Embeddings2D from './Embeddings2D';
-import Histogram from "./Histogram";
-
+import { Form, Spinner } from "react-bootstrap";
+import { changeParam, highlightNodePairs } from "../actions";
+import Embeddings2D from "./Embeddings2D";
+import ScatterHistogram from "./ScatterHistogram";
 
 class EmbeddingsView extends Component {
     render() {
-        // console.log('rendering EmbeddingView...');
         const {
+            numDim,
+            nodeTypes,
+            distances,
             spec,
-            latent,
-            graph,
             param,
-            selectedNodeType,
             hoveredNodes,
-            focalDistances,
+            selectedNodes,
             highlightNodePairs,
         } = this.props;
-        const histSpec = { ...spec.histogram, width: 300 };
-        const { emb, isComputing, edgeLenBins } = latent;
-        const { nodeTypes } = graph;
+        const { isComputing, display, distMatLatent, distMatTopo } = distances;
         const { nodePairFilter } = param;
-        let highlightDistVal;
-        if (!latent.isComputing) {
+        let highlightDistVals;
+        if (!isComputing) {
             if (!!hoveredNodes && hoveredNodes.length === 2) {
-                highlightDistVal = latent.distMatrix[hoveredNodes[0]][hoveredNodes[1]];
-            } else if (focalDistances !== null && !Array.isArray(focalDistances)) {
-                highlightDistVal = focalDistances;
+                highlightDistVals = [
+                    distMatLatent[hoveredNodes[0]][hoveredNodes[1]],
+                    distMatTopo[hoveredNodes[0]][hoveredNodes[1]],
+                ];
+            } else if (
+                selectedNodes.length === 2 &&
+                selectedNodes[0].length === 1 &&
+                selectedNodes[1].length === 1
+            ) {
+                highlightDistVals = [
+                    distMatLatent[selectedNodes[0][0]][selectedNodes[1][0]],
+                    distMatTopo[selectedNodes[0][0]][selectedNodes[1][0]],
+                ];
             }
         }
 
         return (
             <div id="embeddings-view" className="view">
                 <h5 className="text-center">
-                    Latent space <small>(#dim={emb[0].length})</small>
+                    Latent space <small>(#dim={numDim})</small>
                 </h5>
 
                 <h6>UMAP 2D node embeddings</h6>
                 <Embeddings2D />
 
                 {nodeTypes.length > 1 && (
-                    <div>
+                    <div style={{ marginTop: "5px" }}>
                         <Form inline>
                             <Form.Group controlId="select-node-type">
                                 <Form.Label column="sm">Only brush nodes of type</Form.Label>
                                 <Form.Control
                                     as="select"
                                     size="xs"
-                                    value={selectedNodeType}
+                                    value={param.latent.selectedNodeType}
                                     onChange={(e) => {
-                                        this.props.changeSelectedNodeType(e.target.value);
+                                        this.props.changeParam(
+                                            "latent.selectedNodeType",
+                                            parseInt(e.target.value)
+                                        );
                                     }}
                                 >
                                     {nodeTypes.map((nt, i) => (
@@ -76,25 +77,42 @@ class EmbeddingsView extends Component {
                 <div className="section-divider"></div>
 
                 {isComputing ? (
-                    <div>Computing distances...</div>
+                    <div>
+                        <Spinner animation="border" role="status" />
+                        <span style={{ marginLeft: "10px" }}>Computing distances...</span>
+                    </div>
                 ) : (
                     <div>
+                        <h6 style={{ marginTop: "10px" }}>
+                            Compare distances of node pairs in latent vs. topo
+                        </h6>
                         <div>
-                            <h6 style={{ marginTop: "10px" }}>Distance distribution of ALL node pairs</h6>
-                            <Histogram
-                                bins={latent.allDistBins}
-                                spec={histSpec}
-                                xDomain={[0, 1]}
-                                xLabel="Cosine distance"
-                                yLabel="#node pairs"
-                                hVal={highlightDistVal}
-                                brushedFunc={highlightNodePairs.bind(null, "all")}
-                                brushedRange={
-                                    nodePairFilter.which === "all" ? nodePairFilter.brushedRange : null
-                                }
-                            />
+                            <small> todo: switch between linear and log scale</small>
                         </div>
-                        <div>
+                        <div className="scatter-hist-container">
+                            {display.map((d, i) => (
+                                <div key={i}>
+                                    <div className="text-center title">
+                                        {d.title}
+                                    </div>
+                                    <ScatterHistogram
+                                        data={d}
+                                        hasHist={true}
+                                        spec={spec}
+                                        xLabel="latent"
+                                        yLabel="topo"
+                                        hVals={highlightDistVals}
+                                        brushedFunc={highlightNodePairs.bind(null, "all")}
+                                        brushedRange={
+                                            nodePairFilter.which === "all"
+                                                ? nodePairFilter.brushedRange
+                                                : null
+                                        }
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        {/* <div>
                             <h6 style={{ marginTop: "10px" }}>of connected node pairs (aka. edges)</h6>
                             <Histogram
                                 bins={edgeLenBins}
@@ -107,8 +125,8 @@ class EmbeddingsView extends Component {
                                     nodePairFilter.which === "edge" ? nodePairFilter.brushedRange : null
                                 }
                             />
-                        </div>
-                        {focalDistances.length > 0 &&
+                        </div> */}
+                        {/* {focalDistances.length > 0 &&
                             focalDistances.map((hd, i) => (
                                 <div key={i}>
                                     <h6>{hd.mode}</h6>
@@ -124,7 +142,7 @@ class EmbeddingsView extends Component {
                                         }
                                     />
                                 </div>
-                            ))}
+                            ))} */}
                     </div>
                 )}
             </div>
@@ -132,17 +150,21 @@ class EmbeddingsView extends Component {
     }
 }
 
-// TODO speed up with memorization
-const mapStateToProps = (state) => ({ ...state });
+const mapStateToProps = (state) => ({
+    numDim: state.latent.emb ? state.latent.emb[0].length : null,
+    nodeTypes: state.graph.nodeTypes,
+    distances: state.distances,
+    spec: state.spec.scatterHist,
+    param: state.param,
+    hoveredNodes: state.hoveredNodes,
+    selectedNodes: state.selectedNodes,
+});
 
 const mapDispatchToProps = (dispatch) =>
     bindActionCreators(
         {
-            highlightNodes,
             changeParam,
-            changeSelectedNodeType,
             highlightNodePairs,
-            hoverNode,
         },
         dispatch
     );

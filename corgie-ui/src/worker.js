@@ -1,31 +1,9 @@
-import { extent, forceSimulation, forceManyBody, forceLink, forceX, forceY } from "d3";
+import * as Comlink from "comlink";
+import { extent, forceSimulation, forceManyBody, forceLink, forceX, forceY, bin as d3bin } from "d3";
 import { Layout as cola } from "webcola";
 import { UMAP } from "umap-js";
 import bs from "bitset";
-import { getNeighborDistance, getCosineDistance } from "./utils";
-
-export function getDistancesOfAllPairs(emb) {
-    console.log("Getting distances of all node pairs...", emb.length);
-    let d = [];
-    let m = [];
-    for (let i = 0; i < emb.length; i++) {
-        // Make sure i < j to avoid duplicate computation
-        m.push(new Array(emb.length));
-        for (let j = i + 1; j < emb.length; j++) {
-            const cosD = getCosineDistance(emb[i], emb[j]);
-            // TODO do I really need them or just the cosD?
-            d.push([cosD, i, j]);
-            m[i][j] = cosD;
-        }
-        for (let j = 0; j < i; j++) {
-            m[i][j] = m[j][i];
-        }
-        m[i][i] = 0;
-    }
-    d.sort((x1, x2) => x1[0] - x2[0]);
-
-    return { distArray: d, distMatrix: m };
-}
+import { getNeighborDistance, getCosineDistance, rectBinning } from "./utils";
 
 // The bitset class functions are not copied from the main thread,
 // so we need to re-construct the bitsets in-place
@@ -437,3 +415,70 @@ export function computeSpaceFillingCurveLayout(
 
     return { coords: transCoords, running: false, width, height };
 }
+
+const computeAllDistances = (emb, numNodes, neighborMasks, distMetric, numBins) => {
+    console.log("Computing distances ...", new Date());
+    // Deserialize bitsets
+    for (let i = 0; i < numNodes; i++) {
+        neighborMasks[i] = bs(neighborMasks[i]);
+    }
+
+    const numPairs = (numNodes * (numNodes - 1)) / 2;
+    let dist = [],
+        distLatent = [],
+        distTopo = [];
+    const distArrayBuffer = new ArrayBuffer(numPairs * 8),
+        distBuf = new Float32Array(distArrayBuffer),
+        srcArrayBuffer = new ArrayBuffer(numPairs * 2),
+        srcBuf = new Uint16Array(srcArrayBuffer),
+        tgtArrayBuffer = new ArrayBuffer(numPairs * 2),
+        tgtBuf = new Uint16Array(tgtArrayBuffer);
+
+    let k = 0;
+    for (let i = 0; i < numNodes; i++) {
+        // Make sure i < j to avoid duplicate computation
+        for (let j = i + 1; j < numNodes; j++) {
+            const dLat = getCosineDistance(emb[i], emb[j]);
+            const dTopo = getNeighborDistance(neighborMasks[i], neighborMasks[j], distMetric);
+            distLatent.push(dLat);
+            distTopo.push(dTopo);
+            dist.push([dLat, dTopo]);
+            srcBuf[k] = i;
+            tgtBuf[k] = j;
+            k++;
+        }
+    }
+
+    for (let k = 0; k < numPairs; k++) {
+        distBuf[k * 2] = dist[k][0];
+        distBuf[k * 2 + 1] = dist[k][1];
+    }
+
+    const binGen1d = d3bin().domain([0, 1]).thresholds(numBins);
+    const binsLatent = binGen1d(distLatent),
+        binsTopo = binGen1d(distTopo);
+    const gridRes = rectBinning(dist, [1, 1], numBins);
+
+    console.log("Finish computing distances!", new Date());
+    // return { distBuf, srcBuf, tgtBuf };
+    return Comlink.transfer(
+        {
+            distBuf,
+            srcBuf,
+            tgtBuf,
+            binsLatent,
+            binsTopo,
+            gridBins: gridRes.bins,
+            gridBinsMaxCnt: gridRes.maxCnt,
+        },
+        [distBuf.buffer, srcBuf.buffer, tgtBuf.buffer]
+    );
+};
+
+Comlink.expose({
+    computeAllDistances: computeAllDistances,
+    computeLocalLayoutWithCola: computeLocalLayoutWithCola,
+    computeLocalLayoutWithD3: computeLocalLayoutWithD3,
+    computeLocalLayoutWithUMAP: computeLocalLayoutWithUMAP,
+    computeSpaceFillingCurveLayout: computeSpaceFillingCurveLayout
+});

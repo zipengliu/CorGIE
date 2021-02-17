@@ -1,7 +1,9 @@
-import React, { Component } from "react";
+import React, { Component, memo, useCallback } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form, ButtonGroup, Button, ListGroup } from "react-bootstrap";
+import { Form, ButtonGroup, Button } from "react-bootstrap";
+import { FixedSizeList } from "react-window";
+import debounce from "lodash.debounce";
 import {
     selectNodes,
     highlightNodes,
@@ -31,6 +33,23 @@ export class HighlightControl extends Component {
         const { nodePairFilter } = this.props.param;
         const { nodes } = graph;
         const labelOrId = nodes && nodes[0].label ? "label" : "id";
+
+        const NodePairItem = memo(({ index, style }) => {
+            const p = highlightedNodePairs[index];
+            const debouncedHover = useCallback(debounce((x) => this.props.hoverNode(x), 200));
+            return (
+                <div
+                    className="list-group-item"
+                    onMouseEnter={debouncedHover.bind(this, [p[1], p[2]])}
+                    onMouseLeave={debouncedHover.bind(this, null)}
+                    onClick={this.props.selectNodePair.bind(null, p[1], p[2])}
+                    style={style}
+                >
+                    {graph.nodes[p[1]][labelOrId]} - {graph.nodes[p[2]][labelOrId]}
+                </div>
+            );
+        });
+
         return (
             <div className="view" id="highlight-control">
                 <h5 className="text-center">Highlight</h5>
@@ -115,21 +134,19 @@ export class HighlightControl extends Component {
                 {highlightedNodePairs.length > 0 && (
                     <div>
                         <div className="node-pair-list">
-                            <ListGroup>
-                                {highlightedNodePairs.map((p, i) => (
-                                    <ListGroup.Item
-                                        key={i}
-                                        onMouseEnter={this.props.hoverNode.bind(null, [p[1], p[2]])}
-                                        onMouseLeave={this.props.hoverNode.bind(null, null)}
-                                        onClick={this.props.selectNodePair.bind(null, p[1], p[2])}
-                                    >
-                                        {graph.nodes[p[1]][labelOrId]} - {graph.nodes[p[2]][labelOrId]}
-                                    </ListGroup.Item>
-                                ))}
-                            </ListGroup>
+                            <FixedSizeList
+                                height={
+                                    highlightedNodePairs.length > 16 ? 400 : 25 * highlightedNodePairs.length
+                                }
+                                width="100%"
+                                itemSize={25}
+                                itemCount={highlightedNodePairs.length}
+                            >
+                                {NodePairItem}
+                            </FixedSizeList>
                         </div>
                         <div>
-                            <span style={{marginRight: '5px'}}>Order by distance:</span>
+                            <span style={{ marginRight: "5px" }}>Order by distance:</span>
                             <ButtonGroup size="xs">
                                 <Button
                                     variant="outline-secondary"

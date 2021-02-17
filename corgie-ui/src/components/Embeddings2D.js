@@ -157,7 +157,7 @@ const mapStateToProps = (state) => ({
     nodeColors: state.nodeColors,
     colorBy: state.param.colorBy,
     selectedNodes: state.selectedNodes,
-    selectedNodeType: state.selectedNodeType,
+    selectedNodeType: state.param.latent.selectedNodeType,
     selBoundingBox: state.selBoundingBox,
     highlightedNodes: state.highlightedNodes,
     hoveredNeighbors: state.hoveredNeighbors,

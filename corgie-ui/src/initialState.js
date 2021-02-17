@@ -1,3 +1,5 @@
+import { bin as d3bin } from "d3";
+
 export default {
     loaded: false,
     datasetId: null,
@@ -7,13 +9,15 @@ export default {
     centralNodeType: 0,
     nodeColors: [],
 
-    selectedNodeType: 0,
+    featureAgg: {
+        cnts: null
+    },
+
     selectedNodes: [], // Array of array
     selBoundingBox: [],
     isNodeSelected: {}, // Dict for ALL selected nodes
     selNodeAttrs: [], // Attribute distributions for selected nodes, each selection group is an array in selNodeAttrs
     selFeatures: [], // Binary feature distribution for each selected group
-    focalDistances: [],
     isNodeSelectedNeighbor: {},
 
     highlightedNodes: [],
@@ -25,6 +29,12 @@ export default {
     hoveredEdges: [], // list of edges between hovered nodes and their neighbors
 
     neighborIntersections: null,
+
+    distances: {
+        binGen: d3bin().domain([0, 1]).thresholds(20),
+        isComputing: true,
+        display: [],
+    },
 
     initialLayout: {
         running: true,
@@ -65,6 +75,10 @@ export default {
             layout: "umap",
             // layout: 'spiral',
             // layout: 'group-constraint-cola',
+        },
+
+        latent: {
+            selectedNodeType: 0,
         },
 
         features: {
@@ -110,9 +124,6 @@ export default {
             width: 400,
             height: 400,
             nodeSize: 3,
-            margins: { top: 10, bottom: 10, left: 10, right: 10 },
-            histSize: { width: 200, height: 100 },
-            histMargins: { top: 10, bottom: 30, left: 30, right: 10 },
         },
         intersectionPlot: {
             margins: { top: 10, bottom: 10, left: 10, right: 10 },
@@ -138,17 +149,21 @@ export default {
             countBarHeight: 100,
         },
         histogram: {
-            margins: { top: 10, bottom: 30, left: 30, right: 10, betweenHist: 20 },
+            margins: { top: 10, bottom: 30, left: 30, right: 10 },
             height: 60,
             width: 100,
-            barWidth: 10,
-            barGap: 2,
         },
-        scatterplot: {
-            margins: { top: 20, bottom: 30, left: 30, right: 10 },
-            height: 200,
-            width: 200,
+        scatterHist: {
+            margins: { top: 15, bottom: 12, left: 18, right: 10 },
+            histHeight: 30,
+            scatterHeight: 100,
+            histWidth: 30,
+            scatterWidth: 100,
+            tickLabelGap: 15,
             dotSize: 2,
+            numBins: 20,
+            legendWidth: 20,
+            gridBinSize: 0.05,
         },
         feature: {
             cellSize: 6,

@@ -1,11 +1,12 @@
 import "whatwg-fetch";
+import * as Comlink from "comlink";
 import { csvParseRows } from "d3";
-import { isPointInBox, getSelectedNeighbors } from "./utils";
+import { getSelectedNeighbors } from "./utils";
+import { computeNeighborMasks, computeEdgeDict } from "./utils";
 
-// eslint-disable-next-line import/no-webpack-loader-syntax
-import worker from "workerize-loader!./worker";
+import DistLayoutWorker from "./worker";
 
-let workerInstance = new worker();
+const workerInstance = Comlink.wrap(new DistLayoutWorker());
 
 const ACTION_TYPES = {
     FETCH_DATA_PENDING: "FETCH_DATA_PENDING",
@@ -30,7 +31,7 @@ const ACTION_TYPES = {
 export default ACTION_TYPES;
 
 export function fetchGraphData(homePath, datasetId) {
-    return async function (dispatch) {
+    return async function (dispatch, getState) {
         const where = `${homePath}/data/${datasetId}`;
         console.log("fetching data from ", where);
 
@@ -68,9 +69,20 @@ export function fetchGraphData(homePath, datasetId) {
                     }),
             ];
 
+            const state = getState();
+            const { hops, neighborDistanceMetric } = state.param;
+            const { numBins } = state.spec.scatterHist;
+            graph.edgeDict = computeEdgeDict(graph.nodes.length, graph.links);
+            Object.assign(graph, computeNeighborMasks(graph.nodes.length, graph.edgeDict, hops));
             dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features }));
 
-            let distData = await workerInstance.getDistancesOfAllPairs(emb);
+            const distData = await workerInstance.computeAllDistances(
+                emb,
+                graph.nodes.length,
+                graph.neighborMasks.map((x) => x.toString()), // serialize the bitsets
+                neighborDistanceMetric,
+                numBins
+            );
             dispatch(computeDistancesDone(distData));
         } catch (e) {
             dispatch(fetchDataError(e));
@@ -137,7 +149,7 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
             console.error("action selectNodes encountered the wrong mode: ", mode);
         }
 
-        const neighRes = getSelectedNeighbors(newSel, state.graph.neigh, state.param.hops);
+        const neighRes = getSelectedNeighbors(newSel, state.graph.neighborMasksByHop, state.param.hops);
         dispatch(selectNodesPending(newSel, neighRes));
 
         if (newSel.length) {
@@ -160,7 +172,7 @@ export function selectNodePair(node1, node2) {
         const state = getState();
         let newSel = [[node1], [node2]];
 
-        const neighRes = getSelectedNeighbors(newSel, state.graph.neigh, state.param.hops);
+        const neighRes = getSelectedNeighbors(newSel, state.graph.neighborMasksByHop, state.param.hops);
         dispatch(selectNodesPending(newSel, neighRes));
 
         const layoutRes = await callLocalLayoutFunc(
@@ -212,7 +224,7 @@ async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     neighRes.isNodeSelectedNeighbor,
                     neighRes.neighArr,
                     // serializedNeighMap,   // Use local signature
-                    graph.neigh[0].map((x) => x.toArray()), // Use global signature
+                    graph.neighborMasksByHop[0].map((x) => x.toArray()), // Use global signature
                     param.neighborDistanceMetric,
                     spec.graph
                 );
@@ -247,10 +259,6 @@ export function selectNodesPending(newSel, neighRes) {
 
 export function selectNodesDone(layoutRes) {
     return { type: ACTION_TYPES.SELECT_NODES_DONE, layoutRes };
-}
-
-export function changeSelectedNodeType(idx) {
-    return { type: ACTION_TYPES.CHANGE_SELECTED_NODE_TYPE, idx: parseInt(idx, 10) };
 }
 
 export function changeParam(param, value, inverse = false, arrayIdx = null) {

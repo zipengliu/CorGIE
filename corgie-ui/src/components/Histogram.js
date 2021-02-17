@@ -7,16 +7,7 @@ import Brush from "./Brush";
 //   spec is the specification for rendering: {margins: {left: 10, ...}, width: xxx, height: xxx}
 //   xDomain (optional) is the domain of x axis.  If not specified, it will use first and last bin to compute the min and max value
 //   hVal is the value to highlight in this histogram
-function Histogram({
-    bins,
-    spec,
-    xDomain,
-    xLabel,
-    yLabel,
-    hVal,
-    brushedFunc,
-    brushedRange,
-}) {
+function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, brushedRange }) {
     const { margins, width, height } = spec;
     const yScaleMax = max(bins.map((b) => b.length));
     const yScale = scaleLinear().domain([0, yScaleMax]).range([0, height]).nice();
@@ -59,7 +50,7 @@ function Histogram({
                 ))}
 
                 <g className="axis" transform={`translate(0,${height})`}>
-                    <line x1={-3} y1={0} x2={width} y2={0} />
+                    <line x1={-3} y1={0} x2={width} y2={0} markerEnd="url(#axis-arrow-head)" />
                     {xTicks.map((x, i) => (
                         <text key={i} x={xScale(x)} y={10} textAnchor="middle">
                             {xFormat(x)}
@@ -86,7 +77,7 @@ function Histogram({
                     )}
                 </g>
                 <g className="axis">
-                    <line x1={-2} y1={height} x2={-2} y2={0} />
+                    <line x1={-2} y1={height} x2={-2} y2={0} markerEnd="url(#axis-arrow-head)" />
                     {yTicks.map((y, i) => (
                         <text key={i} x={-6} y={height - yScale(y)} textAnchor="end">
                             {yFormat(y)}
@@ -121,6 +112,17 @@ function Histogram({
             <defs>
                 <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="0" refY="5" orient="auto">
                     <polygon points="0 0, 10 5, 0 10" fill="black" />
+                </marker>
+
+                <marker
+                    id="axis-arrow-head"
+                    orient="auto"
+                    markerWidth="4"
+                    markerHeight="8"
+                    refX="0.1"
+                    refY="4"
+                >
+                    <path d="M0,0 V8 L4,4 Z" fill="black" />
                 </marker>
             </defs>
         </svg>

@@ -44,8 +44,12 @@ export function coordsRescale(coords, w, h, margin) {
     let xExtent = extent(xArr);
     let yExtent = extent(yArr);
 
-    let xScale = scaleLinear().domain(xExtent).range([margin, w - margin]);
-    let yScale = scaleLinear().domain(yExtent).range([margin, h - margin]);
+    let xScale = scaleLinear()
+        .domain(xExtent)
+        .range([margin, w - margin]);
+    let yScale = scaleLinear()
+        .domain(yExtent)
+        .range([margin, h - margin]);
 
     return coords.map((d) => ({ x: xScale(d[0]), y: yScale(d[1]) }));
 }
@@ -74,9 +78,11 @@ export function getCosineDistance(u, v) {
         magV += Math.pow(v[i], 2);
     }
     let mag = Math.sqrt(magU) * Math.sqrt(magV);
-    let sim = mag > Number.EPSILON ? p / mag : 1.0;
-    // console.log(sim);
-    return 1.0 - sim;
+    if (mag > Number.EPSILON) {
+        return Math.max(0, 1.0 - p / mag);
+    } else {
+        return 1.0;
+    }
 }
 
 // Get the positional color for a node that sits at (x, y), where x,y is in [0,1]
@@ -183,4 +189,91 @@ export function binarySearch(arr, v) {
         }
     }
     return l;
+}
+
+export function rectBinning(data, extent, numBins) {
+    const unitX = extent[0] / numBins,
+        unitY = extent[1] / numBins;
+    const bins = new Array(numBins);
+    for (let i = 0; i < numBins; i++) {
+        bins[i] = new Array(numBins).fill(0).map(() => []);
+    }
+
+    let m = 0;
+    function inc(valX, valY, idx) {
+        let i = Math.floor(valX / unitX),
+            j = Math.floor(valY / unitY);
+        i = Math.min(i, numBins - 1);
+        j = Math.min(j, numBins - 1);
+        bins[i][j].push(idx);
+        m = Math.max(m, bins[i][j].length);
+    }
+
+    if (data.constructor === Float32Array) {
+        for (let i = 0; i < data.length; i += 2) {
+            inc(data[i], data[i + 1], i >> 1);
+        }
+    } else {
+        for (let i = 0; i < data.length; i += 1) {
+            inc(data[i][0], data[i][1], i);
+        }
+    }
+    return { bins, maxCnt: m };
+}
+
+// Comppute the neighborMasksByHop and neighborMasks (all hops combined)
+export function computeNeighborMasks(numNodes, edgeDict, hops) {
+    const masks = [],
+        masksByHop = [];
+    let last;
+    for (let i = 0; i < numNodes; i++) {
+        masks.push(bs(0));
+    }
+
+    // first hop
+    for (let sid = 0; sid < edgeDict.length; sid++) {
+        for (let tid of edgeDict[sid]) {
+            masks[sid].set(tid, 1);
+            masks[tid].set(sid, 1);
+        }
+    }
+    masksByHop.push(masks.map((m) => m.clone()));
+    last = masksByHop[0];
+
+    // hop > 1
+    for (let h = 1; h < hops; h++) {
+        const cur = [];
+        for (let i = 0; i < numNodes; i++) {
+            cur.push(bs(0));
+        }
+        for (let i = 0; i < numNodes; i++) {
+            let m = masks[i];
+            for (let sid of m.toArray()) {
+                for (let tid of edgeDict[sid]) {
+                    m.set(tid, 1);
+                }
+            }
+
+            for (let sid of last[i].toArray()) {
+                for (let tid of edgeDict[sid]) {
+                    cur[i].set(tid, 1);
+                }
+            }
+        }
+        masksByHop.push(cur);
+        last = cur;
+    }
+    return { neighborMasks: masks, neighborMasksByHop: masksByHop };
+}
+
+export function computeEdgeDict(numNodes, edges) {
+    const d = new Array(numNodes);
+    for (let i = 0; i < numNodes; i++) {
+        d[i] = [];
+    }
+    for (let e of edges) {
+        d[e.source].push(e.target);
+        d[e.target].push(e.source);
+    }
+    return d;
 }

@@ -1,8 +1,7 @@
-import React, { Component } from "react";
+import React from "react";
 import { connect } from "react-redux";
 import { Spinner } from "react-bootstrap";
 import GraphLayout from "./GraphLayout";
-import { isPointInBox } from "../utils";
 
 function GraphView({ initialLayout, focalLayout }) {
     return (
