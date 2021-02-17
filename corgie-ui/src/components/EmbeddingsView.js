@@ -102,10 +102,10 @@ class EmbeddingsView extends Component {
                                         xLabel="latent"
                                         yLabel="topo"
                                         hVals={highlightDistVals}
-                                        brushedFunc={highlightNodePairs.bind(null, "all")}
-                                        brushedRange={
-                                            nodePairFilter.which === "all"
-                                                ? nodePairFilter.brushedRange
+                                        brushedFunc={highlightNodePairs.bind(null, i)}
+                                        brushedArea={
+                                            nodePairFilter.which === i
+                                                ? nodePairFilter.brushedArea
                                                 : null
                                         }
                                     />

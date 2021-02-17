@@ -444,8 +444,8 @@ const processDistCompResults = (distRes, numNodes) => {
     const distMatLatent = {},
         distMatTopo = {};
     for (let i = 0; i < numNodes; i++) {
-        distMatLatent[i] = {[i]: 0};
-        distMatTopo[i] = {[i]: 0};
+        distMatLatent[i] = { [i]: 0 };
+        distMatTopo[i] = { [i]: 0 };
     }
     const scatterHistAll = {
         name: "all",
@@ -477,7 +477,8 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
     let data = {
         name: whichSubset,
         dist: [],
-        pairs: [],
+        src: [],
+        tgt: [],
         binsLatent: null,
         binsTopo: null,
     };
@@ -487,7 +488,8 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
         // Ref should be edges
         data.dist = ref.map((e) => [distMatLatent[e.source][e.target], distMatTopo[e.source][e.target]]);
         data.title = "those connected by edges";
-        data.pairs = ref.map((e) => [e.source, e.target]);
+        data.src = ref.map((e) => e.source);
+        data.tgt = ref.map((e) => e.target);
     } else if (whichSubset.includes("between")) {
         for (let i = 0; i < ref[0].length; i++) {
             for (let j = 0; j < ref[1].length; j++) {
@@ -500,7 +502,8 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
         for (let i = 0; i < ref.length; i++) {
             for (let j = i + 1; j < ref.length; j++) {
                 data.dist.push([distMatLatent[ref[i]][ref[j]], distMatTopo[ref[i]][ref[j]]]);
-                data.pairs.push([ref[i], ref[j]]);
+                data.src.push(ref[i]);
+                data.tgt.push(ref[j]);
             }
         }
         data.title = `those within ${whichSubset}`;
@@ -571,20 +574,6 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
 //     return res;
 // }
 
-// Binary search for all node pairs with distance between x1 and x2
-// Return an array of node pair data struct: [dist, source, target]
-function findNodePairs(distArr, range) {
-    const x1 = range[0],
-        x2 = range[1];
-    const pos1 = binarySearch(distArr, x1),
-        pos2 = binarySearch(distArr, x2 + Number.EPSILON);
-    if (pos1 <= pos2) {
-        return distArr.slice(pos1, pos2);
-    } else {
-        return [];
-    }
-}
-
 function setNodeColors(draft, colorBy) {
     if (colorBy === -1) {
         draft.nodeColors = draft.latent.posColor;
@@ -605,6 +594,8 @@ function setNodeColors(draft, colorBy) {
 }
 
 const reducers = produce((draft, action) => {
+    const ascFunc = (x1, x2) => x1[0][0] - x2[0][0],
+        descFunc = (x1, x2) => x2[0][0] - x1[0][0];
     let neiRes;
     switch (action.type) {
         case ACTION_TYPES.FETCH_DATA_PENDING:
@@ -784,19 +775,14 @@ const reducers = produce((draft, action) => {
             }
             return;
         case ACTION_TYPES.HIGHLIGHT_NODE_PAIRS:
-            const { brushedRange, which } = action;
-            draft.param.nodePairFilter.brushedRange = brushedRange;
+            const { brushedArea, which, brushedPairs } = action;
+            draft.param.nodePairFilter.brushedArea = brushedArea;
             draft.param.nodePairFilter.which = which;
             if (which === null) {
                 draft.highlightedNodePairs = [];
-            } else if (which === "all") {
-                draft.highlightedNodePairs = findNodePairs(draft.latent.distArray, brushedRange);
-            } else if (which === "edge") {
-                draft.highlightedNodePairs = findNodePairs(draft.latent.distEdgeArray, brushedRange);
             } else {
-                draft.highlightedNodePairs = findNodePairs(
-                    draft.focalDistances[which].nodePairs,
-                    brushedRange
+                draft.highlightedNodePairs = brushedPairs.sort(
+                    draft.param.nodePairFilter.ascending ? ascFunc : descFunc
                 );
             }
             return;
@@ -983,8 +969,6 @@ const reducers = produce((draft, action) => {
             if (action.param === "colorBy") {
                 setNodeColors(draft, action.value);
             } else if (action.param === "nodePairFilter.ascending") {
-                const ascFunc = (x1, x2) => x1[0] - x2[0],
-                    descFunc = (x1, x2) => x2[0] - x1[0];
                 draft.highlightedNodePairs.sort(action.value ? ascFunc : descFunc);
             }
             return;

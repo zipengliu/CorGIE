@@ -97,8 +97,8 @@ export default {
 
         nodePairFilter: {
             ascending: true, // sort the node pairs by latent distance in ascending order
-            which: null, // could be null, all, edge, 0 (for foc-0), 1 (for foc-1), 2 (for b/w)
-            brushedRange: null,
+            which: null, 
+            brushedArea: null,
         },
 
         topoVsLatent: {

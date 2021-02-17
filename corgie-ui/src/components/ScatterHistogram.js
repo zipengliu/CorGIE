@@ -1,10 +1,12 @@
 import React, { memo } from "react";
 import { scaleLinear, max, interpolateGreys, scaleSequential, format } from "d3";
+import Brush from "./Brush";
 
 function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedFunc, brushedArea }) {
     const { margins, histWidth, scatterWidth, legendWidth, histHeight, scatterHeight, tickLabelGap } = spec;
-    const u = spec.gridBinSize;
-    const { binsLatent, binsTopo, gridBins, pairs, kdt } = data;
+    const u = spec.gridBinSize,
+        numBins = spec.numBins;
+    const { binsLatent, binsTopo, gridBins, dist, src, tgt } = data;
 
     const svgWidth =
             margins.left +
@@ -18,10 +20,10 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
     // scatterplot scales
     const scatterScales = {
         latent: scaleLinear().domain([0, 1]).range([0, scatterWidth]).nice(),
-        topo: scaleLinear().domain([0, 1]).range([0, scatterHeight]).nice(),
+        topo: scaleLinear().domain([0, 1]).range([scatterHeight, 0]).nice(),
     };
     const uLat = scatterScales.latent(u),
-        uTopo = scatterScales.topo(u);
+        uTopo = uLat;
     const colorScale = scaleSequential(interpolateGreys).domain([0, data.gridBinsMaxCnt]);
     let histScales, maxCntLatent, maxCntTopo;
 
@@ -36,6 +38,32 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
     const valFormat = format(".2f"),
         cntFormat = format(".3~s");
 
+    const callSnapBrush = (a) => {
+        function getBinIdx(x) {
+            const i = Math.floor(x / u);
+            return Math.min(i, numBins - 1);
+        }
+        const x1 = getBinIdx(scatterScales.latent.invert(a.x));
+        const y2 = getBinIdx(scatterScales.topo.invert(a.y));
+        const x2 = getBinIdx(scatterScales.latent.invert(a.x + a.width));
+        const y1 = getBinIdx(scatterScales.topo.invert(a.y + a.height));
+        let brushedPairIdx = [];
+        for (let i = x1; i <= x2; i++) {
+            for (let j = y1; j <= y2; j++) {
+                brushedPairIdx = brushedPairIdx.concat(gridBins[i][j]);
+            }
+        }
+        const brushedPairs = brushedPairIdx.map((p) => [dist[p], src[p], tgt[p]]);
+        brushedFunc(
+            {
+                x: x1 * uLat,
+                y: scatterHeight - y2 * uTopo,
+                width: (x2 - x1 + 1) * uLat,
+                height: (y2 - y1 + 1) * uTopo,
+            },
+            brushedPairs
+        );
+    };
     // const callBrushed = (x1, x2) => {
     //     const xVal1 = xScale.invert(x1),
     //         xVal2 = xScale.invert(x2);
@@ -65,7 +93,7 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                                     <rect
                                         key={j}
                                         x={scatterScales.latent(i * u)}
-                                        y={scatterHeight - scatterScales.topo((j + 1) * u)}
+                                        y={scatterScales.topo((j + 1) * u)}
                                         width={uLat}
                                         height={uTopo}
                                         fill={colorScale(col.length)}
@@ -113,12 +141,7 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                             markerEnd="url(#axis-arrow-head)"
                         />
                         {[".5", "1"].map((y, i) => (
-                            <text
-                                key={i}
-                                x={-3}
-                                y={scatterHeight - scatterScales.topo(parseFloat(y))}
-                                textAnchor="end"
-                            >
+                            <text key={i} x={-3} y={scatterScales.topo(parseFloat(y))} textAnchor="end">
                                 {y}
                             </text>
                         ))}
@@ -128,15 +151,23 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                             </text>
                         )}
                     </g>
+                    {brushedFunc && (
+                        <Brush
+                            width={scatterWidth}
+                            height={scatterHeight}
+                            brushedFunc={callSnapBrush}
+                            brushedArea={brushedArea}
+                        />
+                    )}
                     {hVals && (
                         <g className="value-marker">
                             <line
                                 x1={0}
-                                y1={scatterHeight - scatterScales.topo(hVals[1])}
+                                y1={scatterScales.topo(hVals[1])}
                                 x2={scatterWidth + arrowLen}
-                                y2={scatterHeight - scatterScales.topo(hVals[1])}
+                                y2={scatterScales.topo(hVals[1])}
                             />
-                            <text x={2} y={scatterHeight - scatterScales.topo(hVals[1]) - 2}>
+                            <text x={2} y={scatterScales.topo(hVals[1]) - 2}>
                                 {valFormat(hVals[1])}
                             </text>
                             <line
@@ -215,7 +246,7 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                                         key={i}
                                         x={scatterScales.latent(b.x0)}
                                         y={0}
-                                        width={scatterScales.latent(b.x1) - scatterScales.latent(b.x0) - 1}
+                                        width={uLat - 1}
                                         height={histScales.latent(b.length)}
                                     >
                                         <title>
@@ -254,9 +285,9 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                                         className="bar"
                                         key={i}
                                         x={-histScales.topo(b.length)}
-                                        y={-scatterScales.topo(b.x1)}
+                                        y={scatterScales.topo(b.x1) - scatterHeight}
                                         width={histScales.topo(b.length)}
-                                        height={scatterScales.topo(b.x1) - scatterScales.topo(b.x0) - 1}
+                                        height={uTopo - 1}
                                     >
                                         <title>
                                             {yLabel}: {valFormat(b.x0)}-{valFormat(b.x1)} count: {b.length}
@@ -267,25 +298,6 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                         </g>
                     </g>
                 )}
-
-                {/* {brushedFunc && (
-                    <Brush
-                        width={width}
-                        height={height}
-                        isRange={true}
-                        brushedFunc={callBrushed}
-                        brushedArea={
-                            brushedArea
-                                ? {
-                                      x: xScale(brushedArea[0]),
-                                      y: 0,
-                                      width: xScale(brushedArea[1]) - xScale(brushedArea[0]),
-                                      height: height,
-                                  }
-                                : null
-                        }
-                    />
-                )} */}
             </g>
 
             <defs>

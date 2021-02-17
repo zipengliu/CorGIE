@@ -110,8 +110,8 @@ export function highlightNodes(nodeIndices, brushedArea = null, fromView = null,
     return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIndices, brushedArea, fromView, which };
 }
 
-export function highlightNodePairs(which, v1, v2) {
-    return { type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS, brushedRange: [v1, v2], which };
+export function highlightNodePairs(which, brushedArea, brushedPairs) {
+    return { type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS, brushedArea, which, brushedPairs };
 }
 
 export function hoverNode(nodeIdx) {
