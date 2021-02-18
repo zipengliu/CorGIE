@@ -35,7 +35,7 @@ class GraphLayout extends Component {
         console.log({ candidates, targetNodes, brushedArea });
         if (targetNodes.length == 0) return;
 
-        this.props.highlightNodes(targetNodes, brushedArea, "emb", null);
+        this.props.highlightNodes(targetNodes, brushedArea, "focal-layout", null);
     }
     _onMouseDown() {
         const mousePos = this.stageRef.current.getPointerPosition();
@@ -78,6 +78,7 @@ class GraphLayout extends Component {
             nodes,
             nodeColors,
             spec,
+            nodeSize,
             selectedNodes,
             highlightedNodes,
             highlightedEdges,
@@ -105,7 +106,7 @@ class GraphLayout extends Component {
                                     coords={coords}
                                     nodes={nodes}
                                     nodeColors={nodeColors}
-                                    nodeSize={spec.nodeSize}
+                                    nodeSize={nodeSize}
                                 />
                             )}
                             {highlightedNodes.length > 0 && (
@@ -115,7 +116,7 @@ class GraphLayout extends Component {
                                     coords={coords}
                                     nodes={nodes}
                                     nodeColors={nodeColors}
-                                    nodeSize={spec.nodeSize}
+                                    nodeSize={nodeSize}
                                 />
                             )}
                             {hoveredNeighbors.length > 0 && (
@@ -127,7 +128,7 @@ class GraphLayout extends Component {
                                     coords={coords}
                                     nodes={nodes}
                                     nodeColors={nodeColors}
-                                    nodeSize={spec.nodeSize}
+                                    nodeSize={nodeSize}
                                 />
                             )}
                             {this.state.brushedArea && (
@@ -152,6 +153,7 @@ const mapStateToProps = (state) => ({
     nodes: state.graph.nodes,
     edges: state.graph.edges,
     spec: state.spec.graph,
+    nodeSize: state.param.nodeSize,
     nodeColors: state.nodeColors,
     selectedNodes: state.selectedNodes,
     highlightedNodes: state.highlightedNodes,
@@ -172,9 +174,17 @@ const mapDispatchToProps = (dispatch) =>
 
 export default connect(mapStateToProps, mapDispatchToProps)(GraphLayout);
 
-function BaseLayerUnconnected({ spec, nodes, edges, coords, nodeColors, groups, hoverNode, highlightNodes }) {
+function BaseLayerUnconnected({
+    nodes,
+    edges,
+    coords,
+    nodeColors,
+    groups,
+    hoverNode,
+    highlightNodes,
+    nodeSize,
+}) {
     console.log("GraphLayout BaseLayer render()");
-    const { nodeSize } = spec;
     const debouncedHover = useCallback(debounce((x) => hoverNode(x), 300));
 
     return (
@@ -195,7 +205,7 @@ function BaseLayerUnconnected({ spec, nodes, edges, coords, nodeColors, groups, 
                         opacity={0.5}
                         onMouseOver={debouncedHover.bind(null, [e.source, e.target])}
                         onMouseOut={debouncedHover.bind(null, null)}
-                        onClick={highlightNodes.bind(null, [e.source, e.target], null, "graph", null)}
+                        onClick={highlightNodes.bind(null, [e.source, e.target], null, "graph-edge", null)}
                     />
                 ))}
             </Group>
@@ -230,7 +240,7 @@ function BaseLayerUnconnected({ spec, nodes, edges, coords, nodeColors, groups, 
                         events={{
                             onMouseOver: debouncedHover.bind(null, i),
                             onMouseOut: debouncedHover.bind(null, null),
-                            onClick: highlightNodes.bind(null, [i], null, "graph", null),
+                            onClick: highlightNodes.bind(null, [i], null, "graph-node", null),
                         }}
                     />
                 ))}
@@ -242,7 +252,7 @@ function BaseLayerUnconnected({ spec, nodes, edges, coords, nodeColors, groups, 
 const mapStateToPropsBaseLayer = (state) => ({
     nodes: state.graph.nodes,
     edges: state.graph.edges,
-    spec: state.spec.graph,
+    nodeSize: state.param.nodeSize,
     nodeColors: state.nodeColors,
 });
 

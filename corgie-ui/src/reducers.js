@@ -494,7 +494,8 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
         for (let i = 0; i < ref[0].length; i++) {
             for (let j = 0; j < ref[1].length; j++) {
                 data.dist.push([distMatLatent[ref[0][i]][ref[1][j]], distMatTopo[ref[0][i]][ref[1][j]]]);
-                data.pairs.push([ref[0][i], ref[1][j]]);
+                data.src.push(ref[0][i]);
+                data.tgt.push(ref[1][j]);
             }
         }
         data.title = "those between foc-0 and foc-1";
@@ -633,7 +634,7 @@ const reducers = produce((draft, action) => {
                 draft.featureAgg.maxCnts = max(draft.featureAgg.cnts);
                 draft.featureAgg.compressedCnts = compressFeatureValues(
                     draft.featureAgg.cnts,
-                    draft.spec.feature.barcodeMaxWidth
+                    draft.spec.feature.maxNumBars
                 );
                 draft.featureAgg.scale = scaleSequential(interpolateGreys).domain([
                     0,
@@ -731,6 +732,8 @@ const reducers = produce((draft, action) => {
                     draft.param.nodeFilter.brushedArea = action.brushedArea;
                 // No break here
                 case "emb":
+                case "focal-layout":
+                case "graph-edge":
                     draft.highlightedNodes = action.nodeIndices;
                     draft.highlightedEdges = getEdgesWithinGroup(
                         draft.graph.edgeDict,
@@ -738,7 +741,7 @@ const reducers = produce((draft, action) => {
                         null
                     );
                     break;
-                case "graph":
+                case "graph-node":
                     // Highlight their neighbors as well
                     neiRes = getNeighbors(
                         draft.graph.neighborMasksByHop,
@@ -789,22 +792,26 @@ const reducers = produce((draft, action) => {
         case ACTION_TYPES.HOVER_NODE:
             if (action.nodeIdx === null) {
                 draft.hoveredNodes = [];
+                draft.hoveredNeighbors = [];
+                draft.hoveredEdges = [];
             } else if (Number.isInteger(action.nodeIdx)) {
                 // Hover on a node
                 draft.hoveredNodes = [action.nodeIdx];
+                neiRes = getNeighbors(
+                    draft.graph.neighborMasksByHop,
+                    draft.param.hopsHighlight,
+                    draft.graph.edgeDict,
+                    draft.hoveredNodes,
+                    true
+                );
+                draft.hoveredNeighbors = neiRes.nodes;
+                draft.hoveredEdges = neiRes.edges;
             } else {
-                // Hover on a node pair
+                // Hover on a node pair or edge
                 draft.hoveredNodes = action.nodeIdx;
+                draft.hoveredNeighbors = action.nodeIdx;
+                draft.hoveredEdges = [{ source: action.nodeIdx[0], target: action.nodeIdx[1] }];
             }
-            neiRes = getNeighbors(
-                draft.graph.neighborMasksByHop,
-                draft.param.hopsHighlight,
-                draft.graph.edgeDict,
-                draft.hoveredNodes,
-                true
-            );
-            draft.hoveredNeighbors = neiRes.nodes;
-            draft.hoveredEdges = neiRes.edges;
             return;
         case ACTION_TYPES.SELECT_NODES_PENDING:
             let { newSel, neighRes } = action;
@@ -851,10 +858,7 @@ const reducers = produce((draft, action) => {
                     draft.selFeatures = newSel.map((s) => {
                         const cnts = aggregateBinaryFeatures(draft.graph.features, s);
                         const maxCnts = max(cnts);
-                        const compressedCnts = compressFeatureValues(
-                            cnts,
-                            draft.spec.feature.barcodeMaxWidth
-                        );
+                        const compressedCnts = compressFeatureValues(cnts, draft.spec.feature.maxNumBars);
                         const scale = scaleSequential(interpolateGreys).domain([0, maxCnts]);
                         return { mode: "highlight", cnts, compressedCnts, maxCnts, scale };
                     });
@@ -867,7 +871,7 @@ const reducers = produce((draft, action) => {
                         const t = Math.max(Math.abs(diffExtent[0]), Math.abs(diffExtent[1]));
                         const diffCompressedCnts = compressFeatureValues(
                             diffCnts,
-                            draft.spec.feature.barcodeMaxWidth
+                            draft.spec.feature.maxNumBars
                         );
                         draft.selFeatures.push({
                             mode: "diff",

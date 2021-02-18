@@ -128,17 +128,20 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
     return async function (dispatch, getState) {
         // Update state.selectedNodes before calling the layout in the worker
         const state = getState();
-        const { selectedNodes } = state;
+        const { selectedNodes, isNodeSelected } = state;
         // Deep copy the selectedNodes to avoid side effects
         let newSel = selectedNodes.map((x) => x.slice());
-
+        const nondup = targetNodes ? targetNodes.filter((x) => !isNodeSelected[x]) : null;
         if (mode === "CREATE") {
             // Create a new selection
-            newSel.push(targetNodes);
+            if (nondup.length) {
+                newSel.push(nondup);
+            }
         } else if (mode === "APPEND") {
-            // TODO append
             console.assert(targetGroupIdx !== null);
-            newSel[targetGroupIdx] = newSel[targetGroupIdx].concat(targetGroupIdx);
+            // Check for duplicate nodes
+            newSel[targetGroupIdx] = newSel[targetGroupIdx].concat(nondup);
+            console.log(newSel);
         } else if (mode === "DELETE") {
             console.assert(targetGroupIdx !== null);
             console.log("delete ", targetGroupIdx);
@@ -148,6 +151,7 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
         } else {
             console.error("action selectNodes encountered the wrong mode: ", mode);
         }
+        console.log("calling action.selectNodes() ", { mode, targetNodes, targetGroupIdx, newSel });
 
         const neighRes = getSelectedNeighbors(newSel, state.graph.neighborMasksByHop, state.param.hops);
         dispatch(selectNodesPending(newSel, neighRes));

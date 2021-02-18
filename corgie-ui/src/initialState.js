@@ -65,6 +65,7 @@ export default {
         // neighborDistanceMetric: 'hamming',
         neighborDistanceMetric: "jaccard",
 
+        nodeSize: 4,
         graph: {
             layout: "force-directed-d3",
             // layout: "random",
@@ -115,7 +116,6 @@ export default {
             margins: { top: 10, bottom: 10, left: 10, right: 10 },
 
             neighborMarkerMaxHeight: 30,
-            nodeSize: 4,
             innerRingNodeGap: 10,
             outerRingNodeGap: 2,
             minRingGap: 50, // Minimum gap between the two rings (along the radius axis)
@@ -170,6 +170,8 @@ export default {
             cellGap: 1,
             margins: { top: 5, bottom: 5, left: 10, right: 10 },
             barcodeMaxWidth: 1000,
+            barWidth: 2,
+            maxNumBars: 500,    // remember to sync these three values
             barcodeHeight: 15,
         },
     },

@@ -41,7 +41,7 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
     const callSnapBrush = (a) => {
         function getBinIdx(x) {
             const i = Math.floor(x / u);
-            return Math.min(i, numBins - 1);
+            return Math.max(0, Math.min(i, numBins - 1));
         }
         const x1 = getBinIdx(scatterScales.latent.invert(a.x));
         const y2 = getBinIdx(scatterScales.topo.invert(a.y));

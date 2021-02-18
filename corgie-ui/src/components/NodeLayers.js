@@ -11,7 +11,7 @@ export const FocusLayer = memo(({ focalGroups, nodes, coords, focalBBox, nodeSiz
         <Group>
             {!!focalBBox && focalBBox.map((h, i) => (
                 <Group key={i}>
-                    <Text x={h.x} y={h.y - 2} text={`foc-${i}`} fontSize={12} />
+                    <Text x={h.x} y={h.y - 10} text={`foc-${i}`} fontSize={12} />
                     <Rect {...h} stroke="#ccc" strokeWidth={1} fill="blue" opacity={0.3} />
                 </Group>
             ))}
@@ -34,20 +34,20 @@ export const FocusLayer = memo(({ focalGroups, nodes, coords, focalBBox, nodeSiz
 ));
 
 export class HighlightLayer extends PureComponent {
-    componentDidMount() {
-        const period = 200;
+    // componentDidMount() {
+    //     const period = 200;
 
-        this.anim = new Animation((frame) => {
-            this.layer.opacity((Math.sin(frame.time / period) + 1) / 2);
-        }, this.layer);
+    //     this.anim = new Animation((frame) => {
+    //         this.layer.opacity((Math.sin(frame.time / period) + 1) / 2);
+    //     }, this.layer);
 
-        this.anim.start();
-    }
-    componentWillUnmount() {
-        if (this.anim) {
-            this.anim.stop();
-        }
-    }
+    //     this.anim.start();
+    // }
+    // componentWillUnmount() {
+    //     if (this.anim) {
+    //         this.anim.stop();
+    //     }
+    // }
     render() {
         const { highlightedNodes, highlightedEdges, nodes, coords, nodeSize } = this.props;
         return (
@@ -79,7 +79,7 @@ export class HighlightLayer extends PureComponent {
                             key={i}
                             x={coords[nodeIdx].x}
                             y={coords[nodeIdx].y}
-                            radius={nodeSize}
+                            radius={nodeSize * 1.5}
                             typeId={nodes[nodeIdx].typeId}
                             style={{ fillEnabled: false, stroke: "black", strokeWidth: 2 }}
                         />

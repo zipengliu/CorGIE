@@ -41,8 +41,8 @@ function FeatureMatrix({ values, scale, spec }) {
 }
 
 function FeatureStrips({ compressedCnts, colorScale, spec }) {
-    const { barcodeHeight, margins } = spec;
-    const width = compressedCnts.length + margins.left + margins.right;
+    const { barcodeHeight, margins, barWidth } = spec;
+    const width = compressedCnts.length * barWidth + margins.left + margins.right;
     const height = barcodeHeight + margins.top + margins.bottom;
 
     return (
@@ -50,13 +50,21 @@ function FeatureStrips({ compressedCnts, colorScale, spec }) {
             <g transform={`translate(${margins.left},${margins.top})`}>
                 <g>
                     {compressedCnts.map((v, i) => (
-                        <line key={i} x1={i} y1={0} x2={i} y2={barcodeHeight} stroke={colorScale(v)} />
+                        <line
+                            key={i}
+                            x1={i * barWidth}
+                            y1={0}
+                            x2={i * barWidth}
+                            y2={barcodeHeight}
+                            stroke={colorScale(v)}
+                            style={{ strokeWidth: `${barWidth}px` }}
+                        />
                     ))}
                 </g>
                 <rect
-                    x={-1}
+                    x={-2}
                     y={0}
-                    width={compressedCnts.length + 2}
+                    width={compressedCnts.length * barWidth + 2}
                     height={barcodeHeight}
                     style={{ strokeWidth: "1px", stroke: "grey", strokeDasharray: "5,5", fill: "None" }}
                 />

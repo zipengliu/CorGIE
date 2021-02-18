@@ -146,7 +146,7 @@ export class HighlightControl extends Component {
                             </FixedSizeList>
                         </div>
                         <div>
-                            <span style={{ marginRight: "5px" }}>Order by distance:</span>
+                            <span style={{ marginRight: "5px" }}>Order by latent distance:</span>
                             <ButtonGroup size="xs">
                                 <Button
                                     variant="outline-secondary"

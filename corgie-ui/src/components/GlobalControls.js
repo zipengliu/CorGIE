@@ -159,6 +159,8 @@ export class GlobalControls extends Component {
                             </Form.Group>
                         </Form>
                     </div>
+
+                    <div>todo: node size control</div>
                 </div>
             </div>
         );

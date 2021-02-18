@@ -20,6 +20,7 @@ export function aggregateBinaryFeatures(features, highlightNodes) {
     return res;
 }
 
+// maxWidth: max number of bins / strips
 export function compressFeatureValues(values, maxWidth, sort = false) {
     const sortedVal = sort ? values.slice().sort((a, b) => b - a) : values;
     const n = values.length;
@@ -32,7 +33,7 @@ export function compressFeatureValues(values, maxWidth, sort = false) {
         for (let j = i; j < n && j < i + r; j++) {
             t = Math.max(t, sortedVal[j]); // Use the max function to aggreagte
         }
-        compValues.push(t / r);
+        compValues.push(t);
     }
     return compValues;
 }
