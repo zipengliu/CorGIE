@@ -1,8 +1,27 @@
 import React, { memo } from "react";
-import { scaleLinear, max, interpolateGreys, scaleSequential, format } from "d3";
+import {
+    scaleLinear,
+    max,
+    interpolateGreys,
+    scaleSequential,
+    scaleSequentialLog,
+    scaleLog,
+    format,
+    leastIndex,
+} from "d3";
 import Brush from "./Brush";
 
-function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedFunc, brushedArea }) {
+function ScatterHistogram({
+    hasHist,
+    data,
+    spec,
+    xLabel,
+    yLabel,
+    hVals,
+    brushedFunc,
+    brushedArea,
+    useLinearScale,
+}) {
     const { margins, histWidth, scatterWidth, legendWidth, histHeight, scatterHeight, tickLabelGap } = spec;
     const u = spec.gridBinSize,
         numBins = spec.numBins;
@@ -17,39 +36,57 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
             legendWidth,
         svgHeight = margins.top + margins.bottom + (hasHist ? histHeight : 0) + scatterHeight + tickLabelGap;
 
-    // scatterplot scales
-    const scatterScales = {
-        latent: scaleLinear().domain([0, 1]).range([0, scatterWidth]).nice(),
-        topo: scaleLinear().domain([0, 1]).range([scatterHeight, 0]).nice(),
-    };
-    const uLat = scatterScales.latent(u),
-        uTopo = uLat;
-    const colorScale = scaleSequential(interpolateGreys).domain([0, data.gridBinsMaxCnt]);
+    // scales
+    const uLat = u * scatterWidth,
+        uTopo = u * scatterHeight;
+    let colorScale,
+        linearColorScale = scaleSequential(interpolateGreys).domain([0, data.gridBinsMaxCnt]);
+    if (useLinearScale) {
+        colorScale = linearColorScale;
+    } else {
+        const getColorLogScale = (domainMax) => {
+            const s = scaleSequentialLog(interpolateGreys).domain([1, domainMax + 1]);
+            return (x) => s(x + 1);
+        };
+        colorScale = getColorLogScale(data.gridBinsMaxCnt);
+    }
     let histScales, maxCntLatent, maxCntTopo;
 
     if (hasHist) {
         maxCntLatent = max(binsLatent.map((b) => b.length));
         maxCntTopo = max(binsTopo.map((b) => b.length));
-        histScales = {
-            latent: scaleLinear().domain([0, maxCntLatent]).range([0, histHeight]),
-            topo: scaleLinear().domain([0, maxCntTopo]).range([0, histWidth]),
-        };
+        if (useLinearScale) {
+            histScales = {
+                latent: scaleLinear().domain([0, maxCntLatent]).range([0, histHeight]),
+                topo: scaleLinear().domain([0, maxCntTopo]).range([0, histWidth]),
+            };
+        } else {
+            const getLogScale = (domainMax, rangeMax) => {
+                const s = scaleLog()
+                    .domain([1, domainMax + 1])
+                    .range([0, rangeMax]);
+                return (x) => s(x + 1);
+            };
+            histScales = {
+                latent: getLogScale(maxCntLatent, histHeight),
+                topo: getLogScale(maxCntTopo, histWidth),
+            };
+        }
     }
     const valFormat = format(".2f"),
-        cntFormat = format(".3~s");
+        cntFormat = format(".2~s");
 
     const callSnapBrush = (a) => {
-        function getBinIdx(x) {
-            const i = Math.floor(x / u);
-            return Math.max(0, Math.min(i, numBins - 1));
+        function constrain(x) {
+            return Math.max(0, Math.min(x, numBins - 1));
         }
-        const x1 = getBinIdx(scatterScales.latent.invert(a.x));
-        const y2 = getBinIdx(scatterScales.topo.invert(a.y));
-        const x2 = getBinIdx(scatterScales.latent.invert(a.x + a.width));
-        const y1 = getBinIdx(scatterScales.topo.invert(a.y + a.height));
+        const x1 = constrain(Math.floor(a.x / uLat)),
+            y1 = constrain(Math.ceil((scatterHeight - a.y) / uTopo)),
+            x2 = constrain(Math.ceil((a.x + a.width) / uLat)),
+            y2 = constrain(Math.floor((scatterHeight - a.y - a.height) / uTopo));
         let brushedPairIdx = [];
-        for (let i = x1; i <= x2; i++) {
-            for (let j = y1; j <= y2; j++) {
+        for (let i = x1; i < x2; i++) {
+            for (let j = y2; j < y1; j++) {
                 brushedPairIdx = brushedPairIdx.concat(gridBins[i][j]);
             }
         }
@@ -57,20 +94,17 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
         brushedFunc(
             {
                 x: x1 * uLat,
-                y: scatterHeight - y2 * uTopo,
-                width: (x2 - x1 + 1) * uLat,
-                height: (y2 - y1 + 1) * uTopo,
+                y: scatterHeight - y1 * uTopo,
+                width: (x2 - x1) * uLat,
+                height: (y1 - y2) * uTopo,
             },
             brushedPairs
         );
     };
-    // const callBrushed = (x1, x2) => {
-    //     const xVal1 = xScale.invert(x1),
-    //         xVal2 = xScale.invert(x2);
-    //     brushedFunc(xVal1, xVal2);
-    // };
 
     const arrowLen = 8; // extra length on the axis to make arrow head
+    const histTickNum = 3,
+        colorTickNum = 5;
     return (
         <svg width={svgWidth} height={svgHeight} className="histogram scatterplot">
             <g transform={`translate(${margins.left},${margins.top})`}>
@@ -92,8 +126,8 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                                 {row.map((col, j) => (
                                     <rect
                                         key={j}
-                                        x={scatterScales.latent(i * u)}
-                                        y={scatterScales.topo((j + 1) * u)}
+                                        x={i * uLat}
+                                        y={scatterHeight - (j + 1) * uTopo}
                                         width={uLat}
                                         height={uTopo}
                                         fill={colorScale(col.length)}
@@ -111,18 +145,18 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                     {/* scatterplot x-axis */}
                     <g className="axis" transform={`translate(0,${scatterHeight})`}>
                         <line
-                            x1={-1}
-                            y1={0}
+                            x1={-3}
+                            y1={2}
                             x2={scatterWidth + arrowLen}
-                            y2={0}
+                            y2={2}
                             markerEnd="url(#axis-arrow-head)"
                         />
                         {[".5", "1"].map((x, i) => (
-                            <text key={i} x={scatterScales.latent(parseFloat(x))} y={10} textAnchor="middle">
+                            <text key={i} x={scatterWidth * x} y={11} textAnchor="middle">
                                 {x}
                             </text>
                         ))}
-                        <text x={-10} y={10}>
+                        <text x={-10} y={11}>
                             0
                         </text>
                         {xLabel && (
@@ -134,14 +168,14 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                     {/* scatterplot y-axis */}
                     <g className="axis">
                         <line
-                            x1={0}
-                            y1={scatterHeight}
-                            x2={0}
+                            x1={-2}
+                            y1={scatterHeight + 2}
+                            x2={-2}
                             y2={-arrowLen}
                             markerEnd="url(#axis-arrow-head)"
                         />
                         {[".5", "1"].map((y, i) => (
-                            <text key={i} x={-3} y={scatterScales.topo(parseFloat(y))} textAnchor="end">
+                            <text key={i} x={-4} y={scatterHeight * (1 - y) + 3} textAnchor="end">
                                 {y}
                             </text>
                         ))}
@@ -163,20 +197,20 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                         <g className="value-marker">
                             <line
                                 x1={0}
-                                y1={scatterScales.topo(hVals[1])}
+                                y1={(1 - hVals[1]) * scatterHeight}
                                 x2={scatterWidth + arrowLen}
-                                y2={scatterScales.topo(hVals[1])}
+                                y2={(1 - hVals[1]) * scatterHeight}
                             />
-                            <text x={2} y={scatterScales.topo(hVals[1]) - 2}>
+                            <text x={2} y={(1 - hVals[1]) * scatterHeight - 2}>
                                 {valFormat(hVals[1])}
                             </text>
                             <line
-                                x1={scatterScales.latent(hVals[0])}
+                                x1={hVals[0] * scatterWidth}
                                 y1={0}
-                                x2={scatterScales.latent(hVals[0])}
+                                x2={hVals[0] * scatterWidth}
                                 y2={scatterHeight}
                             />
-                            <text x={scatterScales.latent(hVals[0])} y={-2} textAnchor="middle">
+                            <text x={hVals[0] * scatterWidth} y={-2} textAnchor="middle">
                                 {valFormat(hVals[0])}
                             </text>
                         </g>
@@ -194,20 +228,33 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                         0
                     </text>
                     <g transform="translate(0, 12)">
-                        {new Array(5).fill(0).map((_, i) => (
+                        <rect
+                            x={0}
+                            y={0}
+                            width={uTopo}
+                            height={uLat * colorTickNum}
+                            style={{ stroke: "black", fill: "none" }}
+                        />
+                        {new Array(colorTickNum).fill(0).map((_, i) => (
                             <rect
                                 key={i}
                                 x={0}
                                 y={uTopo * i}
                                 height={uLat}
                                 width={uTopo}
-                                fill={colorScale((i * data.gridBinsMaxCnt) / 5)}
-                                stroke="black"
+                                fill={linearColorScale((i * data.gridBinsMaxCnt) / 5)}
                             />
                         ))}
                     </g>
+                    <text x={9} y={12 + 3 * uTopo} textAnchor="start">
+                        {cntFormat(
+                            useLinearScale
+                                ? data.gridBinsMaxCnt / 2
+                                : Math.pow(10, Math.log10(data.gridBinsMaxCnt + 1) / 2)
+                        )}
+                    </text>
                     <text x={uLat / 2} y={24 + 5 * uTopo} textAnchor="middle">
-                        {data.gridBinsMaxCnt}
+                        {cntFormat(data.gridBinsMaxCnt)}
                     </text>
                 </g>
 
@@ -221,21 +268,29 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                         >
                             <g className="axis">
                                 <line
-                                    x1={-1}
+                                    x1={-3}
                                     y1={0}
                                     x2={scatterWidth + arrowLen}
                                     y2={0}
                                     markerEnd="url(#axis-arrow-head)"
                                 />
                                 <line
-                                    x1={0}
+                                    x1={-2}
                                     y1={0}
-                                    x2={0}
+                                    x2={-2}
                                     y2={histHeight + arrowLen}
                                     markerEnd="url(#axis-arrow-head)"
                                 />
-                                <line x1={0} y1={histHeight} x2={5} y2={histHeight} />
-                                <text x={-2} y={histHeight} textAnchor="end">
+                                {new Array(histTickNum).fill(0).map((_, i) => (
+                                    <line
+                                        key={i}
+                                        x1={-2}
+                                        y1={histScales.latent((maxCntLatent / histTickNum) * (i + 1))}
+                                        x2={-6}
+                                        y2={histScales.latent((maxCntLatent / histTickNum) * (i + 1))}
+                                    />
+                                ))}
+                                <text x={-7} y={histHeight + 3} textAnchor="end">
                                     {cntFormat(maxCntLatent)}
                                 </text>
                             </g>
@@ -244,7 +299,7 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                                     <rect
                                         className="bar"
                                         key={i}
-                                        x={scatterScales.latent(b.x0)}
+                                        x={b.x0 * scatterWidth}
                                         y={0}
                                         width={uLat - 1}
                                         height={histScales.latent(b.length)}
@@ -262,20 +317,28 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                             <g className="axis">
                                 <line
                                     x1={1}
-                                    y1={0}
+                                    y1={2}
                                     x2={-histWidth - arrowLen}
-                                    y2={0}
+                                    y2={2}
                                     markerEnd="url(#axis-arrow-head)"
                                 />
                                 <line
                                     x1={0}
-                                    y1={0}
+                                    y1={3}
                                     x2={0}
                                     y2={-scatterHeight - arrowLen}
                                     markerEnd="url(#axis-arrow-head)"
                                 />
-                                <line x1={-histWidth} y1={0} x2={-histWidth} y2={-5} />
-                                <text x={-histWidth} y={10} textAnchor="middle">
+                                {new Array(histTickNum).fill(0).map((_, i) => (
+                                    <line
+                                        key={i}
+                                        x1={-histScales.topo((maxCntTopo / histTickNum) * (i + 1))}
+                                        y1={0}
+                                        x2={-histScales.topo((maxCntTopo / histTickNum) * (i + 1))}
+                                        y2={5}
+                                    />
+                                ))}
+                                <text x={-histWidth} y={17} textAnchor="middle">
                                     {cntFormat(maxCntTopo)}
                                 </text>
                             </g>
@@ -285,7 +348,7 @@ function ScatterHistogram({ hasHist, data, spec, xLabel, yLabel, hVals, brushedF
                                         className="bar"
                                         key={i}
                                         x={-histScales.topo(b.length)}
-                                        y={scatterScales.topo(b.x1) - scatterHeight}
+                                        y={-b.x1 * scatterHeight}
                                         width={histScales.topo(b.length)}
                                         height={uTopo - 1}
                                     >

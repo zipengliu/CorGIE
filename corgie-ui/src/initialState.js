@@ -66,6 +66,8 @@ export default {
         neighborDistanceMetric: "jaccard",
 
         nodeSize: 4,
+        embNodeSize: 3,
+
         graph: {
             layout: "force-directed-d3",
             // layout: "random",
@@ -100,6 +102,7 @@ export default {
             ascending: true, // sort the node pairs by latent distance in ascending order
             which: null, 
             brushedArea: null,
+            useLinearScale: true,
         },
 
         topoVsLatent: {
@@ -153,8 +156,13 @@ export default {
             height: 60,
             width: 100,
         },
+        partialHistogram: {
+            margins: { top: 10, bottom: 30, left: 30, right: 10 },
+            height: 30,
+            width: 100,
+        },
         scatterHist: {
-            margins: { top: 15, bottom: 12, left: 18, right: 10 },
+            margins: { top: 15, bottom: 12, left: 18, right: 20 },
             histHeight: 30,
             scatterHeight: 100,
             histWidth: 30,

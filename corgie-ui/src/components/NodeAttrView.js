@@ -116,8 +116,7 @@ function FeatureComboVis({ data, collapsed, toggleFunc, spec, legendText }) {
 
 class NodeAttrView extends Component {
     findBrushedNodesAndDispatch(whichType, whichAttr, v1, v2) {
-        const { nodes } = this.props.graph;
-        const h = nodes
+        const h = this.props.nodes
             .filter((n) => whichType === n.type && v1 <= n[whichAttr] && n[whichAttr] <= v2)
             .map((n) => n.id);
         this.props.highlightNodes(h, [v1, v2], "node-attr", whichAttr);
@@ -132,15 +131,15 @@ class NodeAttrView extends Component {
             selFeatures,
             hoveredNodes,
             selectedNodes,
+            changeParam,
         } = this.props;
-        const histSpec = this.props.spec.histogram;
-        const partialHistSpec = { ...histSpec, height: histSpec.height / 2 };
-        const { changeParam } = this.props;
+        const histSpec = this.props.spec.histogram,
+            partialHistSpec = this.props.spec.partialHistogram;
         const { nodeFilter } = param;
 
         let hNodeData;
         if (!!hoveredNodes && hoveredNodes.length === 1) {
-            hNodeData = this.props.graph.nodes[hoveredNodes[0]];
+            hNodeData = this.props.nodes[hoveredNodes[0]];
         }
 
         return (
@@ -236,7 +235,17 @@ class NodeAttrView extends Component {
     }
 }
 
-const mapStateToProps = (state) => ({ ...state });
+const mapStateToProps = (state) => ({
+    nodes: state.graph.nodes,
+    param: state.param,
+    nodeAttrs: state.nodeAttrs,
+    selNodeAttrs: state.selNodeAttrs,
+    featureAgg: state.featureAgg,
+    selFeatures: state.selFeatures,
+    hoveredNodes: state.hoveredNodes,
+    selectedNodes: state.selectedNodes,
+    spec: state.spec,
+});
 
 const mapDispatchToProps = (dispatch) => bindActionCreators({ changeParam, highlightNodes }, dispatch);
 

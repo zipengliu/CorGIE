@@ -21,6 +21,7 @@ export default class Brush extends Component {
             mouseMoveFunc: this._onMouseMove.bind(this),
             mouseUpFunc: this._onMouseUp.bind(this),
         };
+        nextState.brushedArea = this._calcBrushedArea(nextState.startPoint, nextState.startPoint);
         this.setState(nextState);
         window.document.addEventListener("mousemove", nextState.mouseMoveFunc);
         window.document.addEventListener("mouseup", nextState.mouseUpFunc);
@@ -50,7 +51,7 @@ export default class Brush extends Component {
     }
 
     _calcBrushedArea(startPoint, endPoint) {
-        if (!this.state.mouseDown || startPoint == null || endPoint == null) {
+        if (startPoint == null || endPoint == null) {
             return null;
         }
         const parentNode = this.boxRef.current;

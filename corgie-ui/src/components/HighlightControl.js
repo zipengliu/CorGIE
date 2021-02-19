@@ -29,9 +29,7 @@ export class HighlightControl extends Component {
         }
     }
     render() {
-        const { graph, selectedNodes, highlightedNodes, highlightedNodePairs } = this.props;
-        const { nodePairFilter } = this.props.param;
-        const { nodes } = graph;
+        const { nodes, selectedNodes, highlightedNodes, highlightedNodePairs, nodePairFilter, changeParam } = this.props;
         const labelOrId = nodes && nodes[0].label ? "label" : "id";
 
         const NodePairItem = memo(({ index, style }) => {
@@ -45,7 +43,7 @@ export class HighlightControl extends Component {
                     onClick={this.props.selectNodePair.bind(null, p[1], p[2])}
                     style={style}
                 >
-                    {graph.nodes[p[1]][labelOrId]} - {graph.nodes[p[2]][labelOrId]}
+                    {nodes[p[1]][labelOrId]} - {nodes[p[2]][labelOrId]}
                 </div>
             );
         });
@@ -151,7 +149,7 @@ export class HighlightControl extends Component {
                                 <Button
                                     variant="outline-secondary"
                                     active={nodePairFilter.ascending}
-                                    onClick={this.props.changeParam.bind(
+                                    onClick={changeParam.bind(
                                         this,
                                         "nodePairFilter.ascending",
                                         true,
@@ -164,7 +162,7 @@ export class HighlightControl extends Component {
                                 <Button
                                     variant="outline-secondary"
                                     active={!nodePairFilter.ascending}
-                                    onClick={this.props.changeParam.bind(
+                                    onClick={changeParam.bind(
                                         this,
                                         "nodePairFilter.ascending",
                                         false,
@@ -195,7 +193,13 @@ export class HighlightControl extends Component {
     }
 }
 
-const mapStateToProps = (state) => ({ ...state });
+const mapStateToProps = (state) => ({ 
+    nodes: state.graph.nodes,
+    selectedNodes: state.selectedNodes,
+    highlightedNodes: state.highlightedNodes,
+    highlightedNodePairs: state.highlightedNodePairs,
+    nodePairFilter: state.param.nodePairFilter,
+});
 
 const mapDispatchToProps = (dispatch) =>
     bindActionCreators(

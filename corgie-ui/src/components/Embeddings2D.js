@@ -79,6 +79,7 @@ class Embeddings2D extends Component {
             nodes,
             coords,
             spec,
+            nodeSize,
             nodeColors,
             colorBy,
             selectedNodes,
@@ -105,7 +106,7 @@ class Embeddings2D extends Component {
                                     focalBBox={selBoundingBox}
                                     nodes={nodes}
                                     coords={coords}
-                                    nodeSize={spec.nodeSize}
+                                    nodeSize={nodeSize}
                                 />
                             )}
                             {highlightedNodes.length > 0 && (
@@ -115,7 +116,7 @@ class Embeddings2D extends Component {
                                     coords={coords}
                                     nodes={nodes}
                                     nodeColors={nodeColors}
-                                    nodeSize={spec.nodeSize}
+                                    nodeSize={nodeSize}
                                 />
                             )}
                             {hoveredNeighbors.length > 0 && (
@@ -127,7 +128,7 @@ class Embeddings2D extends Component {
                                     coords={coords}
                                     nodes={nodes}
                                     nodeColors={nodeColors}
-                                    nodeSize={spec.nodeSize}
+                                    nodeSize={nodeSize}
                                 />
                             )}
                             {this.state.brushedArea && (
@@ -161,6 +162,7 @@ const mapStateToProps = (state) => ({
     selBoundingBox: state.selBoundingBox,
     highlightedNodes: state.highlightedNodes,
     hoveredNeighbors: state.hoveredNeighbors,
+    nodeSize: state.param.nodeSize - 1,
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -174,9 +176,8 @@ const mapDispatchToProps = (dispatch) =>
 
 export default connect(mapStateToProps, mapDispatchToProps)(Embeddings2D);
 
-function BaseLayerUnconnected({ nodeColors, colorBy, spec, coords, nodes, hoverNode, highlightNodes }) {
+function BaseLayerUnconnected({ nodeColors, colorBy, nodeSize, coords, nodes, hoverNode, highlightNodes }) {
     console.log("Embeddings2D BaseLayer render()");
-    const { nodeSize } = spec;
     const debouncedHover = useCallback(debounce((i) => hoverNode(i), 300));
 
     return (
@@ -208,7 +209,7 @@ function BaseLayerUnconnected({ nodeColors, colorBy, spec, coords, nodes, hoverN
 const mapStateToPropsBaseLayer = (state) => ({
     nodes: state.graph.nodes,
     coords: state.latent.coords,
-    spec: state.spec.latent,
+    nodeSize: state.param.nodeSize - 1,
     nodeColors: state.nodeColors,
     colorBy: state.param.colorBy,
 });

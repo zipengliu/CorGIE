@@ -16,10 +16,10 @@ function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, bru
         .range([0, width])
         .nice();
     const xTicks = xScale.ticks(3),
-        xFormat = xScale.tickFormat(3, "s");
+        xFormat = xScale.tickFormat(3, ".2~s");
     const numTicks = Math.max(1, Math.floor(height / 20));
     const yTicks = yScale.ticks(numTicks),
-        yFormat = yScale.tickFormat(numTicks, "~s");
+        yFormat = yScale.tickFormat(numTicks, ".2~s");
 
     const callBrushed = (x1, x2) => {
         const xVal1 = xScale.invert(x1),
@@ -31,8 +31,15 @@ function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, bru
     const svgWidth = margins.left + margins.right + width;
     const svgHeight = topMargin + margins.bottom + height + (xLabel ? 15 : 0);
 
+    const arrowLen = 5; // extra length on the axis to make arrow head
     return (
-        <svg width={svgWidth} height={svgHeight}>
+        <svg
+            width={svgWidth}
+            height={svgHeight}
+            onClick={() => {
+                console.log("click histo");
+            }}
+        >
             <g transform={`translate(${margins.left},${topMargin})`} className="histogram">
                 {bins.map((b, i) => (
                     <rect
@@ -50,11 +57,14 @@ function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, bru
                 ))}
 
                 <g className="axis" transform={`translate(0,${height})`}>
-                    <line x1={-3} y1={0} x2={width} y2={0} markerEnd="url(#axis-arrow-head)" />
+                    <line x1={-3} y1={0} x2={width + arrowLen} y2={0} markerEnd="url(#axis-arrow-head)" />
                     {xTicks.map((x, i) => (
-                        <text key={i} x={xScale(x)} y={10} textAnchor="middle">
-                            {xFormat(x)}
-                        </text>
+                        <g key={i} transform={`translate(${xScale(x)},0)`}>
+                            <line x1={0} y1={0} x2={0} y2={4} />
+                            <text x={0} y={14} textAnchor="middle">
+                                {xFormat(x)}
+                            </text>
+                        </g>
                     ))}
                     {xLabel && (
                         <text x={width} y={20} textAnchor="end">
@@ -77,11 +87,14 @@ function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, bru
                     )}
                 </g>
                 <g className="axis">
-                    <line x1={-2} y1={height} x2={-2} y2={0} markerEnd="url(#axis-arrow-head)" />
+                    <line x1={-2} y1={height} x2={-2} y2={-arrowLen} markerEnd="url(#axis-arrow-head)" />
                     {yTicks.map((y, i) => (
-                        <text key={i} x={-6} y={height - yScale(y)} textAnchor="end">
-                            {yFormat(y)}
-                        </text>
+                        <g key={i} transform={`translate(0,${height - yScale(y)})`}>
+                            <line x1={-2} y1={0} x2={-6} y2={0} />
+                            <text x={-10} y={3} textAnchor="end">
+                                {yFormat(y)}
+                            </text>
+                        </g>
                     ))}
                     {yLabel && (
                         <text x={5} y={-5}>

@@ -810,7 +810,7 @@ const reducers = produce((draft, action) => {
                 // Hover on a node pair or edge
                 draft.hoveredNodes = action.nodeIdx;
                 draft.hoveredNeighbors = action.nodeIdx;
-                draft.hoveredEdges = [{ source: action.nodeIdx[0], target: action.nodeIdx[1] }];
+                draft.hoverEdges = getEdgesWithinGroup(draft.graph.edgeDict, draft.hoveredNodes, null);
             }
             return;
         case ACTION_TYPES.SELECT_NODES_PENDING:

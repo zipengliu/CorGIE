@@ -17,9 +17,11 @@ class EmbeddingsView extends Component {
             hoveredNodes,
             selectedNodes,
             highlightNodePairs,
+            changeParam,
         } = this.props;
         const { isComputing, display, distMatLatent, distMatTopo } = distances;
         const { nodePairFilter } = param;
+        const { useLinearScale } = nodePairFilter;
         let highlightDistVals;
         if (!isComputing) {
             if (!!hoveredNodes && hoveredNodes.length === 2) {
@@ -86,63 +88,54 @@ class EmbeddingsView extends Component {
                         <h6 style={{ marginTop: "10px" }}>
                             Compare distances of node pairs in latent vs. topo
                         </h6>
-                        <div>
-                            <small> todo: switch between linear and log scale</small>
+                        <div style={{ fontSize: ".875rem" }}>
+                            <Form inline>
+                                <Form.Label style={{ marginRight: "5px" }}>
+                                    Luminance ~ #node pairs with specific distance values.
+                                </Form.Label>
+                                <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
+                                <Form.Check
+                                    inline
+                                    label="linear"
+                                    type="radio"
+                                    id="scale-linear-ctrl"
+                                    checked={useLinearScale}
+                                    onChange={() => {
+                                        changeParam("nodePairFilter.useLinearScale", null, true);
+                                    }}
+                                />
+                                <Form.Check
+                                    inline
+                                    label="log10"
+                                    type="radio"
+                                    id="scale-log-ctrl"
+                                    checked={!useLinearScale}
+                                    onChange={() => {
+                                        changeParam("nodePairFilter.useLinearScale", null, true);
+                                    }}
+                                />
+                            </Form>
                         </div>
                         <div className="scatter-hist-container">
                             {display.map((d, i) => (
                                 <div key={i}>
-                                    <div className="text-center title">
-                                        {d.title}
-                                    </div>
+                                    <div className="text-center title">{d.title}</div>
                                     <ScatterHistogram
                                         data={d}
                                         hasHist={true}
+                                        useLinearScale={useLinearScale}
                                         spec={spec}
                                         xLabel="latent"
                                         yLabel="topo"
                                         hVals={highlightDistVals}
                                         brushedFunc={highlightNodePairs.bind(null, i)}
                                         brushedArea={
-                                            nodePairFilter.which === i
-                                                ? nodePairFilter.brushedArea
-                                                : null
+                                            nodePairFilter.which === i ? nodePairFilter.brushedArea : null
                                         }
                                     />
                                 </div>
                             ))}
                         </div>
-                        {/* <div>
-                            <h6 style={{ marginTop: "10px" }}>of connected node pairs (aka. edges)</h6>
-                            <Histogram
-                                bins={edgeLenBins}
-                                spec={{ ...histSpec, height: histSpec.height / 2 }}
-                                xDomain={[0, 1]}
-                                xLabel={"Cosine distance"}
-                                yLabel={"#node pairs"}
-                                brushedFunc={highlightNodePairs.bind(null, "edge")}
-                                brushedRange={
-                                    nodePairFilter.which === "edge" ? nodePairFilter.brushedRange : null
-                                }
-                            />
-                        </div> */}
-                        {/* {focalDistances.length > 0 &&
-                            focalDistances.map((hd, i) => (
-                                <div key={i}>
-                                    <h6>{hd.mode}</h6>
-                                    <Histogram
-                                        bins={hd.bins}
-                                        spec={{ ...histSpec, height: histSpec.height / 2 }}
-                                        xDomain={[0, 1]}
-                                        xLabel="Cosine distance"
-                                        yLabel="#node pairs"
-                                        brushedFunc={highlightNodePairs.bind(null, i)}
-                                        brushedRange={
-                                            nodePairFilter.which === i ? nodePairFilter.brushedRange : null
-                                        }
-                                    />
-                                </div>
-                            ))} */}
                     </div>
                 )}
             </div>
