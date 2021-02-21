@@ -10,11 +10,18 @@ function GraphView({ initialLayout, focalLayout }) {
             {focalLayout.running && (
                 <div>
                     <Spinner animation="border" role="status" />
-                    <span style={{ marginLeft: "10px" }}>Computing layouts for selected nodes...</span>
+                    <span style={{ marginLeft: "10px" }}>Computing layout for focal nodes...</span>
                 </div>
             )}
             {focalLayout.coords && !focalLayout.running && <GraphLayout layoutData={focalLayout} />}
-            <GraphLayout layoutData={initialLayout} />
+            {initialLayout.running ? (
+                <div>
+                    <Spinner animation="border" role="status" />
+                    <span style={{ marginLeft: "10px" }}>Computing initial graph layout...</span>
+                </div>
+            ) : (
+                <GraphLayout layoutData={initialLayout} />
+            )}
         </div>
     );
 }

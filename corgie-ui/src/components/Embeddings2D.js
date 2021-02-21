@@ -209,7 +209,7 @@ function BaseLayerUnconnected({ nodeColors, colorBy, nodeSize, coords, nodes, ho
 const mapStateToPropsBaseLayer = (state) => ({
     nodes: state.graph.nodes,
     coords: state.latent.coords,
-    nodeSize: state.param.nodeSize - 1,
+    nodeSize: Math.max(state.param.nodeSize - 1, 1),
     nodeColors: state.nodeColors,
     colorBy: state.param.colorBy,
 });

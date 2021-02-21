@@ -54,24 +54,6 @@ import { Layout as cola } from "webcola";
 //     return nodes.map((d) => ({ x: d.x, y: d.y }));
 // }
 
-// TODO move this to a background worker thread
-export function computeForceLayoutWithD3(nodes, edges) {
-    // const constrainCoord = (v, min, max) => Math.max(min, Math.min(v, max));
-    let coords = nodes.map((n, i) => ({ index: i }));
-    let edgesCopied = edges.map(e => ({...e}));
-
-    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 800));
-
-    let simulation = forceSimulation(coords)
-        .force("link", forceLink(edgesCopied))
-        .force("charge", forceManyBody().strength(-40))
-        .force("x", forceX(canvasSize / 2))
-        .force("y", forceY(canvasSize / 2))
-        .stop();
-    simulation.tick(300);
-
-    return { coords: coords.map((d) => ({ x: d.x, y: d.y })), width: canvasSize, height: canvasSize };
-}
 
 export function computeForceLayoutWithCola(nodes, edges, spec) {
     let coords = nodes.map((n, i) => ({

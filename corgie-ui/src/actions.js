@@ -4,13 +4,18 @@ import { csvParseRows } from "d3";
 import { getSelectedNeighbors } from "./utils";
 import { computeNeighborMasks, computeEdgeDict } from "./utils";
 
-import DistLayoutWorker from "./worker";
+import FocalLayoutWorker from "./focalLayout.worker";
+import InitialLayoutWorker from "./initialLayout.worker";
+import DistanceWorker from "./distance.worker";
 
-const workerInstance = Comlink.wrap(new DistLayoutWorker());
+const distanceWorker = Comlink.wrap(new DistanceWorker());
+const focalLayoutWorker = Comlink.wrap(new FocalLayoutWorker());
+const initalLayoutWorker = Comlink.wrap(new InitialLayoutWorker());
 
 const ACTION_TYPES = {
     FETCH_DATA_PENDING: "FETCH_DATA_PENDING",
     FETCH_DATA_SUCCESS: "FETCH_DATA_SUCCESS",
+    COMPUTE_INIT_LAYOUT_DONE: "COMPUTE_INIT_LAYOUT_DONE",
     FETCH_DATA_ERROR: "FETCH_DATA_ERROR",
     COMPUTE_DISTANCES_DONE: "COMPUTE_DISTANCES_DONE",
     HIGHLIGHT_NODES: "HIGHLIGHT_NODES",
@@ -78,6 +83,12 @@ export function fetchGraphData(homePath, datasetId) {
             Object.assign(graph, computeNeighborMasks(graph.nodes.length, graph.edgeDict, hops));
             dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features }));
 
+            initalLayoutWorker
+                .computeForceLayoutWithD3(graph.nodes.length, graph.links, state.spec.coordRescaleMargin)
+                .then((layoutRes) => {
+                    dispatch(computeInitLayoutDone(layoutRes));
+                });
+
             const srcBuf = new ArrayBuffer(graph.links.length * 2),
                 tgtBuf = new ArrayBuffer(graph.links.length * 2);
             const edgeSrc = new Uint16Array(srcBuf),
@@ -86,7 +97,7 @@ export function fetchGraphData(homePath, datasetId) {
                 edgeSrc[i] = graph.links[i].source;
                 edgeTgt[i] = graph.links[i].traget;
             }
-            await workerInstance.initializeState(
+            await distanceWorker.initializeState(
                 emb,
                 graph.nodes.length,
                 edgeSrc,
@@ -95,14 +106,22 @@ export function fetchGraphData(homePath, datasetId) {
                 neighborDistanceMetric,
                 numBins
             );
-            const sampleDistData = await workerInstance.computeDistances("sample", null, state.distances.maxSample);
+            const sampleDistData = await distanceWorker.computeDistances(
+                "sample",
+                null,
+                state.distances.maxSample
+            );
             dispatch(computeDistancesDone(sampleDistData, 0));
-            const edgeDistData = await workerInstance.computeDistances("edge");
+            const edgeDistData = await distanceWorker.computeDistances("edge");
             dispatch(computeDistancesDone(edgeDistData, 1));
         } catch (e) {
             dispatch(fetchDataError(e));
         }
     };
+}
+
+function computeInitLayoutDone(layoutRes) {
+    return { type: ACTION_TYPES.COMPUTE_INIT_LAYOUT_DONE, layoutRes };
 }
 
 function fetchDataPending() {
@@ -174,15 +193,27 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
         if (newSel.length) {
             let distGrpIdx = 2;
             if (newSel[0].length > 1) {
-                dispatch(computeDistancesDone(await workerInstance.computeDistances("within", newSel[0]), distGrpIdx));
+                dispatch(
+                    computeDistancesDone(
+                        await distanceWorker.computeDistances("within", newSel[0]),
+                        distGrpIdx
+                    )
+                );
                 distGrpIdx++;
             }
             if (newSel.length > 1 && newSel[1].length > 1) {
-                dispatch(computeDistancesDone(await workerInstance.computeDistances("within", newSel[1]), distGrpIdx));
+                dispatch(
+                    computeDistancesDone(
+                        await distanceWorker.computeDistances("within", newSel[1]),
+                        distGrpIdx
+                    )
+                );
                 distGrpIdx++;
             }
             if (newSel.length > 1 && (newSel[0].length > 1 || newSel[1].length > 1)) {
-                dispatch(computeDistancesDone(await workerInstance.computeDistances("between", newSel), distGrpIdx));
+                dispatch(
+                    computeDistancesDone(await distanceWorker.computeDistances("between", newSel), distGrpIdx)
+                );
             }
 
             const layoutRes = await callLocalLayoutFunc(
@@ -235,7 +266,7 @@ async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
 
         switch (param.focalGraph.layout) {
             case "group-constraint-cola":
-                return await workerInstance.computeLocalLayoutWithCola(
+                return await distanceWorker.computeLocalLayoutWithCola(
                     graph.nodes,
                     graph.edges,
                     param.hops,
@@ -247,7 +278,7 @@ async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     spec.graph
                 );
             case "umap":
-                return await workerInstance.computeLocalLayoutWithUMAP(
+                return await distanceWorker.computeLocalLayoutWithUMAP(
                     graph.nodes,
                     // graph.edges,
                     param.hops,
@@ -261,7 +292,7 @@ async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     spec.graph
                 );
             case "spiral":
-                return await workerInstance.computeSpaceFillingCurveLayout(
+                return await distanceWorker.computeSpaceFillingCurveLayout(
                     graph.nodes,
                     param.hops,
                     neighRes.isNodeSelected,
@@ -271,7 +302,7 @@ async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     param.neighborDistanceMetric
                 );
             default:
-                return await workerInstance.computeLocalLayoutWithD3(
+                return await distanceWorker.computeLocalLayoutWithD3(
                     graph.nodes,
                     graph.edges,
                     param.hops,

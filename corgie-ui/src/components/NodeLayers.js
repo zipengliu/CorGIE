@@ -126,7 +126,7 @@ export const HoverLayer = memo(
                         y={coords[nodeIdx].y}
                         radius={nodeSize}
                         typeId={nodes[nodeIdx].typeId}
-                        style={{ fill: nodeColors[i], strokeEnabled: false }}
+                        style={{ fill: nodeColors[hoveredNodes[i]], strokeEnabled: false }}
                     />
                 ))}
             </Group>

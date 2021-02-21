@@ -333,23 +333,23 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes, neighArr, nei
 //     return d;
 // }
 
-function callLayoutFunc(nodes, edges, whichLayout, spec) {
-    let layoutRes;
-    // No point of computing any global layout for a large graph
-    if (nodes.length > 1000) {
-        layoutRes = computeDummyLayout(nodes);
-    } else {
-        if (whichLayout === "force-directed-d3") {
-            // Make a copy of the edges to prevent them from changes by the force simulation
-            layoutRes = computeForceLayoutWithD3(nodes, edges);
-        } else if (whichLayout === "force-directed-cola") {
-            layoutRes = computeForceLayoutWithCola(nodes, edges, spec);
-        } else {
-            layoutRes = computeDummyLayout(nodes);
-        }
-    }
-    return layoutRes;
-}
+// function callLayoutFunc(nodes, edges, whichLayout, spec) {
+//     let layoutRes;
+//     // No point of computing any global layout for a large graph
+//     if (nodes.length > 1000) {
+//         layoutRes = computeDummyLayout(nodes);
+//     } else {
+//         if (whichLayout === "force-directed-d3") {
+//             // Make a copy of the edges to prevent them from changes by the force simulation
+//             layoutRes = computeForceLayoutWithD3(nodes, edges);
+//         } else if (whichLayout === "force-directed-cola") {
+//             layoutRes = computeForceLayoutWithCola(nodes, edges, spec);
+//         } else {
+//             layoutRes = computeDummyLayout(nodes);
+//         }
+//     }
+//     return layoutRes;
+// }
 
 // Note that attrs will be changed by calling this function
 // attrMeta is an array of object that describes the attribute names and types
@@ -614,12 +614,6 @@ const reducers = produce((draft, action) => {
             }
             populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
             mapColorToNodeType(draft.graph.nodeTypes);
-            draft.initialLayout = callLayoutFunc(
-                draft.graph.nodes,
-                draft.graph.edges,
-                draft.param.graph.layout,
-                draft.spec.graph
-            ); // TODO make this async
 
             // draft.graph.neighborMasksByHop = getNeighborMasksByHop(graph.nodes, graph.links, draft.param.hops);
             draft.graph.neighborMasksByType = getNeighborMasksByType(
@@ -663,6 +657,10 @@ const reducers = produce((draft, action) => {
             setNodeColors(draft, draft.param.colorBy);
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
+            return;
+
+        case ACTION_TYPES.COMPUTE_INIT_LAYOUT_DONE:
+            draft.initialLayout = {...action.layoutRes, running: false};
             return;
 
         case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
