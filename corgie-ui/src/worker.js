@@ -5,6 +5,19 @@ import { UMAP } from "umap-js";
 import bs from "bitset";
 import { getNeighborDistance, getCosineDistance, rectBinning } from "./utils";
 
+// Store some big objects in the worker thread to avoid data transmission
+let state = {
+    emb: null,
+    numNodes: null,
+    edgeSrc: null,
+    edgeTgt: null,
+    neighborMasks: null,
+    distMetric: null,
+    numBins: null,
+    distMatLatent: null,
+    distMatTopo: null,
+};
+
 // The bitset class functions are not copied from the main thread,
 // so we need to re-construct the bitsets in-place
 function reconstructBitsets(neighMap) {
@@ -416,69 +429,205 @@ export function computeSpaceFillingCurveLayout(
     return { coords: transCoords, running: false, width, height };
 }
 
-const computeAllDistances = (emb, numNodes, neighborMasks, distMetric, numBins) => {
+function initializeState(emb, numNodes, edgeSrc, edgeTgt, neighborMasks, distMetric, numBins) {
+    state.emb = emb;
+    state.numNodes = numNodes;
+    state.edgeSrc = edgeSrc;
+    state.edgeTgt = edgeTgt;
+    state.neighborMasks = neighborMasks.map((m) => bs(m));
+    state.distMetric = distMetric;
+    state.numBins = numBins;
+
+    function initDistMat(n) {
+        let d = {};
+        for (let i = 0; i < n; i++) {
+            d[i] = { [i]: 0 };
+        }
+        return d;
+    }
+    state.distMatLatent = initDistMat(numNodes);
+    state.distMatTopo = initDistMat(numNodes);
+}
+
+// const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
+//     const { distMatTopo, distMatLatent, binGen } = distData;
+//     let data = {
+//         name: whichSubset,
+//         dist: [],
+//         src: [],
+//         tgt: [],
+//         binsLatent: null,
+//         binsTopo: null,
+//     };
+//     let binRes;
+
+//     function checkAndCompute(s, t) {
+//         // Must check whether we have computed that value
+//         if (distMatLatent[s].hasOwnProperty(t)) {
+//             data.dist.push([distMatLatent[s][t], distMatTopo[s][t]]);
+//             data.src.push(s);
+//             data.tgt.push(t);
+//         }
+//     }
+
+//     if (whichSubset === "edge") {
+//         // Ref should be edges
+//         for (let e of ref) {
+//             checkAndCompute(e.source, e.target);
+//         }
+//         data.title = "those connected by edges";
+//     } else if (whichSubset.includes("between")) {
+//         for (let i = 0; i < ref[0].length; i++) {
+//             for (let j = 0; j < ref[1].length; j++) {
+//                 checkAndCompute(ref[0][i], ref[1][j]);
+//             }
+//         }
+//         data.title = "those between foc-0 and foc-1";
+//     } else if (whichSubset.includes("foc")) {
+//         for (let i = 0; i < ref.length; i++) {
+//             for (let j = i + 1; j < ref.length; j++) {
+//                 checkAndCompute(ref[i], ref[j]);
+//             }
+//         }
+//         data.title = `those within ${whichSubset}`;
+//     }
+//     binRes = rectBinning(data.dist, [1, 1], numBins);
+//     Object.assign(data, {
+//         binsLatent: binGen(data.dist.map((x) => x[0])),
+//         binsTopo: binGen(data.dist.map((x) => x[1])),
+//         gridBins: binRes.bins,
+//         gridBinsMaxCnt: binRes.maxCnt,
+//     });
+//     console.log(data);
+//     return data;
+// };
+
+function computeDistances(mode, targetNodes = null, maxNumPairs = 0) {
     console.log("Computing distances ...", new Date());
-    // Deserialize bitsets
-    for (let i = 0; i < numNodes; i++) {
-        neighborMasks[i] = bs(neighborMasks[i]);
+
+    const n = state.numNodes;
+    const { distMatLatent, distMatTopo, emb, neighborMasks } = state;
+
+    let numPairs, pairGen;
+    if (mode === "all") {
+        numPairs = (n * (n - 1)) / 2;
+        pairGen = function* () {
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    yield [i, j];
+                }
+            }
+        };
+    } else if (mode === "sample") {
+        numPairs = Math.min((n * (n - 1)) / 2, maxNumPairs);
+        pairGen = function* () {
+            const dup = {};
+            // sample node pairs
+            const maxSeqNum = n * (n - 1);
+            let x;
+            for (let i = 0; i < numPairs; i++) {
+                do {
+                    x = Math.floor(Math.random() * maxSeqNum);
+                } while (dup[x]);
+                dup[x] = true;
+                let s = Math.floor(x / (n - 1)),
+                    t = x % (n - 1);
+                if (t >= s) {
+                    t++;
+                }
+                yield [s, t];
+            }
+        };
+    } else if (mode === "edge") {
+        numPairs = state.edgeSrc.length;
+        pairGen = function* () {
+            for (let i = 0; i < numPairs; i++) {
+                yield [state.edgeSrc[i], state.edgeTgt[i]];
+            }
+        };
+    } else if (mode === "within") {
+        numPairs = (targetNodes.length * (targetNodes.length - 1)) / 2;
+        pairGen = function* () {
+            for (let i = 0; i < targetNodes.length; i++) {
+                for (let j = i + 1; j < targetNodes.length; j++) {
+                    yield [targetNodes[i], targetNodes[j]];
+                }
+            }
+        };
+    } else if (mode === "between") {
+        numPairs = targetNodes[0].length * targetNodes[1].length;
+        pairGen = function* () {
+            for (let i = 0; i < targetNodes[0].length; i++) {
+                for (let j = 0; j < targetNodes[1].length; j++) {
+                    yield [targetNodes[0][i], targetNodes[1][j]];
+                }
+            }
+        };
     }
 
-    const numPairs = (numNodes * (numNodes - 1)) / 2;
-    let dist = [],
-        distLatent = [],
-        distTopo = [];
-    const distArrayBuffer = new ArrayBuffer(numPairs * 8),
-        distBuf = new Float32Array(distArrayBuffer),
-        srcArrayBuffer = new ArrayBuffer(numPairs * 2),
+    const srcArrayBuffer = new ArrayBuffer(numPairs * 2),
         srcBuf = new Uint16Array(srcArrayBuffer),
         tgtArrayBuffer = new ArrayBuffer(numPairs * 2),
         tgtBuf = new Uint16Array(tgtArrayBuffer);
+    const dist = [],
+        distLatent = [],
+        distTopo = [];
 
-    let k = 0;
-    for (let i = 0; i < numNodes; i++) {
-        // Make sure i < j to avoid duplicate computation
-        for (let j = i + 1; j < numNodes; j++) {
-            const dLat = getCosineDistance(emb[i], emb[j]);
-            const dTopo = getNeighborDistance(neighborMasks[i], neighborMasks[j], distMetric);
-            distLatent.push(dLat);
-            distTopo.push(dTopo);
-            dist.push([dLat, dTopo]);
-            srcBuf[k] = i;
-            tgtBuf[k] = j;
-            k++;
+    function computeDist(i, j, k) {
+        let dLat, dTopo;
+        if (distMatLatent[i].hasOwnProperty(j)) {
+            dLat = distMatLatent[i][j];
+            dTopo = distMatTopo[i][j];
+        } else {
+            dLat = getCosineDistance(emb[i], emb[j]);
+            dTopo = getNeighborDistance(neighborMasks[i], neighborMasks[j], state.distMetric);
+            distMatLatent[i][j] = dLat;
+            distMatLatent[j][i] = dLat;
+            distMatTopo[i][j] = dTopo;
+            distMatTopo[j][i] = dTopo;
         }
+        distLatent.push(dLat);
+        distTopo.push(dTopo);
+        dist.push([dLat, dTopo]);
+        srcBuf[k] = i;
+        tgtBuf[k] = j;
     }
 
-    for (let k = 0; k < numPairs; k++) {
-        distBuf[k * 2] = dist[k][0];
-        distBuf[k * 2 + 1] = dist[k][1];
+    let pairIter = pairGen();
+    let iterRes = pairIter.next();
+    let k = 0;
+    while (!iterRes.done) {
+        const s = iterRes.value[0],
+            t = iterRes.value[1];
+        computeDist(s, t, k);
+        k++;
+        iterRes = pairIter.next();
     }
 
-    const binGen1d = d3bin().domain([0, 1]).thresholds(numBins);
+    const binGen1d = d3bin().domain([0, 1]).thresholds(state.numBins);
     const binsLatent = binGen1d(distLatent),
         binsTopo = binGen1d(distTopo);
-    const gridRes = rectBinning(dist, [1, 1], numBins);
+    const gridRes = rectBinning(dist, [1, 1], state.numBins);
 
     console.log("Finish computing distances!", new Date());
-    // return { distBuf, srcBuf, tgtBuf };
     return Comlink.transfer(
         {
-            distBuf,
-            srcBuf,
-            tgtBuf,
+            src: srcBuf,
+            tgt: tgtBuf,
             binsLatent,
             binsTopo,
             gridBins: gridRes.bins,
             gridBinsMaxCnt: gridRes.maxCnt,
         },
-        [distBuf.buffer, srcBuf.buffer, tgtBuf.buffer]
+        [srcBuf.buffer, tgtBuf.buffer]
     );
-};
+}
 
 Comlink.expose({
-    computeAllDistances: computeAllDistances,
+    initializeState: initializeState,
+    computeDistances: computeDistances,
     computeLocalLayoutWithCola: computeLocalLayoutWithCola,
     computeLocalLayoutWithD3: computeLocalLayoutWithD3,
     computeLocalLayoutWithUMAP: computeLocalLayoutWithUMAP,
-    computeSpaceFillingCurveLayout: computeSpaceFillingCurveLayout
+    computeSpaceFillingCurveLayout: computeSpaceFillingCurveLayout,
 });

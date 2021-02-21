@@ -437,41 +437,6 @@ function computeBoundingBox(coords, included) {
     };
 }
 
-// distBuf: Float32Array.  srcBuf and tgtBuf: Uint16Array.
-const processDistCompResults = (distRes, numNodes) => {
-    const { distBuf, srcBuf, tgtBuf, binsLatent, binsTopo, gridBins, gridBinsMaxCnt } = distRes;
-    // Init distance matrix
-    const distMatLatent = {},
-        distMatTopo = {};
-    for (let i = 0; i < numNodes; i++) {
-        distMatLatent[i] = { [i]: 0 };
-        distMatTopo[i] = { [i]: 0 };
-    }
-    const scatterHistAll = {
-        name: "all",
-        title: "all",
-        dist: [],
-        src: srcBuf,
-        tgt: tgtBuf,
-        binsLatent,
-        binsTopo,
-        gridBins,
-        gridBinsMaxCnt,
-    };
-    for (let i = 0; i < srcBuf.length; i++) {
-        const s = srcBuf[i],
-            t = tgtBuf[i];
-        const dTopo = distBuf[2 * i + 1],
-            dLat = distBuf[2 * i];
-        distMatLatent[s][t] = dLat;
-        distMatLatent[t][s] = dLat;
-        distMatTopo[s][t] = dTopo;
-        distMatTopo[t][s] = dTopo;
-        scatterHistAll.dist.push([dLat, dTopo]);
-    }
-    return { distMatLatent, distMatTopo, scatterHistAll };
-};
-
 const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
     const { distMatTopo, distMatLatent, binGen } = distData;
     let data = {
@@ -484,27 +449,32 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
     };
     let binRes;
 
+    function checkAndCompute(s, t) {
+        // Must check whether we have computed that value
+        if (distMatLatent[s].hasOwnProperty(t)) {
+            data.dist.push([distMatLatent[s][t], distMatTopo[s][t]]);
+            data.src.push(s);
+            data.tgt.push(t);
+        }
+    }
+
     if (whichSubset === "edge") {
         // Ref should be edges
-        data.dist = ref.map((e) => [distMatLatent[e.source][e.target], distMatTopo[e.source][e.target]]);
+        for (let e of ref) {
+            checkAndCompute(e.source, e.target);
+        }
         data.title = "those connected by edges";
-        data.src = ref.map((e) => e.source);
-        data.tgt = ref.map((e) => e.target);
     } else if (whichSubset.includes("between")) {
         for (let i = 0; i < ref[0].length; i++) {
             for (let j = 0; j < ref[1].length; j++) {
-                data.dist.push([distMatLatent[ref[0][i]][ref[1][j]], distMatTopo[ref[0][i]][ref[1][j]]]);
-                data.src.push(ref[0][i]);
-                data.tgt.push(ref[1][j]);
+                checkAndCompute(ref[0][i], ref[1][j]);
             }
         }
         data.title = "those between foc-0 and foc-1";
     } else if (whichSubset.includes("foc")) {
         for (let i = 0; i < ref.length; i++) {
             for (let j = i + 1; j < ref.length; j++) {
-                data.dist.push([distMatLatent[ref[i]][ref[j]], distMatTopo[ref[i]][ref[j]]]);
-                data.src.push(ref[i]);
-                data.tgt.push(ref[j]);
+                checkAndCompute(ref[i], ref[j]);
             }
         }
         data.title = `those within ${whichSubset}`;
@@ -516,6 +486,7 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
         gridBins: binRes.bins,
         gridBinsMaxCnt: binRes.maxCnt,
     });
+    console.log(data);
     return data;
 };
 
@@ -595,8 +566,8 @@ function setNodeColors(draft, colorBy) {
 }
 
 const reducers = produce((draft, action) => {
-    const ascFunc = (x1, x2) => x1[0][0] - x2[0][0],
-        descFunc = (x1, x2) => x2[0][0] - x1[0][0];
+    // const ascFunc = (x1, x2) => x1[0][0] - x2[0][0],
+    //     descFunc = (x1, x2) => x2[0][0] - x1[0][0];
     let neiRes;
     switch (action.type) {
         case ACTION_TYPES.FETCH_DATA_PENDING:
@@ -695,32 +666,9 @@ const reducers = produce((draft, action) => {
             return;
 
         case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
-            console.log("Data recieved.  Processing...", new Date());
-            draft.distances.isComputing = false;
-            let procDistData = processDistCompResults(action.distData, draft.graph.nodes.length);
-            // for performance: avoid immer to do stuff recursively in these objects
-            freeze(procDistData.distMatTopo);
-            freeze(procDistData.distMatLatent);
-            Object.assign(draft.distances, procDistData);
-            draft.distances.display = [
-                procDistData.scatterHistAll,
-                computeScatterHistData(
-                    draft.distances,
-                    "edge",
-                    draft.graph.edges,
-                    draft.spec.scatterHist.numBins
-                ),
-            ];
-
-            // Check whether there are focal groups during the distance computation.
-            // if (draft.selectedNodes.length > 0) {
-            //     draft.focalDistances = computeDistancesFocal(
-            //         draft.selectedNodes,
-            //         draft.latent.distMatrix,
-            //         draft.latent.binGen
-            //     );
-            // }
-            console.log("Distance Data processed", new Date());
+            console.log("Data recieved.  Storing data...", new Date());
+            Object.assign(draft.distances.display[action.idx], action.distData);
+            draft.distances.display[action.idx].isComputing = false;
             return;
 
         case ACTION_TYPES.HIGHLIGHT_NODES:
@@ -784,9 +732,10 @@ const reducers = produce((draft, action) => {
             if (which === null) {
                 draft.highlightedNodePairs = [];
             } else {
-                draft.highlightedNodePairs = brushedPairs.sort(
-                    draft.param.nodePairFilter.ascending ? ascFunc : descFunc
-                );
+                draft.highlightedNodePairs = brushedPairs;
+                // .sort(
+                //     draft.param.nodePairFilter.ascending ? ascFunc : descFunc
+                // );
             }
             return;
         case ACTION_TYPES.HOVER_NODE:
@@ -810,7 +759,7 @@ const reducers = produce((draft, action) => {
                 // Hover on a node pair or edge
                 draft.hoveredNodes = action.nodeIdx;
                 draft.hoveredNeighbors = action.nodeIdx;
-                draft.hoverEdges = getEdgesWithinGroup(draft.graph.edgeDict, draft.hoveredNodes, null);
+                draft.hoveredEdges = getEdgesWithinGroup(draft.graph.edgeDict, draft.hoveredNodes, null);
             }
             return;
         case ACTION_TYPES.SELECT_NODES_PENDING:
@@ -828,18 +777,19 @@ const reducers = produce((draft, action) => {
                 draft.selFeatures = [];
                 draft.focalLayout = { running: false };
                 draft.selBoundingBox = [];
+                draft.distances.display.length = 2;
             } else {
                 draft.isNodeSelected = neighRes.isNodeSelected;
                 draft.isNodeSelectedNeighbor = neighRes.isNodeSelectedNeighbor;
                 draft.neighMap = neighRes.neighMap;
                 draft.neighArr = neighRes.neighArr;
                 // neighGrp is for the roll-up matrix of neighbor counts
-                draft.neighGrp = countSelectedNeighborsByHop(
-                    draft.graph.neighborMasksByHop,
-                    draft.selectedNodes,
-                    neighRes.neighArr,
-                    neighRes.neighMap
-                );
+                // draft.neighGrp = countSelectedNeighborsByHop(
+                //     draft.graph.neighborMasksByHop,
+                //     draft.selectedNodes,
+                //     neighRes.neighArr,
+                //     neighRes.neighMap
+                // );
 
                 draft.selNodeAttrs = newSel.map((sel) =>
                     summarizeNodeAttrs(
@@ -881,35 +831,18 @@ const reducers = produce((draft, action) => {
                         });
                     }
                 }
-
-                // Compute distance distributions in latent space for focal nodes
+                // Allocate space for the distance data, waiting for worker to return the actual computed values
                 if (newSel[0].length > 1) {
-                    draft.distances.display.push(
-                        computeScatterHistData(
-                            draft.distances,
-                            "foc-0",
-                            newSel[0],
-                            draft.spec.scatterHist.numBins
-                        )
-                    );
+                    draft.distances.display.push({ isComputing: true, title: "those within foc-0" });
                 }
                 if (newSel.length > 1 && newSel[1].length > 1) {
-                    draft.distances.display.push(
-                        computeScatterHistData(
-                            draft.distances,
-                            "foc-1",
-                            newSel[1],
-                            draft.spec.scatterHist.numBins
-                        )
-                    );
-                    draft.distances.display.push(
-                        computeScatterHistData(
-                            draft.distances,
-                            "between",
-                            newSel,
-                            draft.spec.scatterHist.numBins
-                        )
-                    );
+                    draft.distances.display.push({ isComputing: true, title: "those within foc-1" });
+                }
+                if (newSel.length > 1 && (newSel[0].length > 1 || newSel[1].length > 1)) {
+                    draft.distances.display.push({
+                        isComputing: true,
+                        title: "those between foc-0 and foc-1",
+                    });
                 }
             }
             draft.param.features.collapsedSel = new Array(newSel.length + 1).fill(true);
@@ -972,9 +905,10 @@ const reducers = produce((draft, action) => {
             // Special param changes
             if (action.param === "colorBy") {
                 setNodeColors(draft, action.value);
-            } else if (action.param === "nodePairFilter.ascending") {
-                draft.highlightedNodePairs.sort(action.value ? ascFunc : descFunc);
             }
+            // else if (action.param === "nodePairFilter.ascending") {
+            //     draft.highlightedNodePairs.sort(action.value ? ascFunc : descFunc);
+            // }
             return;
         case ACTION_TYPES.CHANGE_HOPS:
             if (draft.param.hops !== action.hops) {

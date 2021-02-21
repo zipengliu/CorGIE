@@ -5,6 +5,7 @@ import { Form, Spinner } from "react-bootstrap";
 import { changeParam, highlightNodePairs } from "../actions";
 import Embeddings2D from "./Embeddings2D";
 import ScatterHistogram from "./ScatterHistogram";
+import { getNeighborDistance, getCosineDistance } from "../utils";
 
 class EmbeddingsView extends Component {
     render() {
@@ -14,32 +15,13 @@ class EmbeddingsView extends Component {
             distances,
             spec,
             param,
-            hoveredNodes,
-            selectedNodes,
             highlightNodePairs,
+            highlightDistVals,
             changeParam,
         } = this.props;
-        const { isComputing, display, distMatLatent, distMatTopo } = distances;
+        const { display } = distances;
         const { nodePairFilter } = param;
         const { useLinearScale } = nodePairFilter;
-        let highlightDistVals;
-        if (!isComputing) {
-            if (!!hoveredNodes && hoveredNodes.length === 2) {
-                highlightDistVals = [
-                    distMatLatent[hoveredNodes[0]][hoveredNodes[1]],
-                    distMatTopo[hoveredNodes[0]][hoveredNodes[1]],
-                ];
-            } else if (
-                selectedNodes.length === 2 &&
-                selectedNodes[0].length === 1 &&
-                selectedNodes[1].length === 1
-            ) {
-                highlightDistVals = [
-                    distMatLatent[selectedNodes[0][0]][selectedNodes[1][0]],
-                    distMatTopo[selectedNodes[0][0]][selectedNodes[1][0]],
-                ];
-            }
-        }
 
         return (
             <div id="embeddings-view" className="view">
@@ -78,48 +60,46 @@ class EmbeddingsView extends Component {
                 )}
                 <div className="section-divider"></div>
 
-                {isComputing ? (
-                    <div>
-                        <Spinner animation="border" role="status" />
-                        <span style={{ marginLeft: "10px" }}>Computing distances...</span>
+                <div>
+                    <h6 style={{ marginTop: "10px" }}>Compare distances of node pairs in latent vs. topo</h6>
+                    <div style={{ fontSize: ".875rem" }}>
+                        <Form inline>
+                            <Form.Label style={{ marginRight: "5px" }}>
+                                Luminance ~ #node pairs with specific distance values.
+                            </Form.Label>
+                            <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
+                            <Form.Check
+                                inline
+                                label="linear"
+                                type="radio"
+                                id="scale-linear-ctrl"
+                                checked={useLinearScale}
+                                onChange={() => {
+                                    changeParam("nodePairFilter.useLinearScale", null, true);
+                                }}
+                            />
+                            <Form.Check
+                                inline
+                                label="log10"
+                                type="radio"
+                                id="scale-log-ctrl"
+                                checked={!useLinearScale}
+                                onChange={() => {
+                                    changeParam("nodePairFilter.useLinearScale", null, true);
+                                }}
+                            />
+                        </Form>
                     </div>
-                ) : (
-                    <div>
-                        <h6 style={{ marginTop: "10px" }}>
-                            Compare distances of node pairs in latent vs. topo
-                        </h6>
-                        <div style={{ fontSize: ".875rem" }}>
-                            <Form inline>
-                                <Form.Label style={{ marginRight: "5px" }}>
-                                    Luminance ~ #node pairs with specific distance values.
-                                </Form.Label>
-                                <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
-                                <Form.Check
-                                    inline
-                                    label="linear"
-                                    type="radio"
-                                    id="scale-linear-ctrl"
-                                    checked={useLinearScale}
-                                    onChange={() => {
-                                        changeParam("nodePairFilter.useLinearScale", null, true);
-                                    }}
-                                />
-                                <Form.Check
-                                    inline
-                                    label="log10"
-                                    type="radio"
-                                    id="scale-log-ctrl"
-                                    checked={!useLinearScale}
-                                    onChange={() => {
-                                        changeParam("nodePairFilter.useLinearScale", null, true);
-                                    }}
-                                />
-                            </Form>
-                        </div>
-                        <div className="scatter-hist-container">
-                            {display.map((d, i) => (
-                                <div key={i}>
-                                    <div className="text-center title">{d.title}</div>
+                    <div className="scatter-hist-container">
+                        {display.map((d, i) => (
+                            <div key={i}>
+                                <div className="text-center title">{d.title}</div>
+                                {d.isComputing ? (
+                                    <div>
+                                        <Spinner animation="border" role="status" size="sm" />
+                                        <span style={{ marginLeft: "10px" }}>Computing distances...</span>
+                                    </div>
+                                ) : (
                                     <ScatterHistogram
                                         data={d}
                                         hasHist={true}
@@ -133,25 +113,55 @@ class EmbeddingsView extends Component {
                                             nodePairFilter.which === i ? nodePairFilter.brushedArea : null
                                         }
                                     />
-                                </div>
-                            ))}
-                        </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
-                )}
+                </div>
             </div>
         );
     }
 }
 
-const mapStateToProps = (state) => ({
-    numDim: state.latent.emb ? state.latent.emb[0].length : null,
-    nodeTypes: state.graph.nodeTypes,
-    distances: state.distances,
-    spec: state.spec.scatterHist,
-    param: state.param,
-    hoveredNodes: state.hoveredNodes,
-    selectedNodes: state.selectedNodes,
-});
+const mapStateToProps = (state) => {
+    const emb = state.latent.emb;
+    const { neighborMasks } = state.graph;
+    const { hoveredNodes, selectedNodes } = state;
+
+    let highlightDistVals = null,
+        hx = null,
+        hy;
+    if (!state.distances.display[0].isComputing) {
+        if (!!hoveredNodes && hoveredNodes.length === 2) {
+            hx = hoveredNodes[0];
+            hy = hoveredNodes[1];
+        } else if (
+            selectedNodes.length === 2 &&
+            selectedNodes[0].length === 1 &&
+            selectedNodes[1].length === 1
+        ) {
+            hx = selectedNodes[0][0];
+            hy = selectedNodes[1][0];
+        }
+        if (hx !== null) {
+            highlightDistVals = [
+                getCosineDistance(emb[hx], emb[hy]),
+                getNeighborDistance(neighborMasks[hx], neighborMasks[hy], state.param.neighborDistanceMetric),
+            ];
+        }
+    }
+
+    return {
+        numDim: emb ? emb[0].length : null,
+        nodeTypes: state.graph.nodeTypes,
+        distances: state.distances,
+        spec: state.spec.scatterHist,
+        param: state.param,
+        hoveredNodes: state.hoveredNodes,
+        selectedNodes: state.selectedNodes,
+        highlightDistVals,
+    };
+};
 
 const mapDispatchToProps = (dispatch) =>
     bindActionCreators(

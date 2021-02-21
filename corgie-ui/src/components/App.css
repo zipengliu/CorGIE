@@ -279,8 +279,11 @@ rect.highlight-strip {
     stroke-width: 1px;
     stroke-dasharray: 5;
 }
-.histogram .value-marker text {
+.histogram .value-marker rect {
     fill: black;
+}
+.histogram .value-marker text {
+    fill: white;
 }
 
 .scatterplot {
@@ -325,6 +328,7 @@ rect.highlight-strip {
 }
 .histogram-block .title {
     height: 20px;
+    text-align: center;
 }
 
 .bounding-box text {
@@ -378,6 +382,7 @@ rect.highlight-strip {
 .scatter-hist-container>div {
     margin: 5px 5px 0 0;
     border: 1px dotted grey;
+    padding: 0 5px 5px 5px;
 }
 .scatter-hist-container .title {
     font-size: 14px;;

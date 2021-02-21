@@ -11,7 +11,6 @@ import {
     highlightNodePairs,
     hoverNode,
     selectNodePair,
-    changeParam,
 } from "../actions";
 
 export class HighlightControl extends Component {
@@ -29,7 +28,7 @@ export class HighlightControl extends Component {
         }
     }
     render() {
-        const { nodes, selectedNodes, highlightedNodes, highlightedNodePairs, nodePairFilter, changeParam } = this.props;
+        const { nodes, selectedNodes, highlightedNodes, highlightedNodePairs } = this.props;
         const labelOrId = nodes && nodes[0].label ? "label" : "id";
 
         const NodePairItem = memo(({ index, style }) => {
@@ -38,12 +37,12 @@ export class HighlightControl extends Component {
             return (
                 <div
                     className="list-group-item"
-                    onMouseEnter={debouncedHover.bind(this, [p[1], p[2]])}
+                    onMouseEnter={debouncedHover.bind(this, [p[0], p[1]])}
                     onMouseLeave={debouncedHover.bind(this, null)}
-                    onClick={this.props.selectNodePair.bind(null, p[1], p[2])}
+                    onClick={this.props.selectNodePair.bind(null, p[0], p[1])}
                     style={style}
                 >
-                    {nodes[p[1]][labelOrId]} - {nodes[p[2]][labelOrId]}
+                    {nodes[p[0]][labelOrId]} - {nodes[p[1]][labelOrId]}
                 </div>
             );
         });
@@ -143,7 +142,7 @@ export class HighlightControl extends Component {
                                 {NodePairItem}
                             </FixedSizeList>
                         </div>
-                        <div>
+                        {/* <div>
                             <span style={{ marginRight: "5px" }}>Order by latent distance:</span>
                             <ButtonGroup size="xs">
                                 <Button
@@ -173,7 +172,7 @@ export class HighlightControl extends Component {
                                     desc.
                                 </Button>
                             </ButtonGroup>
-                        </div>
+                        </div> */}
                         <div>
                             <Button
                                 variant="outline-secondary"
@@ -198,7 +197,7 @@ const mapStateToProps = (state) => ({
     selectedNodes: state.selectedNodes,
     highlightedNodes: state.highlightedNodes,
     highlightedNodePairs: state.highlightedNodePairs,
-    nodePairFilter: state.param.nodePairFilter,
+    // nodePairFilter: state.param.nodePairFilter,
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -210,7 +209,6 @@ const mapDispatchToProps = (dispatch) =>
             searchNodes,
             hoverNode,
             selectNodePair,
-            changeParam,
         },
         dispatch
     );

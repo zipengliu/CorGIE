@@ -72,18 +72,33 @@ export function fetchGraphData(homePath, datasetId) {
             const state = getState();
             const { hops, neighborDistanceMetric } = state.param;
             const { numBins } = state.spec.scatterHist;
+            // Filter the self-loops
+            graph.links = graph.links.filter((e) => e.source !== e.target);
             graph.edgeDict = computeEdgeDict(graph.nodes.length, graph.links);
             Object.assign(graph, computeNeighborMasks(graph.nodes.length, graph.edgeDict, hops));
             dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features }));
 
-            const distData = await workerInstance.computeAllDistances(
+            const srcBuf = new ArrayBuffer(graph.links.length * 2),
+                tgtBuf = new ArrayBuffer(graph.links.length * 2);
+            const edgeSrc = new Uint16Array(srcBuf),
+                edgeTgt = new Uint16Array(tgtBuf);
+            for (let i = 0; i < graph.links.length; i++) {
+                edgeSrc[i] = graph.links[i].source;
+                edgeTgt[i] = graph.links[i].traget;
+            }
+            await workerInstance.initializeState(
                 emb,
                 graph.nodes.length,
-                graph.neighborMasks.map((x) => x.toString()), // serialize the bitsets
+                edgeSrc,
+                edgeTgt,
+                graph.neighborMasks.map((x) => x.toString()),
                 neighborDistanceMetric,
                 numBins
             );
-            dispatch(computeDistancesDone(distData));
+            const sampleDistData = await workerInstance.computeDistances("sample", null, state.distances.maxSample);
+            dispatch(computeDistancesDone(sampleDistData, 0));
+            const edgeDistData = await workerInstance.computeDistances("edge");
+            dispatch(computeDistancesDone(edgeDistData, 1));
         } catch (e) {
             dispatch(fetchDataError(e));
         }
@@ -102,8 +117,8 @@ function fetchDataError(error) {
     return { type: ACTION_TYPES.FETCH_DATA_ERROR, error: error.toString() };
 }
 
-function computeDistancesDone(distData) {
-    return { type: ACTION_TYPES.COMPUTE_DISTANCES_DONE, distData };
+function computeDistancesDone(distData, idx) {
+    return { type: ACTION_TYPES.COMPUTE_DISTANCES_DONE, distData, idx };
 }
 
 export function highlightNodes(nodeIndices, brushedArea = null, fromView = null, which = null) {
@@ -157,6 +172,19 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
         dispatch(selectNodesPending(newSel, neighRes));
 
         if (newSel.length) {
+            let distGrpIdx = 2;
+            if (newSel[0].length > 1) {
+                dispatch(computeDistancesDone(await workerInstance.computeDistances("within", newSel[0]), distGrpIdx));
+                distGrpIdx++;
+            }
+            if (newSel.length > 1 && newSel[1].length > 1) {
+                dispatch(computeDistancesDone(await workerInstance.computeDistances("within", newSel[1]), distGrpIdx));
+                distGrpIdx++;
+            }
+            if (newSel.length > 1 && (newSel[0].length > 1 || newSel[1].length > 1)) {
+                dispatch(computeDistancesDone(await workerInstance.computeDistances("between", newSel), distGrpIdx));
+            }
+
             const layoutRes = await callLocalLayoutFunc(
                 state.graph,
                 newSel,

@@ -25,7 +25,7 @@ function ScatterHistogram({
     const { margins, histWidth, scatterWidth, legendWidth, histHeight, scatterHeight, tickLabelGap } = spec;
     const u = spec.gridBinSize,
         numBins = spec.numBins;
-    const { binsLatent, binsTopo, gridBins, dist, src, tgt } = data;
+    const { binsLatent, binsTopo, gridBins, src, tgt } = data;
 
     const svgWidth =
             margins.left +
@@ -90,7 +90,7 @@ function ScatterHistogram({
                 brushedPairIdx = brushedPairIdx.concat(gridBins[i][j]);
             }
         }
-        const brushedPairs = brushedPairIdx.map((p) => [dist[p], src[p], tgt[p]]);
+        const brushedPairs = brushedPairIdx.map((p) => [src[p], tgt[p]]);
         brushedFunc(
             {
                 x: x1 * uLat,
@@ -108,6 +108,47 @@ function ScatterHistogram({
     return (
         <svg width={svgWidth} height={svgHeight} className="histogram scatterplot">
             <g transform={`translate(${margins.left},${margins.top})`}>
+                {/* legends */}
+                <g
+                    className="legend"
+                    transform={`translate(${
+                        (hasHist ? histWidth : 0) + tickLabelGap + scatterWidth + 10
+                    }, 0)`}
+                >
+                    <text x={uLat / 2} y={10} textAnchor="middle">
+                        0
+                    </text>
+                    <g transform="translate(0, 12)">
+                        <rect
+                            x={0}
+                            y={0}
+                            width={uTopo}
+                            height={uLat * colorTickNum}
+                            style={{ stroke: "black", fill: "none" }}
+                        />
+                        {new Array(colorTickNum).fill(0).map((_, i) => (
+                            <rect
+                                key={i}
+                                x={0}
+                                y={uTopo * i}
+                                height={uLat}
+                                width={uTopo}
+                                fill={linearColorScale((i * data.gridBinsMaxCnt) / 5)}
+                            />
+                        ))}
+                    </g>
+                    <text x={9} y={12 + 3 * uTopo} textAnchor="start">
+                        {cntFormat(
+                            useLinearScale
+                                ? data.gridBinsMaxCnt / 2
+                                : Math.pow(10, Math.log10(data.gridBinsMaxCnt + 1) / 2)
+                        )}
+                    </text>
+                    <text x={uLat / 2} y={24 + 5 * uTopo} textAnchor="middle">
+                        {cntFormat(data.gridBinsMaxCnt)}
+                    </text>
+                </g>
+
                 <g transform={`translate(${hasHist ? histWidth + tickLabelGap : tickLabelGap},0)`}>
                     {/* scatterplot points */}
                     <g>
@@ -195,67 +236,22 @@ function ScatterHistogram({
                     )}
                     {hVals && (
                         <g className="value-marker">
-                            <line
-                                x1={0}
-                                y1={(1 - hVals[1]) * scatterHeight}
-                                x2={scatterWidth + arrowLen}
-                                y2={(1 - hVals[1]) * scatterHeight}
-                            />
-                            <text x={2} y={(1 - hVals[1]) * scatterHeight - 2}>
-                                {valFormat(hVals[1])}
-                            </text>
-                            <line
-                                x1={hVals[0] * scatterWidth}
-                                y1={0}
-                                x2={hVals[0] * scatterWidth}
-                                y2={scatterHeight}
-                            />
-                            <text x={hVals[0] * scatterWidth} y={-2} textAnchor="middle">
-                                {valFormat(hVals[0])}
-                            </text>
+                            <g transform={`translate(0,${(1 - hVals[1]) * scatterHeight})`}>
+                                <line x1={0} y1={0} x2={scatterWidth} y2={0} />
+                                <rect x={scatterWidth} y={-6} width={30} height={12} />
+                                <text x={scatterHeight + 2} y={4}>
+                                    {valFormat(hVals[1])}
+                                </text>
+                            </g>
+                            <g transform={`translate(${hVals[0] * scatterWidth},0)`}>
+                                <line x1={0} y1={0} x2={0} y2={scatterHeight} />
+                                <rect x={-15} y={-12} width={30} height={12} />
+                                <text x={0} y={-2} textAnchor="middle">
+                                    {valFormat(hVals[0])}
+                                </text>
+                            </g>
                         </g>
                     )}
-                </g>
-
-                {/* legends */}
-                <g
-                    className="legend"
-                    transform={`translate(${
-                        (hasHist ? histWidth : 0) + tickLabelGap + scatterWidth + 10
-                    }, 0)`}
-                >
-                    <text x={uLat / 2} y={10} textAnchor="middle">
-                        0
-                    </text>
-                    <g transform="translate(0, 12)">
-                        <rect
-                            x={0}
-                            y={0}
-                            width={uTopo}
-                            height={uLat * colorTickNum}
-                            style={{ stroke: "black", fill: "none" }}
-                        />
-                        {new Array(colorTickNum).fill(0).map((_, i) => (
-                            <rect
-                                key={i}
-                                x={0}
-                                y={uTopo * i}
-                                height={uLat}
-                                width={uTopo}
-                                fill={linearColorScale((i * data.gridBinsMaxCnt) / 5)}
-                            />
-                        ))}
-                    </g>
-                    <text x={9} y={12 + 3 * uTopo} textAnchor="start">
-                        {cntFormat(
-                            useLinearScale
-                                ? data.gridBinsMaxCnt / 2
-                                : Math.pow(10, Math.log10(data.gridBinsMaxCnt + 1) / 2)
-                        )}
-                    </text>
-                    <text x={uLat / 2} y={24 + 5 * uTopo} textAnchor="middle">
-                        {cntFormat(data.gridBinsMaxCnt)}
-                    </text>
                 </g>
 
                 {hasHist && (
@@ -333,9 +329,9 @@ function ScatterHistogram({
                                     <line
                                         key={i}
                                         x1={-histScales.topo((maxCntTopo / histTickNum) * (i + 1))}
-                                        y1={0}
+                                        y1={2}
                                         x2={-histScales.topo((maxCntTopo / histTickNum) * (i + 1))}
-                                        y2={5}
+                                        y2={6}
                                     />
                                 ))}
                                 <text x={-histWidth} y={17} textAnchor="middle">

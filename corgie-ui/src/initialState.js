@@ -31,9 +31,8 @@ export default {
     neighborIntersections: null,
 
     distances: {
-        binGen: d3bin().domain([0, 1]).thresholds(20),
-        isComputing: true,
-        display: [],
+        maxSample: 1000000,
+        display: [{isComputing: true, title: 'all (down-sampled)'}, {isComputing: true, title: 'those connected by edges'}],
     },
 
     initialLayout: {
@@ -99,7 +98,7 @@ export default {
         },
 
         nodePairFilter: {
-            ascending: true, // sort the node pairs by latent distance in ascending order
+            // ascending: true, // sort the node pairs by latent distance in ascending order
             which: null, 
             brushedArea: null,
             useLinearScale: true,
