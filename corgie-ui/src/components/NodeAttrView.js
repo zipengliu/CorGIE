@@ -144,8 +144,8 @@ class NodeAttrView extends Component {
 
         return (
             <div id="node-attr-view" className="view">
-                <h5 className="text-center">Node features</h5>
-                <div>
+                <h5 className="view-title text-center">Node features</h5>
+                <div className="view-body">
                     <div className="attribute-row">
                         <div className="attribute-row-title">All</div>
                         {nodeAttrs.map((a, i) => (

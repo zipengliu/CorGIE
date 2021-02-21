@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Spinner } from "react-bootstrap";
 import { changeParam, highlightNodePairs } from "../actions";
+import { ComputingSpinner } from "./GraphView";
 import Embeddings2D from "./Embeddings2D";
 import ScatterHistogram from "./ScatterHistogram";
 import { getNeighborDistance, getCosineDistance } from "../utils";
@@ -25,97 +26,102 @@ class EmbeddingsView extends Component {
 
         return (
             <div id="embeddings-view" className="view">
-                <h5 className="text-center">
+                <h5 className="view-title text-center">
                     Latent space <small>(#dim={numDim})</small>
                 </h5>
 
-                <h6>UMAP 2D node embeddings</h6>
-                <Embeddings2D />
+                <div className="view-body">
+                    <h6>UMAP 2D node embeddings</h6>
+                    <Embeddings2D />
 
-                {nodeTypes.length > 1 && (
-                    <div style={{ marginTop: "5px" }}>
-                        <Form inline>
-                            <Form.Group controlId="select-node-type">
-                                <Form.Label column="sm">Only brush nodes of type</Form.Label>
-                                <Form.Control
-                                    as="select"
-                                    size="xs"
-                                    value={param.latent.selectedNodeType}
-                                    onChange={(e) => {
-                                        this.props.changeParam(
-                                            "latent.selectedNodeType",
-                                            parseInt(e.target.value)
-                                        );
+                    {nodeTypes.length > 1 && (
+                        <div style={{ marginTop: "5px" }}>
+                            <Form inline>
+                                <Form.Group controlId="select-node-type">
+                                    <Form.Label column="sm">Only brush nodes of type</Form.Label>
+                                    <Form.Control
+                                        as="select"
+                                        size="xs"
+                                        value={param.latent.selectedNodeType}
+                                        onChange={(e) => {
+                                            this.props.changeParam(
+                                                "latent.selectedNodeType",
+                                                parseInt(e.target.value)
+                                            );
+                                        }}
+                                    >
+                                        {nodeTypes.map((nt, i) => (
+                                            <option key={i} value={i}>
+                                                {nt.name}
+                                            </option>
+                                        ))}
+                                    </Form.Control>
+                                </Form.Group>
+                            </Form>
+                        </div>
+                    )}
+                    <div className="section-divider"></div>
+
+                    <div>
+                        <h6 style={{ marginTop: "10px" }}>
+                            Compare distances of node pairs in latent vs. topo
+                        </h6>
+                        <div style={{ fontSize: ".875rem" }}>
+                            <Form inline>
+                                <Form.Label style={{ marginRight: "5px" }}>
+                                    Luminance ~ #node pairs with specific distance values.
+                                </Form.Label>
+                                <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
+                                <Form.Check
+                                    inline
+                                    label="linear"
+                                    type="radio"
+                                    id="scale-linear-ctrl"
+                                    checked={useLinearScale}
+                                    onChange={() => {
+                                        changeParam("nodePairFilter.useLinearScale", null, true);
                                     }}
-                                >
-                                    {nodeTypes.map((nt, i) => (
-                                        <option key={i} value={i}>
-                                            {nt.name}
-                                        </option>
-                                    ))}
-                                </Form.Control>
-                            </Form.Group>
-                        </Form>
-                    </div>
-                )}
-                <div className="section-divider"></div>
-
-                <div>
-                    <h6 style={{ marginTop: "10px" }}>Compare distances of node pairs in latent vs. topo</h6>
-                    <div style={{ fontSize: ".875rem" }}>
-                        <Form inline>
-                            <Form.Label style={{ marginRight: "5px" }}>
-                                Luminance ~ #node pairs with specific distance values.
-                            </Form.Label>
-                            <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
-                            <Form.Check
-                                inline
-                                label="linear"
-                                type="radio"
-                                id="scale-linear-ctrl"
-                                checked={useLinearScale}
-                                onChange={() => {
-                                    changeParam("nodePairFilter.useLinearScale", null, true);
-                                }}
-                            />
-                            <Form.Check
-                                inline
-                                label="log10"
-                                type="radio"
-                                id="scale-log-ctrl"
-                                checked={!useLinearScale}
-                                onChange={() => {
-                                    changeParam("nodePairFilter.useLinearScale", null, true);
-                                }}
-                            />
-                        </Form>
-                    </div>
-                    <div className="scatter-hist-container">
-                        {display.map((d, i) => (
-                            <div key={i}>
-                                <div className="text-center title">{d.title}</div>
-                                {d.isComputing ? (
-                                    <div>
-                                        <Spinner animation="border" role="status" size="sm" />
-                                        <span style={{ marginLeft: "10px" }}>Computing distances...</span>
+                                />
+                                <Form.Check
+                                    inline
+                                    label="log10"
+                                    type="radio"
+                                    id="scale-log-ctrl"
+                                    checked={!useLinearScale}
+                                    onChange={() => {
+                                        changeParam("nodePairFilter.useLinearScale", null, true);
+                                    }}
+                                />
+                            </Form>
+                        </div>
+                        <div className="scatter-hist-list">
+                            {display.map((d, i) => (
+                                <div className="stuff-container" key={i}>
+                                    <div className="container-title">{d.title}</div>
+                                    <div className="container-body">
+                                        {d.isComputing ? (
+                                            <ComputingSpinner />
+                                        ) : (
+                                            <ScatterHistogram
+                                                data={d}
+                                                hasHist={true}
+                                                useLinearScale={useLinearScale}
+                                                spec={spec}
+                                                xLabel="latent"
+                                                yLabel="topo"
+                                                hVals={highlightDistVals}
+                                                brushedFunc={highlightNodePairs.bind(null, i)}
+                                                brushedArea={
+                                                    nodePairFilter.which === i
+                                                        ? nodePairFilter.brushedArea
+                                                        : null
+                                                }
+                                            />
+                                        )}
                                     </div>
-                                ) : (
-                                    <ScatterHistogram
-                                        data={d}
-                                        hasHist={true}
-                                        useLinearScale={useLinearScale}
-                                        spec={spec}
-                                        xLabel="latent"
-                                        yLabel="topo"
-                                        hVals={highlightDistVals}
-                                        brushedFunc={highlightNodePairs.bind(null, i)}
-                                        brushedArea={
-                                            nodePairFilter.which === i ? nodePairFilter.brushedArea : null
-                                        }
-                                    />
-                                )}
-                            </div>
-                        ))}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

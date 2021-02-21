@@ -1,7 +1,7 @@
 import produce, { freeze } from "immer";
 import initialState from "./initialState";
 import ACTION_TYPES from "./actions";
-import { computeForceLayoutWithD3, computeDummyLayout, computeForceLayoutWithCola } from "./layouts";
+// import { computeForceLayoutWithD3, computeDummyLayout, computeForceLayoutWithCola } from "./layouts";
 import { schemeCategory10 } from "d3";
 import bs from "bitset";
 import {
@@ -19,8 +19,6 @@ import {
     aggregateBinaryFeatures,
     compressFeatureValues,
     coordsRescale,
-    getNeighborDistance,
-    binarySearch,
     getNodeEmbeddingColor,
     rectBinning,
 } from "./utils";
@@ -660,7 +658,7 @@ const reducers = produce((draft, action) => {
             return;
 
         case ACTION_TYPES.COMPUTE_INIT_LAYOUT_DONE:
-            draft.initialLayout = {...action.layoutRes, running: false};
+            draft.initialLayout = { ...action.layoutRes, running: false };
             return;
 
         case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
@@ -869,13 +867,15 @@ const reducers = produce((draft, action) => {
                 });
                 for (let i = 0; i < action.layoutRes.coords.length; i++) {
                     const c = action.layoutRes.coords[i];
-                    draft.focalLayout.qt.insert({
-                        id: i,
-                        x: c.x - 0.5,
-                        y: c.y - 0.5,
-                        width: 1,
-                        height: 1,
-                    });
+                    if (c) {
+                        draft.focalLayout.qt.insert({
+                            id: i,
+                            x: c.x - 0.5,
+                            y: c.y - 0.5,
+                            width: 1,
+                            height: 1,
+                        });
+                    }
                 }
             }
             return;

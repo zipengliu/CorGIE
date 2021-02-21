@@ -190,24 +190,34 @@ function BaseLayerUnconnected({
     return (
         <Layer>
             <Group>
-                {edges.map((e, i) => (
-                    <Line
-                        key={i}
-                        points={[
-                            coords[e.source].x,
-                            coords[e.source].y,
-                            coords[e.target].x,
-                            coords[e.target].y,
-                        ]}
-                        stroke="#aaa"
-                        strokeWidth={1}
-                        hitStrokeWidth={2}
-                        opacity={0.5}
-                        onMouseOver={debouncedHover.bind(null, [e.source, e.target])}
-                        onMouseOut={debouncedHover.bind(null, null)}
-                        onClick={highlightNodes.bind(null, [e.source, e.target], null, "graph-edge", null)}
-                    />
-                ))}
+                {edges.map(
+                    (e, i) =>
+                        coords[e.source] &&
+                        coords[e.target] && (
+                            <Line
+                                key={i}
+                                points={[
+                                    coords[e.source].x,
+                                    coords[e.source].y,
+                                    coords[e.target].x,
+                                    coords[e.target].y,
+                                ]}
+                                stroke="#aaa"
+                                strokeWidth={1}
+                                hitStrokeWidth={2}
+                                opacity={0.5}
+                                onMouseOver={debouncedHover.bind(null, [e.source, e.target])}
+                                onMouseOut={debouncedHover.bind(null, null)}
+                                onClick={highlightNodes.bind(
+                                    null,
+                                    [e.source, e.target],
+                                    null,
+                                    "graph-edge",
+                                    null
+                                )}
+                            />
+                        )
+                )}
             </Group>
             {groups && (
                 <Group>
@@ -218,8 +228,8 @@ function BaseLayerUnconnected({
                             ry={5}
                             x={g.bounds.x}
                             y={g.bounds.y}
-                            width={g.bounds.width || g.bounds.width()}
-                            height={g.bounds.height || g.bounds.height()}
+                            width={g.bounds.width}
+                            height={g.bounds.height}
                             stroke="grey"
                             strokeWidth={1}
                             dash={[5, 5]}
@@ -229,21 +239,24 @@ function BaseLayerUnconnected({
                 </Group>
             )}
             <Group>
-                {coords.map((c, i) => (
-                    <NodeRep
-                        key={i}
-                        x={c.x}
-                        y={c.y}
-                        radius={nodeSize}
-                        typeId={nodes[i].typeId}
-                        style={{ fill: nodeColors[i], opacity: 1, strokeEnabled: false }}
-                        events={{
-                            onMouseOver: debouncedHover.bind(null, i),
-                            onMouseOut: debouncedHover.bind(null, null),
-                            onClick: highlightNodes.bind(null, [i], null, "graph-node", null),
-                        }}
-                    />
-                ))}
+                {coords.map(
+                    (c, i) =>
+                        c && (
+                            <NodeRep
+                                key={i}
+                                x={c.x}
+                                y={c.y}
+                                radius={nodeSize}
+                                typeId={nodes[i].typeId}
+                                style={{ fill: nodeColors[i], opacity: 1, strokeEnabled: false }}
+                                events={{
+                                    onMouseOver: debouncedHover.bind(null, i),
+                                    onMouseOut: debouncedHover.bind(null, null),
+                                    onClick: highlightNodes.bind(null, [i], null, "graph-node", null),
+                                }}
+                            />
+                        )
+                )}
             </Group>
         </Layer>
     );

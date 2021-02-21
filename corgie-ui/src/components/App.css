@@ -7,10 +7,42 @@
 }
 
 .App .view {
-    border: 1px dotted grey;
-    border-radius: 10px;
-    margin: 5px;
-    padding: 10px;
+    border: 1px solid grey;
+    border-radius: 5px;
+    margin: 10px 5px;
+    -webkit-box-shadow: 3px 3px 5px 0px grey;
+    -moz-box-shadow: 3px 3px 5px 0px grey;
+    box-shadow: 3px 3px 5px 0px grey;
+}
+.view .view-title {
+    text-align: center;
+    margin-bottom: 0;
+    background-color: #343a40;
+    color: white;
+    padding: 3px;
+}
+.view .view-body {
+    padding: 5px;
+}
+
+.stuff-container {
+    border: 1px solid grey;
+    border-radius: 3px;
+    margin: 10px;
+}
+.stuff-container .container-title {
+    background-color: grey;
+    color: white;
+    padding: 2px 5px;
+    font-size: 0.875rem;
+}
+.stuff-container .container-body {
+    padding: 3px;
+}
+.stuff-container .container-footer {
+    border-top: 1px solid grey;
+    padding: 5px;
+    font-size: .875rem;
 }
 
 .table td.cell-num {
@@ -76,7 +108,7 @@
 .point,
 .node {
     stroke: none;
-    fill: grey;
+    fill: black;
     /* fill-opacity: 0.6; */
 }
 
@@ -313,8 +345,7 @@ rect.highlight-strip {
     flex-direction: row;
     font-size: 0.9rem;
     border-top: 1px dotted grey;
-    margin: 5px 0;
-    padding: 3px;
+    padding: 5px 3px;
 }
 .attribute-row:first-child {
     border: none;
@@ -369,21 +400,23 @@ rect.highlight-strip {
     fill-opacity: 0.3;
 }
 
-#embeddings-view canvas:nth-child(n+3),
+#embeddings-view canvas:nth-child(n + 3),
 #graph-view canvas:not(:first-child) {
     pointer-events: none;
 }
 
-.scatter-hist-container {
+#graph-view .view-body {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.scatter-hist-list {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
+    justify-content: space-around;
 }
-.scatter-hist-container>div {
+.scatter-hist-list .stuff-container {
     margin: 5px 5px 0 0;
-    border: 1px dotted grey;
-    padding: 0 5px 5px 5px;
-}
-.scatter-hist-container .title {
-    font-size: 14px;;
 }

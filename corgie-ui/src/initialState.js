@@ -113,10 +113,10 @@ export default {
     spec: {
         coordRescaleMargin: 6, // must be smaller than node radius
         graph: {
-            edgeType: "line",
-            margin: 15,
-            margins: { top: 10, bottom: 10, left: 10, right: 10 },
+            margin: 5,
+            gapBetweenHop: 30,
 
+            edgeType: "line",
             neighborMarkerMaxHeight: 30,
             innerRingNodeGap: 10,
             outerRingNodeGap: 2,

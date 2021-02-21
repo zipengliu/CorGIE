@@ -81,6 +81,15 @@ export function fetchGraphData(homePath, datasetId) {
             graph.links = graph.links.filter((e) => e.source !== e.target);
             graph.edgeDict = computeEdgeDict(graph.nodes.length, graph.links);
             Object.assign(graph, computeNeighborMasks(graph.nodes.length, graph.edgeDict, hops));
+
+            focalLayoutWorker.initializeState(
+                graph.nodes.length,
+                graph.neighborMasks.map((x) => x.toString()),
+                state.param.hops,
+                neighborDistanceMetric,
+                state.spec.graph,
+            );
+
             dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features }));
 
             initalLayoutWorker
@@ -89,6 +98,7 @@ export function fetchGraphData(homePath, datasetId) {
                     dispatch(computeInitLayoutDone(layoutRes));
                 });
 
+            // Use arraybuffer to avoid copy.  Is this necessary?
             const srcBuf = new ArrayBuffer(graph.links.length * 2),
                 tgtBuf = new ArrayBuffer(graph.links.length * 2);
             const edgeSrc = new Uint16Array(srcBuf),
@@ -216,7 +226,7 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
                 );
             }
 
-            const layoutRes = await callLocalLayoutFunc(
+            const layoutRes = await callFocalLayoutFunc(
                 state.graph,
                 newSel,
                 neighRes,
@@ -238,7 +248,7 @@ export function selectNodePair(node1, node2) {
         const neighRes = getSelectedNeighbors(newSel, state.graph.neighborMasksByHop, state.param.hops);
         dispatch(selectNodesPending(newSel, neighRes));
 
-        const layoutRes = await callLocalLayoutFunc(
+        const layoutRes = await callFocalLayoutFunc(
             state.graph,
             newSel,
             neighRes,
@@ -249,8 +259,7 @@ export function selectNodePair(node1, node2) {
     };
 }
 
-async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) {
-    console.log("Calling local layout function...");
+async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) {
     // Compute the force layout for focal nodes (selected + k-hop neighbors)
     if (selectedNodes.length === 0) {
         return {};
@@ -260,13 +269,22 @@ async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
         let serializedNeighMap = {};
         for (let id in neighMap)
             if (neighMap.hasOwnProperty(id)) {
-                // TODO can use Unit8Array to compress it
                 serializedNeighMap[id] = neighMap[id].mask.toArray();
             }
 
         switch (param.focalGraph.layout) {
+            case "umap":
+                return await focalLayoutWorker.computeFocalLayoutWithUMAP(
+                    selectedNodes,
+                    neighRes.isNodeSelected,
+                    neighRes.isNodeSelectedNeighbor,
+                    neighRes.neighArr,
+                    // serializedNeighMap,   // Use local signature
+                    // graph.neighborMasksByHop[0].map((x) => x.toArray()), // Use global signature
+                    null
+                );
             case "group-constraint-cola":
-                return await distanceWorker.computeLocalLayoutWithCola(
+                return await focalLayoutWorker.computeFocalLayoutWithCola(
                     graph.nodes,
                     graph.edges,
                     param.hops,
@@ -277,22 +295,8 @@ async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     param.neighborDistanceMetric,
                     spec.graph
                 );
-            case "umap":
-                return await distanceWorker.computeLocalLayoutWithUMAP(
-                    graph.nodes,
-                    // graph.edges,
-                    param.hops,
-                    selectedNodes,
-                    neighRes.isNodeSelected,
-                    neighRes.isNodeSelectedNeighbor,
-                    neighRes.neighArr,
-                    // serializedNeighMap,   // Use local signature
-                    graph.neighborMasksByHop[0].map((x) => x.toArray()), // Use global signature
-                    param.neighborDistanceMetric,
-                    spec.graph
-                );
             case "spiral":
-                return await distanceWorker.computeSpaceFillingCurveLayout(
+                return await focalLayoutWorker.computeSpaceFillingCurveLayout(
                     graph.nodes,
                     param.hops,
                     neighRes.isNodeSelected,
@@ -302,7 +306,7 @@ async function callLocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     param.neighborDistanceMetric
                 );
             default:
-                return await distanceWorker.computeLocalLayoutWithD3(
+                return await focalLayoutWorker.computeFocalLayoutWithD3(
                     graph.nodes,
                     graph.edges,
                     param.hops,

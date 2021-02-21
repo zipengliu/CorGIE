@@ -49,100 +49,108 @@ export class HighlightControl extends Component {
 
         return (
             <div className="view" id="highlight-control">
-                <h5 className="text-center">Highlight</h5>
-                <h6>Nodes</h6>
-                <div style={{ marginBottom: "10px" }}>
-                    <div>Search nodes by</div>
-                    <Form inline onSubmit={this.callSearch.bind(this)}>
-                        <Form.Control
-                            className="search-text-box"
-                            id="search-node-label"
-                            placeholder="label"
-                            name="searchLabel"
-                            size="sm"
-                        ></Form.Control>
-                        <span style={{ margin: "0 5px" }}>or</span>
-                        <Form.Control
-                            className="search-text-box"
-                            id="search-node-id"
-                            placeholder="id"
-                            name="searchId"
-                            size="sm"
-                        ></Form.Control>
-                        <Button
-                            variant="outline-secondary"
-                            size="xs"
-                            style={{ marginLeft: "5px" }}
-                            type="submit"
-                        >
-                            search
-                        </Button>
-                    </Form>
-                </div>
-
-                <div>{highlightedNodes.length} nodes are highlighted (blinking).</div>
-                {highlightedNodes.length > 0 && (
-                    <div>
-                        {/* <div>Actions:</div> */}
-                        <div>
-                            <Button
-                                variant="outline-primary"
-                                size="xs"
-                                onClick={this.props.selectNodes.bind(null, "CREATE", highlightedNodes, null)}
-                            >
-                                create focal group
-                            </Button>
-                        </div>
-                        {selectedNodes.length > 0 && (
-                            <div>
-                                add {highlightedNodes.length === 1 ? "it" : "them"} to
-                                {selectedNodes.map((_, i) => (
-                                    <Button
-                                        key={i}
-                                        variant="outline-secondary"
-                                        size="xs"
-                                        onClick={this.props.selectNodes.bind(
-                                            null,
-                                            "APPEND",
-                                            highlightedNodes,
-                                            i
-                                        )}
-                                    >
-                                        foc-{i}
-                                    </Button>
-                                ))}
-                            </div>
-                        )}
-                        <div>
+                <h5 className="view-title text-center">Highlight</h5>
+                <div className="view-body">
+                    <h6>Nodes</h6>
+                    <div style={{ marginBottom: "10px" }}>
+                        <div>Search nodes by</div>
+                        <Form inline onSubmit={this.callSearch.bind(this)}>
+                            <Form.Control
+                                className="search-text-box"
+                                id="search-node-label"
+                                placeholder="label"
+                                name="searchLabel"
+                                size="sm"
+                            ></Form.Control>
+                            <span style={{ margin: "0 5px" }}>or</span>
+                            <Form.Control
+                                className="search-text-box"
+                                id="search-node-id"
+                                placeholder="id"
+                                name="searchId"
+                                size="sm"
+                            ></Form.Control>
                             <Button
                                 variant="outline-secondary"
                                 size="xs"
-                                onClick={this.props.highlightNodes.bind(null, [], null, null, null)}
+                                style={{ marginLeft: "5px" }}
+                                type="submit"
                             >
-                                clear highlights
+                                search
                             </Button>
-                        </div>
+                        </Form>
                     </div>
-                )}
 
-                <div className="section-divider"></div>
-                <h6>Node pairs</h6>
-                <div>{highlightedNodePairs.length} node pairs are highlighted. Click to focus.</div>
-                {highlightedNodePairs.length > 0 && (
-                    <div>
-                        <div className="node-pair-list">
-                            <FixedSizeList
-                                height={
-                                    highlightedNodePairs.length > 16 ? 400 : 25 * highlightedNodePairs.length
-                                }
-                                width="100%"
-                                itemSize={25}
-                                itemCount={highlightedNodePairs.length}
-                            >
-                                {NodePairItem}
-                            </FixedSizeList>
+                    <div>{highlightedNodes.length} nodes are highlighted (blinking).</div>
+                    {highlightedNodes.length > 0 && (
+                        <div>
+                            {/* <div>Actions:</div> */}
+                            <div>
+                                <Button
+                                    variant="outline-primary"
+                                    size="xs"
+                                    onClick={this.props.selectNodes.bind(
+                                        null,
+                                        "CREATE",
+                                        highlightedNodes,
+                                        null
+                                    )}
+                                >
+                                    create focal group
+                                </Button>
+                            </div>
+                            {selectedNodes.length > 0 && (
+                                <div>
+                                    add {highlightedNodes.length === 1 ? "it" : "them"} to
+                                    {selectedNodes.map((_, i) => (
+                                        <Button
+                                            key={i}
+                                            variant="outline-secondary"
+                                            size="xs"
+                                            onClick={this.props.selectNodes.bind(
+                                                null,
+                                                "APPEND",
+                                                highlightedNodes,
+                                                i
+                                            )}
+                                        >
+                                            foc-{i}
+                                        </Button>
+                                    ))}
+                                </div>
+                            )}
+                            <div>
+                                <Button
+                                    variant="outline-secondary"
+                                    size="xs"
+                                    onClick={this.props.highlightNodes.bind(null, [], null, null, null)}
+                                >
+                                    clear highlights
+                                </Button>
+                            </div>
                         </div>
-                        {/* <div>
+                    )}
+
+                    <div className="section-divider"></div>
+                    <h6>Node pairs</h6>
+                    <div>{highlightedNodePairs.length} node pairs are highlighted. Click to focus.</div>
+                    {highlightedNodePairs.length > 0 && (
+                        <div>
+                            <div className="node-pair-list">
+                                <FixedSizeList
+                                    height={
+                                        highlightedNodePairs.length > 16
+                                            ? 400
+                                            : 25 * highlightedNodePairs.length
+                                    }
+                                    width="100%"
+                                    itemSize={25}
+                                    itemCount={highlightedNodePairs.length}
+                                >
+                                    {NodePairItem}
+                                </FixedSizeList>
+                            </div>
+                            {/* <div>
                             <span style={{ marginRight: "5px" }}>Order by latent distance:</span>
                             <ButtonGroup size="xs">
                                 <Button
@@ -173,26 +181,24 @@ export class HighlightControl extends Component {
                                 </Button>
                             </ButtonGroup>
                         </div> */}
-                        <div>
-                            <Button
-                                variant="outline-secondary"
-                                size="xs"
-                                onClick={this.props.highlightNodePairs.bind(null, null, null)}
-                            >
-                                clear highlights
-                            </Button>
+                            <div>
+                                <Button
+                                    variant="outline-secondary"
+                                    size="xs"
+                                    onClick={this.props.highlightNodePairs.bind(null, null, null)}
+                                >
+                                    clear highlights
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                )}
-
-                {/* <div className="section-divider"></div>
-                <h6>Hover</h6> */}
+                    )}
+                </div>
             </div>
         );
     }
 }
 
-const mapStateToProps = (state) => ({ 
+const mapStateToProps = (state) => ({
     nodes: state.graph.nodes,
     selectedNodes: state.selectedNodes,
     highlightedNodes: state.highlightedNodes,
