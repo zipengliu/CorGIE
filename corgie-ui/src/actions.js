@@ -84,6 +84,7 @@ export function fetchGraphData(homePath, datasetId) {
 
             focalLayoutWorker.initializeState(
                 graph.nodes.length,
+                graph.links,
                 graph.neighborMasks.map((x) => x.toString()),
                 state.param.hops,
                 neighborDistanceMetric,
@@ -276,8 +277,6 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
             case "umap":
                 return await focalLayoutWorker.computeFocalLayoutWithUMAP(
                     selectedNodes,
-                    neighRes.isNodeSelected,
-                    neighRes.isNodeSelectedNeighbor,
                     neighRes.neighArr,
                     // serializedNeighMap,   // Use local signature
                     // graph.neighborMasksByHop[0].map((x) => x.toArray()), // Use global signature
@@ -285,15 +284,11 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                 );
             case "group-constraint-cola":
                 return await focalLayoutWorker.computeFocalLayoutWithCola(
-                    graph.nodes,
-                    graph.edges,
-                    param.hops,
-                    neighRes.isNodeSelected,
-                    neighRes.isNodeSelectedNeighbor,
-                    neighRes.neighGrp,
-                    serializedNeighMap,
-                    param.neighborDistanceMetric,
-                    spec.graph
+                    selectedNodes,
+                    neighRes.neighArr,
+                    // serializedNeighMap,
+                    null,
+                    param.nodeSize,
                 );
             case "spiral":
                 return await focalLayoutWorker.computeSpaceFillingCurveLayout(

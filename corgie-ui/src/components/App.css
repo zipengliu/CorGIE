@@ -26,13 +26,13 @@
 }
 
 .stuff-container {
-    border: 1px solid grey;
+    border: 1px solid #aaa;
     border-radius: 3px;
     margin: 10px;
 }
 .stuff-container .container-title {
-    background-color: grey;
-    color: white;
+    background-color: #ddd;
+    color: black;
     padding: 2px 5px;
     font-size: 0.875rem;
 }
@@ -40,9 +40,10 @@
     padding: 3px;
 }
 .stuff-container .container-footer {
-    border-top: 1px solid grey;
+    background-color: #ddd;
+    border-top: 1px solid #aaa;
     padding: 5px;
-    font-size: .875rem;
+    font-size: .8rem;
 }
 
 .table td.cell-num {

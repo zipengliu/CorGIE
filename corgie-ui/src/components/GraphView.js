@@ -10,7 +10,7 @@ export const ComputingSpinner = () => (
     </div>
 );
 
-function GraphView({ initialLayout, focalLayout, hasFocalNodes }) {
+function GraphView({ initialLayout, focalLayout, hasFocalNodes, hops }) {
     return (
         <div className="view" id="graph-view">
             <h5 className="view-title text-center">Graph topology</h5>
@@ -21,7 +21,7 @@ function GraphView({ initialLayout, focalLayout, hasFocalNodes }) {
                 </div> */}
                 {hasFocalNodes && (
                     <div className="stuff-container">
-                        <div className="container-title">Focal layout: grouped UMAP</div>
+                        <div className="container-title">Focal layout: {focalLayout.name}</div>
                         <div className="container-body">
                             {focalLayout.running ? (
                                 <ComputingSpinner />
@@ -30,14 +30,14 @@ function GraphView({ initialLayout, focalLayout, hasFocalNodes }) {
                             )}
                         </div>
                         <div className="container-footer">
-                            Nodes within each dotted box, except the last one, are layout using UMAP. <br />
-                            Distance metric: jaccard distance between neighbor sets (two hops) of the two
-                            nodes. <br />
+                            Nodes within each box are layout using UMAP. Distance metric: jaccard distance
+                            between neighbor sets ({hops} hops) of the two nodes. Nodes outside {hops} hops are
+                            not shown.
                         </div>
                     </div>
                 )}
                 <div className="stuff-container">
-                    <div className="container-title">Original force-directed layout</div>
+                    <div className="container-title">Original layout: {initialLayout.name}</div>
                     <div className="container-body">
                         {initialLayout.running ? (
                             <ComputingSpinner />
@@ -53,6 +53,7 @@ function GraphView({ initialLayout, focalLayout, hasFocalNodes }) {
 
 const mapStateToProps = (state) => ({
     hasFocalNodes: state.selectedNodes.length > 0,
+    hops: state.param.hops,
     initialLayout: state.initialLayout,
     focalLayout: state.focalLayout,
 });

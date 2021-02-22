@@ -114,7 +114,8 @@ export default {
         coordRescaleMargin: 6, // must be smaller than node radius
         graph: {
             margin: 5,
-            gapBetweenHop: 30,
+            padding: 12,    // padding of group
+            gapBetweenHop: 10,
 
             edgeType: "line",
             neighborMarkerMaxHeight: 30,

@@ -1,7 +1,7 @@
 import React, { Component, useCallback } from "react";
 import { connect, ReactReduxContext, Provider } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Stage, Layer, Group, Rect, Line } from "react-konva";
+import { Stage, Layer, Group, Rect, Line, Text } from "react-konva";
 import debounce from "lodash.debounce";
 import NodeRep from "./NodeRep";
 import { FocusLayer, HighlightLayer, HoverLayer } from "./NodeLayers";
@@ -219,25 +219,6 @@ function BaseLayerUnconnected({
                         )
                 )}
             </Group>
-            {groups && (
-                <Group>
-                    {groups.map((g, i) => (
-                        <Rect
-                            key={i}
-                            rx={5}
-                            ry={5}
-                            x={g.bounds.x}
-                            y={g.bounds.y}
-                            width={g.bounds.width}
-                            height={g.bounds.height}
-                            stroke="grey"
-                            strokeWidth={1}
-                            dash={[5, 5]}
-                            fillEnabled={false}
-                        />
-                    ))}
-                </Group>
-            )}
             <Group>
                 {coords.map(
                     (c, i) =>
@@ -258,6 +239,25 @@ function BaseLayerUnconnected({
                         )
                 )}
             </Group>
+            {groups && (
+                <Group>
+                    {groups.map((g, i) => (
+                        <Group key={i}>
+                            <Rect
+                                x={g.bounds.x}
+                                y={g.bounds.y}
+                                width={g.bounds.width}
+                                height={g.bounds.height}
+                                stroke="grey"
+                                strokeWidth={1}
+                                dash={[5, 5]}
+                                fillEnabled={false}
+                            />
+                            <Text text={g.name} x={g.bounds.x + 2} y={g.bounds.y + 2} fontSize={12} />
+                        </Group>
+                    ))}
+                </Group>
+            )}
         </Layer>
     );
 }

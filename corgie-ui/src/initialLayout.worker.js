@@ -33,7 +33,7 @@ function computeForceLayoutWithD3(numNodes, edges, margin) {
     }
 
     console.log("Finish computing initial D3 force layout...", new Date());
-    return { coords: coords.map((d) => ({ x: d.x, y: d.y })), width: canvasSize, height: canvasSize };
+    return { coords: coords.map((d) => ({ x: d.x, y: d.y })), width: canvasSize, height: canvasSize, name: 'D3 force-directed'};
 }
 
 Comlink.expose({
