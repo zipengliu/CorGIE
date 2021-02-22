@@ -49,7 +49,7 @@ export class HighlightLayer extends PureComponent {
     //     }
     // }
     render() {
-        const { highlightedNodes, highlightedEdges, nodes, coords, nodeSize } = this.props;
+        const { highlightedNodes, highlightedEdges, nodes, nodeColors, coords, nodeSize } = this.props;
         return (
             <Layer
                 listening={false}
@@ -71,9 +71,9 @@ export class HighlightLayer extends PureComponent {
                                             coords[e.target].x,
                                             coords[e.target].y,
                                         ]}
-                                        stroke="#aaa"
+                                        stroke="black"
                                         strokeWidth={1}
-                                        opacity={0.5}
+                                        opacity={1}
                                     />
                                 )
                         )}
@@ -88,7 +88,7 @@ export class HighlightLayer extends PureComponent {
                                     y={coords[nodeIdx].y}
                                     radius={nodeSize * 1.5}
                                     typeId={nodes[nodeIdx].typeId}
-                                    style={{ fillEnabled: false, stroke: "black", strokeWidth: 2 }}
+                                    style={{ fill: nodeColors[nodeIdx], stroke: "black", strokeWidth: 2 }}
                                 />
                             )
                     )}
@@ -141,7 +141,7 @@ export const HoverLayer = memo(
                                 y={coords[nodeIdx].y}
                                 radius={nodeSize}
                                 typeId={nodes[nodeIdx].typeId}
-                                style={{ fill: nodeColors[hoveredNodes[i]], strokeEnabled: false }}
+                                style={{ fill: nodeColors[nodeIdx], strokeEnabled: false }}
                             />
                         )
                 )}

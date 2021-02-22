@@ -3,17 +3,17 @@ import {
     extent,
     forceSimulation,
     forceManyBody,
+    forceCollide,
     forceLink,
     forceX,
     forceY,
     scaleSqrt,
     scaleLinear,
-    dsvFormat,
 } from "d3";
 import { Layout as cola } from "webcola";
 import { UMAP } from "umap-js";
 import bs from "bitset";
-import { computeEdgeDict, getNeighborDistance } from "./utils";
+import { getNeighborDistance } from "./utils";
 
 const maxNumNodes = 10000;
 let state = {
@@ -36,6 +36,19 @@ function initializeState(numNodes, edges, neighborMasks, hops, distMetric, spec)
     state.distMetric = distMetric;
     state.spec = spec;
 }
+
+function computeEdgeDict(numNodes, edges) {
+    const d = new Array(numNodes);
+    for (let i = 0; i < numNodes; i++) {
+        d[i] = {};
+    }
+    for (let e of edges) {
+        d[e.source][e.target] = true;
+        d[e.target][e.source] = true;
+    }
+    return d;
+}
+
 
 // The bitset class functions are not copied from the main thread,
 // so we need to re-construct the bitsets in-place
@@ -70,20 +83,44 @@ function evaluateLayout(coords, nodesByHop) {
             }
         }
     }
-    console.log("Evaluate: ", { numEdges, numPairs, energy });
+    // console.log("Evaluate: ", { numEdges, numPairs, energy });
     return energy;
 }
 
 function computeFocalLayoutWithUMAP(
     selectedNodes,
     neighArr,
-    localNeighMap // node connection signature: either global or local
+    localNeighMap,
+    nodeSize 
 ) {
     const runUMAP = (nodeIdxArr, masks) => {
         if (nodeIdxArr.length < 15) {
-            // Not enough data to compute UMAP
-            // Consider something that reduces edge crossings?
-            return nodeIdxArr.map((_) => [Math.random(), Math.random()]);
+            // Not enough data to compute UMAP, so we use D3 with edges within this group
+            // return nodeIdxArr.map((_) => [Math.random(), Math.random()]);
+            const coords = nodeIdxArr.map((_, i) => ({ index: i }));
+            const mapping = {};
+            for (let i = 0; i < nodeIdxArr.length; i++) {
+                mapping[nodeIdxArr[i]] = i;
+            }
+            const withinEdges = [];
+            // very small number of nodes so we can afford loops
+            for (let i = 0; i < nodeIdxArr.length; i++) {
+                const nidi = nodeIdxArr[i];
+                for (let j = i + 1; j < nodeIdxArr.length; j++) {
+                    const nidj = nodeIdxArr[j];
+                    if (edgeDict[nidi].hasOwnProperty(nidj.toString())) {
+                        withinEdges.push({ source: i, target: j });
+                    }
+                }
+            }
+            let simulation = forceSimulation(coords)
+                .force("link", forceLink(withinEdges))
+                .force("charge", forceManyBody().strength(-20))
+                .force('collide', forceCollide().radius(nodeSize + 1))
+                // .force("center", forceCenter(50, 50))   // imaging a 100x100 bounding box
+                .stop();
+            simulation.tick(300);
+            return coords.map((c) => [c.x, c.y]);
         } else {
             console.log("Calling UMAP... #nodes =", nodeIdxArr.length);
             const distFunc = (x, y) => getNeighborDistance(masks[x], masks[y], state.distMetric); // Global signature
@@ -97,7 +134,7 @@ function computeFocalLayoutWithUMAP(
     reconstructBitsets(localNeighMap);
     const n = state.numNodes,
         numFoc = selectedNodes.length;
-    const { hops } = state;
+    const { hops, edgeDict } = state;
     const { padding, gapBetweenHop } = state.spec;
 
     const nodesByHop = [[]];
@@ -169,38 +206,51 @@ function computeFocalLayoutWithUMAP(
             [Math.sin(r), Math.cos(r)],
         ];
         const tempCoords = [];
+        const centerX = bbox.x + bbox.width / 2,
+            centerY = bbox.y + bbox.height / 2;
         for (let nid of nodes) {
             const c = oldCoords[nid];
             // Change in place
             tempCoords.push({
-                x: transMatrix[0][0] * (c.x - bbox.x) + transMatrix[0][1] * (c.y - bbox.y),
-                y: transMatrix[1][0] * (c.x - bbox.x) + transMatrix[1][1] * (c.y - bbox.y),
+                x: transMatrix[0][0] * (c.x - centerX) + transMatrix[0][1] * (c.y - centerY) + centerX,
+                y: transMatrix[1][0] * (c.x - centerX) + transMatrix[1][1] * (c.y - centerY) + centerY,
             });
         }
-        // rescale since nodes might go out of bbox
-        const xExtent = extent(tempCoords.map((t) => t.x)),
-            yExtent = extent(tempCoords.map((t) => t.y));
-        const xScale = scaleLinear()
-                .domain(xExtent)
-                .range([bbox.x + padding, bbox.x + bbox.width - padding]),
-            yScale = scaleLinear()
-                .domain(yExtent)
-                .range([bbox.y + padding, bbox.y + bbox.height - padding]);
-        for (let i = 0; i < nodes.length; i++) {
-            newCoords[nodes[i]] = {
-                x: xScale(tempCoords[i].x),
-                y: yScale(tempCoords[i].y),
-            };
+
+        if ([0, 90, 180, 270].indexOf(degree) === -1) {
+            // rescale since nodes might go out of bbox
+            const xExtent = extent(tempCoords.map((t) => t.x)),
+                yExtent = extent(tempCoords.map((t) => t.y));
+            const xScale = scaleLinear()
+                    .domain(xExtent)
+                    .range([bbox.x + padding, bbox.x + bbox.width - padding]),
+                yScale = scaleLinear()
+                    .domain(yExtent)
+                    .range([bbox.y + padding, bbox.y + bbox.height - padding]);
+            for (let i = 0; i < nodes.length; i++) {
+                newCoords[nodes[i]] = {
+                    x: xScale(tempCoords[i].x),
+                    y: yScale(tempCoords[i].y),
+                };
+            }
+        } else {
+            for (let i = 0; i < nodes.length; i++) {
+                newCoords[nodes[i]] = {
+                    x: tempCoords[i].x,
+                    y: tempCoords[i].y,
+                };
+            }
         }
         // console.log({ degree, nodes, newCoords });
     }
 
     // Get the number of nodes for each hop
     const nums = nodesByHop.map((n) => n.length);
+    const totalNum = nums.reduce((prev, cur) => prev + cur, 0);
 
     // Allocate space for each hop
-    const canvasHeight = state.getCanvasSize(n),
-        canvasWidth = canvasHeight * 1.5;
+    let canvasHeight = state.getCanvasSize(totalNum);
+    const canvasWidth = canvasHeight * 1.5;
     // Resize the embeddings for the four different groups of nodes: selected, 1-hop, 2-hop, 3-hop,...
     const weights = [10, 10];
     console.assert(hops <= 5);
@@ -215,9 +265,16 @@ function computeFocalLayoutWithUMAP(
             Math.min(groupWidths[0], ((canvasHeight - (numFoc - 1) * gapBetweenHop) / nums[0]) * s.length)
         ),
     ];
+    let maxNeighHeight = 0;
     for (let i = 1; i <= hops; i++) {
-        groupHeights.push(Math.min(canvasHeight, groupWidths[i]));
+        const h = Math.min(canvasHeight, groupWidths[i]);
+        groupHeights.push(h);
+        maxNeighHeight = Math.max(maxNeighHeight, h);
     }
+    // Re-visit the canvasHeight since the heights might not used up.
+    const focalHeightSum = groupHeights[0].reduce((prev, cur) => prev + cur, 0);
+    let possibleFocalHeight = focalHeightSum + gapBetweenHop * (numFoc - 1);
+    canvasHeight = Math.min(canvasHeight, Math.max(possibleFocalHeight, maxNeighHeight));
     console.log({ canvasWidth, canvasHeight, nums, weights, weightedSum, groupWidths, groupHeights });
 
     const coords = new Array(n);
@@ -227,7 +284,7 @@ function computeFocalLayoutWithUMAP(
         actualGapFocal = 0;
     // position the focal groups
     if (numFoc > 1) {
-        const focalHeightSum = groupHeights[0].reduce((prev, cur) => prev + cur, 0);
+        // The vertical gap between focal groups is not gapBetweenHop
         actualGapFocal = (canvasHeight - focalHeightSum) / (numFoc - 1);
     } else {
         yOffset = (canvasHeight - groupHeights[0][0]) / 2;
@@ -269,7 +326,7 @@ function computeFocalLayoutWithUMAP(
     function dfs(groupIdx) {
         if (groupIdx == groups.length) {
             numTrans++;
-            console.log(`Transformation settings #${numTrans}: `, trans.slice());
+            // console.log(`Transformation settings #${numTrans}: `, trans.slice());
             const e = evaluateLayout(newCoords, nodesByHop);
             if (e < bestEnergy) {
                 bestEnergy = e;
@@ -290,12 +347,12 @@ function computeFocalLayoutWithUMAP(
                 trans.pop();
             }
             flipGroup(groupNodes, coords, newCoords, true, bbox);
-            trans.push('flip horizontally');
+            trans.push("flip horizontally");
             dfs(groupIdx + 1);
             trans.pop();
 
             flipGroup(groupNodes, coords, newCoords, false, bbox);
-            trans.push('flip vertically');
+            trans.push("flip vertically");
             dfs(groupIdx + 1);
             trans.pop();
         } else {
@@ -307,7 +364,7 @@ function computeFocalLayoutWithUMAP(
     }
     dfs(0);
 
-    console.log({bestEnergy, bestTrans});
+    console.log({ numTrans, bestEnergy, bestTrans });
     console.log("UMAP layout finished! ", new Date());
 
     return {

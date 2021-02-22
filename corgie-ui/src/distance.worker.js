@@ -7,8 +7,7 @@ import { getNeighborDistance, getCosineDistance, rectBinning } from "./utils";
 let state = {
     emb: null,
     numNodes: null,
-    edgeSrc: null,
-    edgeTgt: null,
+    edges: null,
     neighborMasks: null,
     distMetric: null,
     numBins: null,
@@ -16,11 +15,10 @@ let state = {
     distMatTopo: null,
 };
 
-function initializeState(emb, numNodes, edgeSrc, edgeTgt, neighborMasks, distMetric, numBins) {
+function initializeState(emb, numNodes, edges, neighborMasks, distMetric, numBins) {
     state.emb = emb;
     state.numNodes = numNodes;
-    state.edgeSrc = edgeSrc;
-    state.edgeTgt = edgeTgt;
+    state.edges = edges;
     state.neighborMasks = neighborMasks.map((m) => bs(m));
     state.distMetric = distMetric;
     state.numBins = numBins;
@@ -73,10 +71,10 @@ function computeDistances(mode, targetNodes = null, maxNumPairs = 0) {
             }
         };
     } else if (mode === "edge") {
-        numPairs = state.edgeSrc.length;
+        numPairs = state.edges.length;
         pairGen = function* () {
-            for (let i = 0; i < numPairs; i++) {
-                yield [state.edgeSrc[i], state.edgeTgt[i]];
+            for (let e of state.edges) {
+                yield [e.source, e.target];
             }
         };
     } else if (mode === "within") {

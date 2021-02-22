@@ -99,20 +99,10 @@ export function fetchGraphData(homePath, datasetId) {
                     dispatch(computeInitLayoutDone(layoutRes));
                 });
 
-            // Use arraybuffer to avoid copy.  Is this necessary?
-            const srcBuf = new ArrayBuffer(graph.links.length * 2),
-                tgtBuf = new ArrayBuffer(graph.links.length * 2);
-            const edgeSrc = new Uint16Array(srcBuf),
-                edgeTgt = new Uint16Array(tgtBuf);
-            for (let i = 0; i < graph.links.length; i++) {
-                edgeSrc[i] = graph.links[i].source;
-                edgeTgt[i] = graph.links[i].traget;
-            }
             await distanceWorker.initializeState(
                 emb,
                 graph.nodes.length,
-                edgeSrc,
-                edgeTgt,
+                graph.links,
                 graph.neighborMasks.map((x) => x.toString()),
                 neighborDistanceMetric,
                 numBins
@@ -280,7 +270,8 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     neighRes.neighArr,
                     // serializedNeighMap,   // Use local signature
                     // graph.neighborMasksByHop[0].map((x) => x.toArray()), // Use global signature
-                    null
+                    null,
+                    param.nodeSize,
                 );
             case "group-constraint-cola":
                 return await focalLayoutWorker.computeFocalLayoutWithCola(

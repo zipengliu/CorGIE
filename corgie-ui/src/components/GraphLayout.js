@@ -33,9 +33,9 @@ class GraphLayout extends Component {
             }
         }
         console.log({ candidates, targetNodes, brushedArea });
-        if (targetNodes.length == 0) return;
+        // if (targetNodes.length == 0) return;
 
-        this.props.highlightNodes(targetNodes, brushedArea, "focal-layout", null);
+        this.props.highlightNodes(targetNodes, brushedArea, "graph-node", null);
     }
     _onMouseDown() {
         const mousePos = this.stageRef.current.getPointerPosition();

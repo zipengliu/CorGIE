@@ -34,7 +34,7 @@ class Embeddings2D extends Component {
                 targetNodes.push(c.id);
             }
         }
-        if (targetNodes.length == 0) return;
+        // if (targetNodes.length == 0) return;
 
         this.props.highlightNodes(targetNodes, brushedArea, "emb", null);
     }

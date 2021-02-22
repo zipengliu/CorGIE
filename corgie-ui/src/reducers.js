@@ -13,6 +13,7 @@ import {
     interpolateGreys,
     interpolateRdBu,
     scaleLinear,
+    format,
 } from "d3";
 import Quadtree from "@timohausmann/quadtree-js";
 import {
@@ -653,6 +654,12 @@ const reducers = produce((draft, action) => {
             draft.attrMeta = attrs;
             draft.nodeAttrs = summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes);
             setNodeColors(draft, draft.param.colorBy);
+
+            const numPairs = (graph.nodes.length * (graph.nodes.length - 1)) / 2;
+            draft.distances.display[0].title =
+                numPairs <= draft.distances.maxSample
+                    ? "all"
+                    : `random samples (N=${format("~s")(draft.distances.maxSample)})`;
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
             return;

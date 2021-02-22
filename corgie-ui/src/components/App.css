@@ -409,7 +409,11 @@ rect.highlight-strip {
 #graph-view .view-body {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: space-around;
+}
+#graph-view .stuff-container .container-body {
+    padding: 10px;
 }
 
 .scatter-hist-list {
