@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Button, Badge } from "react-bootstrap";
-import { selectNodes, highlightNodes, searchNodes } from "../actions";
+import { selectNodes, highlightNodes, searchNodes, selectNodePair } from "../actions";
 
 export class HighlightControl extends Component {
     callSearch(e) {
@@ -20,12 +20,72 @@ export class HighlightControl extends Component {
     }
     render() {
         const { selectedNodes, highlightedNodes } = this.props;
+        const { selectNodes, selectNodePair, highlightNodes } = this.props;
 
         return (
             <div className="view" id="highlight-control">
-                <h5 className="view-title text-center">Highlight</h5>
+                <h5 className="view-title text-center">
+                    Highlight <Badge variant="primary">{highlightedNodes.length}</Badge>
+                </h5>
                 <div className="view-body">
-                    <div style={{ marginBottom: "10px" }}>
+                    {/* <div>
+                        <Badge variant="dark">{highlightedNodes.length}</Badge> nodes highlighted.
+                    </div> */}
+                    {highlightedNodes.length > 0 && (
+                        <div>
+                            <div>Focus on highlighted nodes:</div>
+                            <div>
+                                <Button
+                                    variant="outline-primary"
+                                    size="xs"
+                                    onClick={selectNodes.bind(null, "CREATE", highlightedNodes, null)}
+                                >
+                                    create a new focal group
+                                </Button>
+                            </div>
+                            {highlightedNodes.length === 2 && (
+                                <div>
+                                    <Button
+                                        variant="outline-primary"
+                                        size="xs"
+                                        onClick={selectNodePair.bind(
+                                            null,
+                                            highlightedNodes[0],
+                                            highlightedNodes[1]
+                                        )}
+                                    >
+                                        create two 1-node groups
+                                    </Button>
+                                </div>
+                            )}
+                            {selectedNodes.length > 0 && (
+                                <div>
+                                    {/* add {highlightedNodes.length === 1 ? "it" : "them"} to */}
+                                    {selectedNodes.map((_, i) => (
+                                        <Button
+                                            key={i}
+                                            variant="outline-secondary"
+                                            size="xs"
+                                            onClick={selectNodes.bind(null, "APPEND", highlightedNodes, i)}
+                                        >
+                                            add to foc-{i}
+                                        </Button>
+                                    ))}
+                                </div>
+                            )}
+                            <div>
+                                <Button
+                                    variant="outline-secondary"
+                                    size="xs"
+                                    onClick={highlightNodes.bind(null, [], null, null, null)}
+                                >
+                                    clear highlights
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
                         <div>Search nodes by</div>
                         <Form inline onSubmit={this.callSearch.bind(this)}>
                             <Form.Control
@@ -53,58 +113,6 @@ export class HighlightControl extends Component {
                             </Button>
                         </Form>
                     </div>
-
-                    <div>
-                        <Badge variant="dark">{highlightedNodes.length}</Badge> nodes highlighted.
-                    </div>
-                    {highlightedNodes.length > 0 && (
-                        <div>
-                            {/* <div>Actions:</div> */}
-                            <div>
-                                <Button
-                                    variant="outline-primary"
-                                    size="xs"
-                                    onClick={this.props.selectNodes.bind(
-                                        null,
-                                        "CREATE",
-                                        highlightedNodes,
-                                        null
-                                    )}
-                                >
-                                    create focal group
-                                </Button>
-                            </div>
-                            {selectedNodes.length > 0 && (
-                                <div>
-                                    add {highlightedNodes.length === 1 ? "it" : "them"} to
-                                    {selectedNodes.map((_, i) => (
-                                        <Button
-                                            key={i}
-                                            variant="outline-secondary"
-                                            size="xs"
-                                            onClick={this.props.selectNodes.bind(
-                                                null,
-                                                "APPEND",
-                                                highlightedNodes,
-                                                i
-                                            )}
-                                        >
-                                            foc-{i}
-                                        </Button>
-                                    ))}
-                                </div>
-                            )}
-                            <div>
-                                <Button
-                                    variant="outline-secondary"
-                                    size="xs"
-                                    onClick={this.props.highlightNodes.bind(null, [], null, null, null)}
-                                >
-                                    clear highlights
-                                </Button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         );
@@ -122,6 +130,7 @@ const mapDispatchToProps = (dispatch) =>
             selectNodes,
             highlightNodes,
             searchNodes,
+            selectNodePair,
         },
         dispatch
     );
