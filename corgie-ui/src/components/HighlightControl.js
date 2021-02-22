@@ -1,17 +1,8 @@
-import React, { Component, memo, useCallback } from "react";
+import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form, ButtonGroup, Button } from "react-bootstrap";
-import { FixedSizeList } from "react-window";
-import debounce from "lodash.debounce";
-import {
-    selectNodes,
-    highlightNodes,
-    searchNodes,
-    highlightNodePairs,
-    hoverNode,
-    selectNodePair,
-} from "../actions";
+import { Form, Button, Badge } from "react-bootstrap";
+import { selectNodes, highlightNodes, searchNodes } from "../actions";
 
 export class HighlightControl extends Component {
     callSearch(e) {
@@ -28,30 +19,12 @@ export class HighlightControl extends Component {
         }
     }
     render() {
-        const { nodes, selectedNodes, highlightedNodes, highlightedNodePairs } = this.props;
-        const labelOrId = nodes && nodes[0].label ? "label" : "id";
-
-        const NodePairItem = memo(({ index, style }) => {
-            const p = highlightedNodePairs[index];
-            const debouncedHover = useCallback(debounce((x) => this.props.hoverNode(x), 200));
-            return (
-                <div
-                    className="list-group-item"
-                    onMouseEnter={debouncedHover.bind(this, [p[0], p[1]])}
-                    onMouseLeave={debouncedHover.bind(this, null)}
-                    onClick={this.props.selectNodePair.bind(null, p[0], p[1])}
-                    style={style}
-                >
-                    {nodes[p[0]][labelOrId]} - {nodes[p[1]][labelOrId]}
-                </div>
-            );
-        });
+        const { selectedNodes, highlightedNodes } = this.props;
 
         return (
             <div className="view" id="highlight-control">
                 <h5 className="view-title text-center">Highlight</h5>
                 <div className="view-body">
-                    <h6>Nodes</h6>
                     <div style={{ marginBottom: "10px" }}>
                         <div>Search nodes by</div>
                         <Form inline onSubmit={this.callSearch.bind(this)}>
@@ -81,7 +54,9 @@ export class HighlightControl extends Component {
                         </Form>
                     </div>
 
-                    <div>{highlightedNodes.length} nodes are highlighted (blinking).</div>
+                    <div>
+                        <Badge variant="dark">{highlightedNodes.length}</Badge> nodes highlighted.
+                    </div>
                     {highlightedNodes.length > 0 && (
                         <div>
                             {/* <div>Actions:</div> */}
@@ -130,68 +105,6 @@ export class HighlightControl extends Component {
                             </div>
                         </div>
                     )}
-
-                    <div className="section-divider"></div>
-                    <h6>Node pairs</h6>
-                    <div>{highlightedNodePairs.length} node pairs are highlighted. Click to focus.</div>
-                    {highlightedNodePairs.length > 0 && (
-                        <div>
-                            <div className="node-pair-list">
-                                <FixedSizeList
-                                    height={
-                                        highlightedNodePairs.length > 16
-                                            ? 400
-                                            : 25 * highlightedNodePairs.length
-                                    }
-                                    width="100%"
-                                    itemSize={25}
-                                    itemCount={highlightedNodePairs.length}
-                                >
-                                    {NodePairItem}
-                                </FixedSizeList>
-                            </div>
-                            {/* <div>
-                            <span style={{ marginRight: "5px" }}>Order by latent distance:</span>
-                            <ButtonGroup size="xs">
-                                <Button
-                                    variant="outline-secondary"
-                                    active={nodePairFilter.ascending}
-                                    onClick={changeParam.bind(
-                                        this,
-                                        "nodePairFilter.ascending",
-                                        true,
-                                        false,
-                                        null
-                                    )}
-                                >
-                                    asc.
-                                </Button>
-                                <Button
-                                    variant="outline-secondary"
-                                    active={!nodePairFilter.ascending}
-                                    onClick={changeParam.bind(
-                                        this,
-                                        "nodePairFilter.ascending",
-                                        false,
-                                        false,
-                                        null
-                                    )}
-                                >
-                                    desc.
-                                </Button>
-                            </ButtonGroup>
-                        </div> */}
-                            <div>
-                                <Button
-                                    variant="outline-secondary"
-                                    size="xs"
-                                    onClick={this.props.highlightNodePairs.bind(null, null, null)}
-                                >
-                                    clear highlights
-                                </Button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         );
@@ -199,11 +112,8 @@ export class HighlightControl extends Component {
 }
 
 const mapStateToProps = (state) => ({
-    nodes: state.graph.nodes,
     selectedNodes: state.selectedNodes,
     highlightedNodes: state.highlightedNodes,
-    highlightedNodePairs: state.highlightedNodePairs,
-    // nodePairFilter: state.param.nodePairFilter,
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -211,10 +121,7 @@ const mapDispatchToProps = (dispatch) =>
         {
             selectNodes,
             highlightNodes,
-            highlightNodePairs,
             searchNodes,
-            hoverNode,
-            selectNodePair,
         },
         dispatch
     );

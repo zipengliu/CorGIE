@@ -13,6 +13,7 @@ import NodeAttrView from "./NodeAttrView";
 import HighlightControl from "./HighlightControl";
 import FocusControl from "./FocusControl";
 import GlobalControls from "./GlobalControls";
+import NodePairView from "./NodePairView";
 import "./App.css";
 
 class App extends Component {
@@ -30,18 +31,28 @@ class App extends Component {
                 </div>
             );
         }
+        const { numNodes, numEdges, homePath, datasetId } = this.props;
 
         return (
             <div>
-                <AppNav datasetId={this.props.datasetId} homePath={this.props.homePath} />
+                <AppNav datasetId={datasetId} homePath={homePath} stats={{ numNodes, numEdges }} />
 
-                <GlobalControls />
                 <div className="App">
                     <div>
-                        <FocusControl />
-                        <HighlightControl />
+                        <div style={{ display: "flex", flexDirection: "row" }}>
+                            <div>
+                                <GlobalControls />
+                                <FocusControl />
+                                <HighlightControl />
+                            </div>
+                            <div>
+                                <EmbeddingsView />
+                            </div>
+                        </div>
+                        <div>
+                            <NodePairView />
+                        </div>
                     </div>
-                    <EmbeddingsView />
                     <div>
                         <NodeAttrView />
                         <GraphView />
@@ -57,6 +68,8 @@ const mapStateToProps = (state) => ({
     homePath: state.homePath,
     datasetId: state.datasetId,
     loaded: state.loaded,
+    numNodes: state.loaded ? state.graph.nodes.length : 0,
+    numEdges: state.loaded ? state.graph.edges.length : 0,
     error: state.error,
 });
 

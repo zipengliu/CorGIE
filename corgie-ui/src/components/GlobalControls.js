@@ -17,7 +17,7 @@ export class GlobalControls extends Component {
     render() {
         const { graph, param, attrMeta, changeParam, hoverNode, highlightNodes } = this.props;
         const { nodes, edges, nodeTypes } = graph;
-        const { colorBy, colorScale, nodeSize } = param;
+        const { colorBy, colorScale, nodeSize, hops, hopsHover } = param;
         let e, numberFormat, colorMin, colorMax;
         if (colorBy !== -1) {
             e = colorScale.domain();
@@ -27,13 +27,10 @@ export class GlobalControls extends Component {
         }
 
         return (
-            <div id="global-controls">
-                <div className="graph-info">
-                    <div>
-                        # nodes: {nodes.length}, # edges: {edges.length}
-                    </div>
-
-                    <div style={{ display: "flex" }}>
+            <div id="global-controls" className="view">
+                <h5 className="view-title">Settings</h5>
+                <div className="view-body">
+                    <div className="setting-item">
                         <div style={{ marginRight: "5px" }}>Node color: </div>
                         <Dropdown
                             onSelect={(k) => {
@@ -46,7 +43,7 @@ export class GlobalControls extends Component {
 
                             <Dropdown.Menu>
                                 <Dropdown.Item eventKey={-1}>UMAP position</Dropdown.Item>
-                                <Dropdown.Divider />
+                                {attrMeta.length > 0 && <Dropdown.Divider />}
                                 {attrMeta.map((a, i) => (
                                     <Dropdown.Item key={i} eventKey={i}>
                                         {a.nodeType}: {a.name}
@@ -54,33 +51,34 @@ export class GlobalControls extends Component {
                                 ))}
                             </Dropdown.Menu>
                         </Dropdown>
-
-                        {colorBy !== -1 && (
-                            <div style={{ marginLeft: "10px" }}>
-                                <span style={{ marginRight: "3px" }}>{numberFormat(e[0])}</span>
-                                <div
-                                    style={{
-                                        display: "inline-block",
-                                        height: "10px",
-                                        width: "100px",
-                                        background: `linear-gradient(90deg, ${colorMin} 0%, ${colorMax} 100%)`,
-                                    }}
-                                ></div>
-                                <span style={{ marginLeft: "3px" }}>{numberFormat(e[1])}</span>
-                            </div>
-                        )}
                     </div>
 
-                    {nodeTypes.length > 1 && (
+                    {colorBy !== -1 && (
                         <div>
-                            <Stage width={80 * nodeTypes.length + 10} height={20}>
+                            <span style={{ marginRight: "3px" }}>{numberFormat(e[0])}</span>
+                            <div
+                                style={{
+                                    display: "inline-block",
+                                    height: "10px",
+                                    width: "100px",
+                                    background: `linear-gradient(90deg, ${colorMin} 0%, ${colorMax} 100%)`,
+                                }}
+                            ></div>
+                            <span style={{ marginLeft: "3px" }}>{numberFormat(e[1])}</span>
+                        </div>
+                    )}
+
+                    {nodeTypes.length > 1 && (
+                        <div className="setting-item">
+                            <div style={{ marginRight: "5px" }}>Node shape: </div>
+                            <Stage width={100} height={21 * nodeTypes.length}>
                                 <Layer>
                                     <Group x={5}>
                                         {nodeTypes.map((nt, i) => (
                                             <Group
                                                 key={i}
-                                                x={i * 80}
-                                                y={0}
+                                                x={0}
+                                                y={i * 21}
                                                 onMouseOver={this.hoverNodeType.bind(this, i)}
                                                 onMouseOut={hoverNode.bind(null, null)}
                                                 onClick={highlightNodes.bind(
@@ -101,7 +99,12 @@ export class GlobalControls extends Component {
                                                         strokeEnabled: false,
                                                     }}
                                                 />
-                                                <Text x={10} y={5} text={nt.name} fontSize={16}></Text>
+                                                <Text
+                                                    x={10}
+                                                    y={5}
+                                                    text={`${nt.name} (${nt.count})`}
+                                                    fontSize={16}
+                                                ></Text>
                                             </Group>
                                         ))}
                                     </Group>
@@ -110,44 +113,8 @@ export class GlobalControls extends Component {
                         </div>
                     )}
 
-                    <div>
-                        <Form inline>
-                            <Form.Group controlId="select-neighbor-hop">
-                                <Form.Label column="sm"># hops considered </Form.Label>
-                                <Form.Control
-                                    as="select"
-                                    size="xs"
-                                    value={param.hops}
-                                    onChange={(e) => {
-                                        this.props.changeHops(parseInt(e.target.value));
-                                    }}
-                                >
-                                    <option value={1}>1</option>
-                                    <option value={2}>2</option>
-                                    <option value={3}>3</option>
-                                </Form.Control>
-                            </Form.Group>
-
-                            <Form.Group controlId="highlight-neighbor-hop">
-                                <Form.Label column="sm"># hops to highlight</Form.Label>
-                                <Form.Control
-                                    as="select"
-                                    size="xs"
-                                    value={param.hopsHighlight}
-                                    onChange={(e) => {
-                                        changeParam("hopsHighlight", parseInt(e.target.value));
-                                    }}
-                                >
-                                    <option value={1}>1</option>
-                                    <option value={2}>2</option>
-                                    <option value={3}>3</option>
-                                </Form.Control>
-                            </Form.Group>
-                        </Form>
-                    </div>
-
-                    <div>
-                        <span>Node size: </span>
+                    <div className="setting-item">
+                        <div style={{ marginRight: "5px" }}>Node size: </div>
                         <ButtonGroup size="xs">
                             <Button
                                 variant="outline-secondary"
@@ -167,6 +134,28 @@ export class GlobalControls extends Component {
                             </Button>
                         </ButtonGroup>
                     </div>
+
+                    <div className="setting-item">
+                        <div style={{ marginRight: "5px" }}>#hops to highlight: </div>
+                        <Dropdown
+                            onSelect={(h) => {
+                                this.props.changeParam("hopsHover", parseInt(h), false);
+                            }}
+                        >
+                            <Dropdown.Toggle id="hops-to-show" size="xs" variant="outline-secondary">
+                                {hopsHover}
+                            </Dropdown.Toggle>
+
+                            <Dropdown.Menu>
+                                {new Array(hops).fill(0).map((_, i) => (
+                                    <Dropdown.Item key={i} eventKey={i + 1}>
+                                        {i + 1}
+                                    </Dropdown.Item>
+                                ))}
+                            </Dropdown.Menu>
+                        </Dropdown>
+                    </div>
+
                 </div>
             </div>
         );

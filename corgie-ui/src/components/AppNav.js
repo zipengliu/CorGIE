@@ -1,7 +1,7 @@
 import React from "react";
 import { Navbar, Nav } from "react-bootstrap";
 
-export default function AppNav({ datasetId, homePath }) {
+export default function AppNav({ datasetId, homePath, stats }) {
     const p = homePath + "/";
     return (
         <Navbar bg="dark" variant="dark" expand="md">
@@ -15,7 +15,7 @@ export default function AppNav({ datasetId, homePath }) {
                     </Nav.Link>
                 </Nav>
                 <Navbar.Text className="justify-content-end">
-                    {datasetId ? `Dataset: ${datasetId}` : ""}
+                    {datasetId ? `Dataset: ${datasetId} (V=${stats.numNodes}, E=${stats.numEdges})` : ""}
                 </Navbar.Text>
             </Navbar.Collapse>
         </Navbar>

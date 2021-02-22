@@ -22,7 +22,13 @@
     padding: 3px;
 }
 .view .view-body {
+    padding: 5px 10px 10px 10px;
+}
+.view .view-footer {
+    background-color: #ddd;
+    border-top: 1px solid #aaa;
     padding: 5px;
+    font-size: 0.8rem;
 }
 
 .stuff-container {
@@ -43,7 +49,7 @@
     background-color: #ddd;
     border-top: 1px solid #aaa;
     padding: 5px;
-    font-size: .8rem;
+    font-size: 0.8rem;
 }
 
 .table td.cell-num {
@@ -209,37 +215,24 @@
 }
 
 #global-controls {
-    width: 100%;
-    margin: 5px 0;
-}
-.graph-info {
-    padding: 0 10px;
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-evenly;
-    flex-wrap: wrap;
-}
-.graph-info .node-type-legend {
-    display: inline-block;
-    margin-left: 8px;
-    margin-right: 8px;
-}
-.graph-info .node-type-legend .emu-circle {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    margin-right: 2px;
-    -webkit-border-radius: 6px;
-    -moz-border-radius: 6px;
-    border-radius: 6px;
+    /* width: 100%;
+    margin: 5px 0; */
 }
 
 #focus-control .focal-group {
     margin-bottom: 10px;
 }
 
-#highlight-control .node-pair-list {
+#node-pair-view {
+    font-size: 0.875rem;
+}
+
+#node-pair-view .view-body {
+    display: flex;
+    flex-direction: row;
+}
+
+.node-pair-list {
     /* border: 1px solid grey; */
     /* max-height: 400px; */
     /* max-width: 250px; */
@@ -247,7 +240,7 @@
     margin: 10px 0;
     font-size: 12px;
 }
-#highlight-control .node-pair-list .list-group-item {
+.node-pair-list .list-group-item {
     padding: 0.2rem 0.5rem;
     cursor: pointer;
     text-overflow: ellipsis;
@@ -424,4 +417,13 @@ rect.highlight-strip {
 }
 .scatter-hist-list .stuff-container {
     margin: 5px 5px 0 0;
+}
+
+#global-controls {
+    min-width: 240px;
+}
+#global-controls .setting-item {
+    display: flex;
+    flex-direction: row;
+    margin: 5px 0;
 }

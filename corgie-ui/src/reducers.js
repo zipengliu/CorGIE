@@ -696,7 +696,7 @@ const reducers = produce((draft, action) => {
                     // Highlight their neighbors as well
                     neiRes = getNeighbors(
                         draft.graph.neighborMasksByHop,
-                        draft.param.hopsHighlight,
+                        draft.param.hopsHover,
                         draft.graph.edgeDict,
                         action.nodeIndices,
                         true
@@ -751,7 +751,7 @@ const reducers = produce((draft, action) => {
                 draft.hoveredNodes = [action.nodeIdx];
                 neiRes = getNeighbors(
                     draft.graph.neighborMasksByHop,
-                    draft.param.hopsHighlight,
+                    draft.param.hopsHover,
                     draft.graph.edgeDict,
                     draft.hoveredNodes,
                     true

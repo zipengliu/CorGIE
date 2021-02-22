@@ -56,7 +56,7 @@ export default {
 
     param: {
         hops: 2,
-        hopsHighlight: 1,
+        hopsHover: 1,
 
         colorBy: -1, // Could be -1 (for emb 2d postion) or a name of the attribute
         colorScale: null,
