@@ -1,6 +1,8 @@
 .App {
     display: flex;
     flex-direction: row;
+    justify-content: center;
+    /* width: 100%; */
     /* align-items: center; */
     /*justify-content: center;*/
     /* flex-wrap: wrap; */
@@ -23,6 +25,7 @@
 }
 .view .view-body {
     padding: 5px 10px 10px 10px;
+    overflow: auto;
 }
 .view .view-footer {
     background-color: #ddd;
@@ -32,9 +35,13 @@
 }
 
 .stuff-container {
-    border: 1px solid #aaa;
+    border: 1px solid #ddd;
     border-radius: 3px;
     margin: 10px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 .stuff-container .container-title {
     background-color: #ddd;
@@ -47,9 +54,39 @@
 }
 .stuff-container .container-footer {
     background-color: #ddd;
-    border-top: 1px solid #aaa;
+    border-top: 1px solid #ddd;
     padding: 5px;
     font-size: 0.8rem;
+}
+
+.stuff-container-hori {
+    display: flex;
+    flex-direction: row;
+    font-size: 0.875rem;
+    /* border: 1px solid #aaa; */
+}
+.stuff-container-hori .container-title {
+    flex-shrink: 0;
+    /* background-color: #ddd; */
+    color: black;
+    padding: 0 2px;
+    font-size: 0.875rem;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.stuff-container-hori .container-body {
+    display: flex;
+    flex-direction: row;
+    padding: 3px 0;
+}
+
+#node-attr-view .stuff-container-hori .container-title {
+    width: 40px;
+}
+#node-attr-view .stuff-container-hori:not(:first-child) {
+    border-top: none;
 }
 
 .table td.cell-num {
@@ -219,6 +256,9 @@
     margin: 5px 0; */
 }
 
+#focus-control {
+    max-width: 400px;
+}
 #focus-control .focal-group {
     margin-bottom: 10px;
 }
@@ -346,13 +386,15 @@ rect.highlight-strip {
 }
 .attribute-row-title {
     width: 40px;
+    height: 100%;
     align-self: center;
+    border-right: 1px dotted grey;
 }
 .histogram-block {
-    /* height: 160px; */
+    /* display: inline-block; */
 }
-.histogram-block .title {
-    height: 20px;
+.histogram-block .histogram-title {
+    height: 18px;
     text-align: center;
 }
 
@@ -373,7 +415,7 @@ rect.highlight-strip {
     background-color: #666;
     color: white;
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: 0.7rem;
     padding: 1px 4px;
 }
 
@@ -399,7 +441,7 @@ rect.highlight-strip {
     pointer-events: none;
 }
 
-#graph-view .view-body {
+#graph-view .graph-layout-list {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;

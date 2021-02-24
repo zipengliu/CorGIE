@@ -37,7 +37,7 @@ export class GlobalControls extends Component {
                                 this.props.changeParam("colorBy", parseInt(k), false);
                             }}
                         >
-                            <Dropdown.Toggle id="color-by-toggle-btn" size="xs" variant="outline-primary">
+                            <Dropdown.Toggle id="color-by-toggle-btn" size="xs" variant="outline-secondary">
                                 {colorBy === -1 ? "UMAP position" : colorBy}
                             </Dropdown.Toggle>
 

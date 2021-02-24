@@ -39,7 +39,7 @@ export function compressFeatureValues(values, maxWidth, sort = false) {
 }
 
 // Rescale the coordinates to [0,0]-[w,h]
-export function coordsRescale(coords, w, h, padding) {
+export function coordsRescale(coords, w, h, paddings) {
     let xArr = coords.map((x) => x[0]);
     let yArr = coords.map((x) => x[1]);
     let xExtent = extent(xArr);
@@ -47,10 +47,10 @@ export function coordsRescale(coords, w, h, padding) {
 
     let xScale = scaleLinear()
         .domain(xExtent)
-        .range([padding, w - padding]);
+        .range([paddings.left, w - paddings.left - paddings.right]);
     let yScale = scaleLinear()
         .domain(yExtent)
-        .range([padding, h - padding]);
+        .range([paddings.top, h - paddings.top - paddings.bottom]);
 
     return coords.map((d) => ({ x: xScale(d[0]), y: yScale(d[1]) }));
 }

@@ -23,6 +23,21 @@ import {
     getNodeEmbeddingColor,
     rectBinning,
 } from "./utils";
+// Note that this is a dirty and quick way to retrieve info about dataset
+import datasetsInfo from "./datasets";
+
+function findHopsInDatasetInfo(id) {
+    const defaultHops = 1;
+    for (let d of datasetsInfo) {
+        if (d.id === id) {
+            if (d.hops) {
+                return parseInt(d.hops);
+            }
+            return defaultHops;
+        }
+    }
+    return defaultHops;
+}
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -362,6 +377,10 @@ function summarizeNodeAttrs(nodes, attrMeta, nodeTypes, attrs = null, included =
         } else if (a.type === "categorical") {
             a.values = {}; // A mapping from value to count
         }
+        if (included) {
+            // Only record the nodes when computing partial histogram data
+            a.nodeIds = [];
+        }
     }
 
     // Count
@@ -369,13 +388,15 @@ function summarizeNodeAttrs(nodes, attrMeta, nodeTypes, attrs = null, included =
         for (let a of res) {
             if (nodeTypes[n.typeId].name === a.nodeType) {
                 if (a.type === "scalar") {
-                    n[a.name] = +n[a.name];
-                    a.values.push(n[a.name]);
+                    a.values.push(+n[a.name]);
                 } else if (a.type === "categorical") {
                     if (!a.values.hasOwnProperty(n[a.name])) {
                         a.values[n[a.name]] = 0;
                     }
                     a.values[n[a.name]]++;
+                }
+                if (included) {
+                    a.nodeIds.push(n.id);
                 }
             }
         }
@@ -578,6 +599,7 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
+            draft.param.hops = findHopsInDatasetInfo(action.data.datasetId);
             const { graph, emb, emb2d, attrs, features } = action.data;
             // the scalar values in emb are in string format, so convert them to float first
             for (let e of emb) {
@@ -633,7 +655,7 @@ const reducers = produce((draft, action) => {
                     emb2d,
                     draft.spec.latent.width,
                     draft.spec.latent.height,
-                    draft.spec.coordRescaleMargin
+                    draft.spec.latent.paddings
                 ),
                 qt: new Quadtree({
                     x: 0,
@@ -679,11 +701,12 @@ const reducers = produce((draft, action) => {
             draft.param.nodeFilter = {};
             switch (action.fromView) {
                 case "node-attr":
-                    draft.param.nodeFilter.whichAttr = action.which;
+                    draft.param.nodeFilter.whichAttr = action.which.attr;
+                    draft.param.nodeFilter.whichRow = action.which.row;
                     draft.param.nodeFilter.brushedArea = action.brushedArea;
                 // No break here
                 case "emb":
-                case "focal-layout":
+                case "graph-node-only":
                 case "graph-edge":
                     draft.highlightedNodes = action.nodeIndices;
                     draft.highlightedEdges = getEdgesWithinGroup(
@@ -692,7 +715,7 @@ const reducers = produce((draft, action) => {
                         null
                     );
                     break;
-                case "graph-node":
+                case "graph-node-neigh":
                     // Highlight their neighbors as well
                     neiRes = getNeighbors(
                         draft.graph.neighborMasksByHop,
@@ -847,17 +870,11 @@ const reducers = produce((draft, action) => {
                         title: "those between foc-0 and foc-1",
                     });
                 }
+                // Clear the highlight (blinking) nodes
+                draft.param.nodeFilter = {};
+                draft.highlightedNodes = [];
             }
             draft.param.features.collapsedSel = new Array(newSel.length + 1).fill(true);
-
-            // Clear the highlight (blinking) nodes
-            draft.param.nodeFilter = {};
-            draft.highlightedNodes = [];
-
-            // draft.latent.distToCurFoc = computeDistanceToCurrentFocus(
-            //     draft.latent.distMatrix,
-            //     draft.selectedNodes
-            // );
 
             return;
         case ACTION_TYPES.SELECT_NODES_DONE:

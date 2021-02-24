@@ -88,13 +88,13 @@ export function fetchGraphData(homePath, datasetId) {
                 graph.neighborMasks.map((x) => x.toString()),
                 state.param.hops,
                 neighborDistanceMetric,
-                state.spec.graph,
+                state.spec.graph
             );
 
             dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features }));
 
             initalLayoutWorker
-                .computeForceLayoutWithD3(graph.nodes.length, graph.links, state.spec.coordRescaleMargin)
+                .computeForceLayoutWithD3(graph.nodes.length, graph.links, state.spec.graph.padding)
                 .then((layoutRes) => {
                     dispatch(computeInitLayoutDone(layoutRes));
                 });
@@ -157,7 +157,7 @@ export function toggleHighlightNodesAttr(delIdx = null) {
     return { type: ACTION_TYPES.TOGGLE_HIGHLIGHT_NODES_ATTR, delIdx };
 }
 
-// Mode could be one of CREATE, APPEND, DELETE, or CLEAR
+// Mode could be one of CREATE, APPEND, DELETE, CLEAR, or REMOVE FROM
 export function selectNodes(mode, targetNodes, targetGroupIdx) {
     // return { type: ACTION_TYPES.SELECT_NODES, nodeIdx, selectionBox, mode };
     return async function (dispatch, getState) {
@@ -165,26 +165,49 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
         const state = getState();
         const { selectedNodes, isNodeSelected } = state;
         // Deep copy the selectedNodes to avoid side effects
-        let newSel = selectedNodes.map((x) => x.slice());
-        const nondup = targetNodes ? targetNodes.filter((x) => !isNodeSelected[x]) : null;
-        if (mode === "CREATE") {
-            // Create a new selection
-            if (nondup.length) {
-                newSel.push(nondup);
-            }
-        } else if (mode === "APPEND") {
-            console.assert(targetGroupIdx !== null);
-            // Check for duplicate nodes
-            newSel[targetGroupIdx] = newSel[targetGroupIdx].concat(nondup);
-            console.log(newSel);
-        } else if (mode === "DELETE") {
-            console.assert(targetGroupIdx !== null);
-            console.log("delete ", targetGroupIdx);
-            newSel.splice(targetGroupIdx, 1);
-        } else if (mode === "CLEAR") {
-            newSel = [];
-        } else {
-            console.error("action selectNodes encountered the wrong mode: ", mode);
+        let nondup;
+        let newSel = selectedNodes.slice();
+        switch (mode) {
+            case "CREATE":
+                nondup = targetNodes.filter((x) => !isNodeSelected[x]);
+                if (nondup.length) {
+                    newSel = [...selectedNodes, nondup];
+                }
+                break;
+            case "APPEND":
+                nondup = targetNodes.filter((x) => !isNodeSelected[x]);
+                newSel[targetGroupIdx] = newSel[targetGroupIdx].concat(nondup);
+                break;
+            case "REMOVE FROM":
+            case "SINGLE OUT":
+                const isHighlighted = {};
+                for (let nodeIdx of targetNodes) {
+                    isHighlighted[nodeIdx] = true;
+                }
+                newSel = [];
+                for (let gid = 0; gid < selectedNodes.length; gid++) {
+                    let t = [];
+                    for (let nodeIdx of selectedNodes[gid]) {
+                        if (!isHighlighted.hasOwnProperty(nodeIdx)) {
+                            t.push(nodeIdx);
+                        }
+                    }
+                    if (t.length) {
+                        newSel.push(t);
+                    }
+                }
+                if (mode === "SINGLE OUT") {
+                    newSel.push(targetNodes);
+                }
+                break;
+            case "DELETE":
+                newSel.splice(targetGroupIdx, 1);
+                break;
+            case "CLEAR":
+                newSel = [];
+                break;
+            default:
+                console.error("action selectNodes encountered the wrong mode: ", mode);
         }
         console.log("calling action.selectNodes() ", { mode, targetNodes, targetGroupIdx, newSel });
 
@@ -271,7 +294,7 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     // serializedNeighMap,   // Use local signature
                     // graph.neighborMasksByHop[0].map((x) => x.toArray()), // Use global signature
                     null,
-                    param.nodeSize,
+                    param.nodeSize
                 );
             case "group-constraint-cola":
                 return await focalLayoutWorker.computeFocalLayoutWithCola(
@@ -279,7 +302,7 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     neighRes.neighArr,
                     // serializedNeighMap,
                     null,
-                    param.nodeSize,
+                    param.nodeSize
                 );
             case "spiral":
                 return await focalLayoutWorker.computeSpaceFillingCurveLayout(

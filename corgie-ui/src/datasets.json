@@ -1,93 +1,14 @@
 [
     {
-        "id": "coauthor-sample-100",
-        "name": "Coauthorshp network sample 100",
-        "source": "xxx",
-        "numNodes": 100,
-        "numEdges": 348,
-        "numTypes": 1,
-        "desc": ""
-    },
-    {
-        "id": "coauthor-sample-500",
-        "name": "Coauthorshp network sample 500",
-        "source": "xxx",
-        "numNodes": 500,
-        "numEdges": 2343,
-        "numTypes": 1,
-        "desc": ""
-    },
-    {
-        "id": "coauthor-sample-1000",
-        "name": "Coauthorshp network sample 1000",
-        "source": "xxx",
-        "numNodes": 1000,
-        "numEdges": 5494,
-        "numTypes": 1,
-        "desc": ""
-    },
-    {
-        "id": "coauthor-sample-5000",
-        "name": "Coauthorshp network sample 5000",
-        "source": "xxx",
-        "numNodes": 5000,
-        "numEdges": 27109,
-        "numTypes": 1,
-        "desc": ""
-    },
-    {
-        "id": "coauthor-sample-10000",
-        "name": "Coauthorshp network sample 10000",
-        "source": "xxx",
-        "numNodes": 10000,
-        "numEdges": 54348,
-        "numTypes": 1,
-        "desc": ""
-    },
-    {
-        "id": "coauthor-full",
-        "name": "Coauthorshp network",
-        "source": "xxx",
-        "numNodes": 69109,
-        "numEdges": 249613,
-        "numTypes": 1,
-        "desc": ""
-    },
-    {
-        "id": "kinship-rotate",
-        "name": "kinship dataset using RotatE model",
-        "source": "xxx",
-        "numNodes": 104,
-        "numEdges": 10686,
-        "numTypes": 1,
-        "desc": "25 edge type"
-    },
-    {
-        "id": "umls-rotate",
-        "name": "umls dataset using RotatE model",
-        "source": "xxx",
-        "numNodes": 135,
-        "numEdges": 6529,
-        "numTypes": 1,
-        "desc": "46 edge types"
-    },
-    {
-        "id": "family-rotate",
-        "name": "family dataset using RotatE model",
-        "source": "xxx",
-        "numNodes": 3007,
-        "numEdges": 28356,
-        "numTypes": 1,
-        "desc": "11 edge types"
-    },
-    {
         "id": "bipartite-user-movie-medium-1",
         "name": "bipartite network (user-movie) medium 1",
         "source": "IMDB Movie",
         "numNodes": 259,
         "numEdges": 800,
         "numTypes": 2,
-        "desc": ""
+        "nodeFeatures": "yes",
+        "hops": 2,
+        "desc": "The demo dataset I use for development and debugging"
     },
     {
         "id": "bipartite-user-movie-medium-2",
@@ -96,6 +17,7 @@
         "numNodes": 780,
         "numEdges": 3200,
         "numTypes": 2,
+        "hops": 2,
         "desc": ""
     },
     {
@@ -105,51 +27,8 @@
         "numNodes": 269,
         "numEdges": 861,
         "numTypes": 3,
-        "desc": ""
-    },
-    {
-        "id": "toronto-rest-20-user-50",
-        "name": "bipartite network (user-restaurant) medium 1",
-        "source": "Yelp",
-        "numNodes": 637,
-        "numEdges": 680,
-        "numTypes": 2,
-        "desc": ""
-    },
-    {
-        "id": "toronto-rest-50-user-50",
-        "name": "bipartite network (user-restaurant) medium 2",
-        "source": "Yelp",
-        "numNodes": 1225,
-        "numEdges": 1401,
-        "numTypes": 2,
-        "desc": ""
-    },
-    {
-        "id": "small-10-movies",
-        "name": "small-10",
-        "source": "IMDB Movie",
-        "numNodes": 84,
-        "numEdges": 87,
-        "numTypes": 3,
-        "desc": ""
-    },
-    {
-        "id": "medium-20-movies",
-        "name": "medium-20",
-        "source": "IMDB Movie",
-        "numNodes": 404,
-        "numEdges": 536,
-        "numTypes": 5,
-        "desc": ""
-    },
-    {
-        "id": "medium-20-movies-with-ratings",
-        "name": "medium-20-w-ratings",
-        "source": "IMDB Movie",
-        "numNodes": 298,
-        "numEdges": 379,
-        "numTypes": 5,
+        "nodeFeatures": "TODO",
+        "hops": 2,
         "desc": ""
     },
     {
@@ -159,7 +38,9 @@
         "numNodes": 1815,
         "numEdges": 2797,
         "numTypes": 5,
-        "desc": ""
+        "nodeFeatures": "TODO",
+        "hops": 2,
+        "desc": "TODO: missing node-embeddings.csv and umap.csv"
     },
     {
         "id": "large-500-movies-with-ratings",
@@ -168,7 +49,30 @@
         "numNodes": 11415,
         "numEdges": 22453,
         "numTypes": 5,
-        "desc": ""
+        "hops": 2,
+        "desc": "TODO: missing node features"
+    },
+    {
+        "id": "toronto-rest-20-user-50",
+        "name": "bipartite network (user-restaurant) medium 1",
+        "source": "Yelp",
+        "numNodes": 637,
+        "numEdges": 680,
+        "numTypes": 2,
+        "nodeFeautres": "2 for restaurants, 6 for users",
+        "hops": 2,
+        "desc": "Sampled 20 restaurants in Toronto and sampled 50 users each"
+    },
+    {
+        "id": "toronto-rest-50-user-50",
+        "name": "bipartite network (user-restaurant) medium 2",
+        "source": "Yelp",
+        "numNodes": 1225,
+        "numEdges": 1401,
+        "numTypes": 2,
+        "nodeFeatures": "TODO",
+        "hops": 2,
+        "desc": "Sampled 50 restaurants in Toronto and sampled 50 users each."
     },
     {
         "id": "cora-gcn",
@@ -177,6 +81,8 @@
         "numNodes": 2708,
         "numEdges": 10556,
         "numTypes": 1,
+        "nodeFeatures": "One-hot word vector (binary). Dictionary length: 1433.",
+        "hops": 1,
         "desc": "Applying GCN on Cora dataset"
     },
     {
@@ -186,6 +92,8 @@
         "numNodes": 3327,
         "numEdges": 4732,
         "numTypes": 1,
+        "nodeFeatures": "One-hot word vector (binary).  Dictionary length: 3703.",
+        "hops": 1,
         "desc": "Applying GCN on CiteSeer dataset"
     },
     {
@@ -195,6 +103,101 @@
         "numNodes": 19717,
         "numEdges": 44338,
         "numTypes": 1,
+        "nodeFeatures": "TF/IDF weighted word vector. Dictionary length 500.",
+        "hops": 1,
         "desc": "Applying GCN on Pubmed dataset"
+    },
+    {
+        "id": "coauthor-sample-100",
+        "name": "Coauthor network sample 100",
+        "source": "DBLP coauthor network",
+        "numNodes": 100,
+        "numEdges": 348,
+        "numTypes": 1,
+        "nodeFeatures": "None",
+        "hops": 2,
+        "desc": ""
+    },
+    {
+        "id": "coauthor-sample-500",
+        "name": "Coauthor network sample 500",
+        "source": "DBLP coauthor network",
+        "numNodes": 500,
+        "numEdges": 2343,
+        "numTypes": 1,
+        "nodeFeatures": "None",
+        "hops": 2,
+        "desc": ""
+    },
+    {
+        "id": "coauthor-sample-1000",
+        "name": "Coauthor network sample 1000",
+        "source": "DBLP coauthor network",
+        "numNodes": 1000,
+        "numEdges": 5494,
+        "numTypes": 1,
+        "nodeFeatures": "None",
+        "hops": 2,
+        "desc": ""
+    },
+    {
+        "id": "coauthor-sample-5000",
+        "name": "Coauthor network sample 5000",
+        "source": "DBLP coauthor network",
+        "numNodes": 5000,
+        "numEdges": 27109,
+        "numTypes": 1,
+        "nodeFeatures": "None",
+        "hops": 2,
+        "desc": ""
+    },
+    {
+        "id": "coauthor-sample-10000",
+        "name": "Coauthor network sample 10000",
+        "source": "DBLP coauthor network",
+        "numNodes": 10000,
+        "numEdges": 54348,
+        "numTypes": 1,
+        "nodeFeatures": "None",
+        "hops": 2,
+        "desc": ""
+    },
+    {
+        "id": "coauthor-full",
+        "name": "Coauthor network full",
+        "source": "DBLP coauthor network",
+        "numNodes": 69109,
+        "numEdges": 249613,
+        "numTypes": 1,
+        "nodeFeatures": "None",
+        "hops": 2,
+        "desc": "trained by LINE (Tang et al. 2015)"
+    },
+    {
+        "id": "kinship-rotate",
+        "name": "kinship dataset using RotatE model",
+        "source": "kinship",
+        "numNodes": 104,
+        "numEdges": 10686,
+        "numTypes": 1,
+        "desc": "25 edge type"
+    },
+    {
+        "id": "umls-rotate",
+        "name": "umls dataset using RotatE model",
+        "source": "umls",
+        "numNodes": 135,
+        "numEdges": 6529,
+        "numTypes": 1,
+        "desc": "46 edge types"
+    },
+    {
+        "id": "family-rotate",
+        "name": "family dataset using RotatE model",
+        "source": "family relations",
+        "numNodes": 3007,
+        "numEdges": 28356,
+        "numTypes": 1,
+        "desc": "11 edge types"
     }
 ]

@@ -13,6 +13,7 @@ export class NodePairView extends Component {
     render() {
         const {
             nodes,
+            hops,
             highlightedNodePairs,
             distances,
             nodePairFilter,
@@ -171,6 +172,12 @@ export class NodePairView extends Component {
                         </div>
                     </div>
                 </div>
+
+                <div className="view-footer">
+                    Topological distance of node pair = 1.0 - Jaccard Index of {hops}-hop neighbor sets of two
+                    nodes. <br />
+                    Latent distance of node pair = cosine distance of node embeddings.
+                </div>
             </div>
         );
     }
@@ -210,6 +217,7 @@ const mapStateToProps = (state) => {
         distances: state.distances,
         spec: state.spec.scatterHist,
         nodePairFilter: state.param.nodePairFilter,
+        hops: state.param.hops,
     };
 };
 

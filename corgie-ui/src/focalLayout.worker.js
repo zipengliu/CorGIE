@@ -94,7 +94,7 @@ function computeFocalLayoutWithUMAP(
     nodeSize 
 ) {
     const runUMAP = (nodeIdxArr, masks) => {
-        if (nodeIdxArr.length < 15) {
+        if (nodeIdxArr.length <= 15) {
             // Not enough data to compute UMAP, so we use D3 with edges within this group
             // return nodeIdxArr.map((_) => [Math.random(), Math.random()]);
             const coords = nodeIdxArr.map((_, i) => ({ index: i }));
@@ -181,13 +181,13 @@ function computeFocalLayoutWithUMAP(
         for (let nid of nodes) {
             if (isHorizontal) {
                 newCoords[nid] = {
-                    x: -(coords[nid].x - center.x) + center.x,
-                    y: coords[nid].y,
+                    x: -(oldCoords[nid].x - center.x) + center.x,
+                    y: oldCoords[nid].y,
                 };
             } else {
                 newCoords[nid] = {
-                    x: coords[nid].x,
-                    y: -(coords[nid].y - center.y) + center.y,
+                    x: oldCoords[nid].x,
+                    y: -(oldCoords[nid].y - center.y) + center.y,
                 };
             }
         }

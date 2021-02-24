@@ -19,8 +19,10 @@ export class HighlightControl extends Component {
         }
     }
     render() {
-        const { selectedNodes, highlightedNodes } = this.props;
+        const { selectedNodes, highlightedNodes, numHighlightsAndFocus } = this.props;
         const { selectNodes, selectNodePair, highlightNodes } = this.props;
+        const areHighlightsAlsoFocus =
+            highlightedNodes.length && numHighlightsAndFocus === highlightedNodes.length;
 
         return (
             <div className="view" id="highlight-control">
@@ -38,9 +40,14 @@ export class HighlightControl extends Component {
                                 <Button
                                     variant="outline-primary"
                                     size="xs"
-                                    onClick={selectNodes.bind(null, "CREATE", highlightedNodes, null)}
+                                    onClick={selectNodes.bind(
+                                        null,
+                                        areHighlightsAlsoFocus ? "SINGLE OUT" : "CREATE",
+                                        highlightedNodes,
+                                        null
+                                    )}
                                 >
-                                    create a new focal group
+                                    {areHighlightsAlsoFocus ? "single out " : "create "}a new focal group
                                 </Button>
                             </div>
                             {highlightedNodes.length === 2 && (
@@ -54,11 +61,11 @@ export class HighlightControl extends Component {
                                             highlightedNodes[1]
                                         )}
                                     >
-                                        create two 1-node groups
+                                        remove all & create two 1-node groups
                                     </Button>
                                 </div>
                             )}
-                            {selectedNodes.length > 0 && (
+                            {selectedNodes.length > 0 && !areHighlightsAlsoFocus && (
                                 <div>
                                     {/* add {highlightedNodes.length === 1 ? "it" : "them"} to */}
                                     {selectedNodes.map((_, i) => (
@@ -71,6 +78,22 @@ export class HighlightControl extends Component {
                                             add to foc-{i}
                                         </Button>
                                     ))}
+                                </div>
+                            )}
+                            {areHighlightsAlsoFocus && (
+                                <div>
+                                    <Button
+                                        variant="outline-secondary"
+                                        size="xs"
+                                        onClick={selectNodes.bind(
+                                            null,
+                                            "REMOVE FROM",
+                                            highlightedNodes,
+                                            null
+                                        )}
+                                    >
+                                        Remove from focus group
+                                    </Button>
                                 </div>
                             )}
                             <div>
@@ -114,6 +137,12 @@ export class HighlightControl extends Component {
                         </Form>
                     </div>
                 </div>
+                {numHighlightsAndFocus > 0 && !areHighlightsAlsoFocus && (
+                    <div className="view-footer">
+                        Note: a node can only exist in one focal group. Duplicated focal nodes will be
+                        removed.
+                    </div>
+                )}
             </div>
         );
     }
@@ -122,6 +151,10 @@ export class HighlightControl extends Component {
 const mapStateToProps = (state) => ({
     selectedNodes: state.selectedNodes,
     highlightedNodes: state.highlightedNodes,
+    numHighlightsAndFocus: state.highlightedNodes.reduce(
+        (prev, cur) => prev + (state.isNodeSelected[cur] ? 1 : 0),
+        0
+    ),
 });
 
 const mapDispatchToProps = (dispatch) =>

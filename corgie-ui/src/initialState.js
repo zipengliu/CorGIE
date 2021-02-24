@@ -42,7 +42,7 @@ export default {
         running: false,
     },
 
-    nodeAttrs: null, // Attribute distributions for all nodes
+    nodeAttrs: [], // Attribute distributions for all nodes
     edgeAttributes: {
         type: {
             type: "categorical",
@@ -57,6 +57,7 @@ export default {
     param: {
         hops: 2,
         hopsHover: 1,
+        onlyHighlightOneNode: false,
 
         colorBy: -1, // Could be -1 (for emb 2d postion) or a name of the attribute
         colorScale: null,
@@ -92,6 +93,7 @@ export default {
         // Either use node attributes or search by labels, one or the other, not the same time.
         nodeFilter: {
             whichAttr: null,
+            whichRow: null,
             brushedArea: null,
             searchLabel: null,
             searchId: null,
@@ -111,11 +113,10 @@ export default {
     },
 
     spec: {
-        coordRescaleMargin: 6, // must be smaller than node radius
         graph: {
             margin: 5,
-            padding: 12,    // padding of group
-            gapBetweenHop: 10,
+            padding: 14,    // padding of group
+            gapBetweenHop: 8,
 
             edgeType: "line",
             neighborMarkerMaxHeight: 30,
@@ -126,6 +127,7 @@ export default {
         latent: {
             width: 400,
             height: 400,
+            paddings: { top: 16, bottom: 4, left: 6, right: 6 },
             nodeSize: 3,
         },
         intersectionPlot: {
@@ -152,12 +154,12 @@ export default {
             countBarHeight: 100,
         },
         histogram: {
-            margins: { top: 10, bottom: 30, left: 30, right: 10 },
+            margins: { top: 10, bottom: 18, left: 30, right: 10 },
             height: 60,
             width: 100,
         },
         partialHistogram: {
-            margins: { top: 10, bottom: 30, left: 30, right: 10 },
+            margins: { top: 10, bottom: 18, left: 30, right: 10 },
             height: 30,
             width: 100,
         },

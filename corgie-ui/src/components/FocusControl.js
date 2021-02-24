@@ -1,18 +1,22 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Button } from "react-bootstrap";
+import { Button, Badge } from "react-bootstrap";
 import { selectNodes } from "../actions";
 
 export class FocusControl extends Component {
     render() {
-        const { graph, selectedNodes } = this.props;
-        const { nodes, nodeTypes } = graph;
+        const { selectedNodes } = this.props;
+        // const { nodes, nodeTypes } = graph;
         return (
             <div className="view" id="focus-control">
                 <h5 className="view-title text-center">Focus</h5>
                 <div className="view-body">
-                    {selectedNodes.length === 0 && <div>No focal group yet.</div>}
+                    {selectedNodes.length === 0 && (
+                        <div>
+                            No focal group yet. Try highlight interesting nodes (by brushing / clicking) and then create focal groups.
+                        </div>
+                    )}
                     {selectedNodes.map((g, i) => (
                         <div className="focal-group" key={i}>
                             <span
@@ -23,7 +27,7 @@ export class FocusControl extends Component {
                                 X
                             </span>
                             <span>
-                                foc-{i}: {g.length} {nodeTypes.length > 1 ? nodes[g[0]].type : ""} nodes
+                                foc-{i}: <Badge variant="dark">{g.length}</Badge> nodes
                             </span>
                         </div>
                     ))}
@@ -33,7 +37,7 @@ export class FocusControl extends Component {
                             size="xs"
                             onClick={this.props.selectNodes.bind(null, "CLEAR", null, null)}
                         >
-                            clear focus
+                            clear all focal nodes
                         </Button>
                     )}
                 </div>
@@ -43,7 +47,7 @@ export class FocusControl extends Component {
 }
 
 const mapStateToProps = (state) => ({
-    graph: state.graph,
+    // graph: state.graph,
     selectedNodes: state.selectedNodes,
 });
 

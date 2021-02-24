@@ -1,20 +1,29 @@
 import * as Comlink from "comlink";
-import { forceSimulation, forceManyBody, forceLink, forceCenter, scaleSqrt, scaleLog, scaleLinear } from "d3";
+import {
+    forceSimulation,
+    forceManyBody,
+    forceLink,
+    forceCenter,
+    scaleSqrt,
+    scaleLog,
+    scaleLinear,
+    extent,
+} from "d3";
 
-function computeForceLayoutWithD3(numNodes, edges, margin) {
+function computeForceLayoutWithD3(numNodes, edges, padding) {
     // const constrainCoord = (v, min, max) => Math.max(min, Math.min(v, max));
     console.log("Computing initial D3 force layout...", new Date());
     let coords = new Array(numNodes).fill(false).map((_, i) => ({ index: i }));
 
     const maxNumNodes = 10000;
-    const getSize = scaleSqrt().domain([1, maxNumNodes]).range([400, 1000]).clamp(true),
-        getLinkDistance = scaleLog().base(2).domain([1, maxNumNodes]).range([50, 2]).clamp(true),
-        getRepelStrength = scaleLog().base(2).domain([1, maxNumNodes]).range([-50, -1]).clamp(true);
+    const getSize = scaleSqrt().domain([1, maxNumNodes]).range([500, 1000]).clamp(true),
+        getLinkDistance = scaleLog().base(2).domain([1, maxNumNodes]).range([70, 1.5]).clamp(true),
+        getRepelStrength = scaleLog().base(2).domain([1, maxNumNodes]).range([-70, -1.5]).clamp(true);
     const canvasSize = getSize(numNodes),
         linkDist = getLinkDistance(numNodes),
         repelStrength = getRepelStrength(numNodes);
 
-    console.log("D3 parameters: ", { canvasSize, linkDist, repelStrength, margin });
+    console.log("D3 parameters: ", { canvasSize, linkDist, repelStrength, padding });
 
     let simulation = forceSimulation(coords)
         .force("link", forceLink(edges).distance(linkDist))
@@ -26,14 +35,34 @@ function computeForceLayoutWithD3(numNodes, edges, margin) {
     for (let i = 0; i < numIterations; i++) {
         // Constrain the nodes in a bounding box
         for (let c of coords) {
-            c.x = Math.max(margin, Math.min(canvasSize - margin, c.x));
-            c.y = Math.max(margin, Math.min(canvasSize - margin, c.y));
+            c.x = Math.max(padding, Math.min(canvasSize - padding, c.x));
+            c.y = Math.max(padding, Math.min(canvasSize - padding, c.y));
         }
         simulation.tick();
     }
 
+    const xExtent = extent(coords.map((c) => c.x)),
+        yExtent = extent(coords.map((c) => c.y));
+    const xRange = xExtent[1] - xExtent[0],
+        yRange = yExtent[1] - yExtent[0];
+    let xScale = (x) => x,
+        yScale = (y) => y;
+    let width = canvasSize, height = canvasSize;
+    if (xRange + 2 * padding < canvasSize * 0.95) {
+        xScale = scaleLinear().domain(xExtent).range([padding, xRange + padding]);
+        width = xRange + 2 * padding;
+    }
+    if (yRange + 2 * padding < canvasSize * 0.95) {
+        yScale = scaleLinear().domain(yExtent).range([padding, yRange + padding]);
+        height = yRange + 2 * padding;
+    }
     console.log("Finish computing initial D3 force layout...", new Date());
-    return { coords: coords.map((d) => ({ x: d.x, y: d.y })), width: canvasSize, height: canvasSize, name: 'D3 force-directed'};
+    return {
+        coords: coords.map(c => ({x: xScale(c.x), y: yScale(c.y)})),
+        width,
+        height,
+        name: "D3 force-directed",
+    };
 }
 
 Comlink.expose({

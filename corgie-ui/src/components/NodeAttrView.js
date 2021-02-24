@@ -115,11 +115,22 @@ function FeatureComboVis({ data, collapsed, toggleFunc, spec, legendText }) {
 }
 
 class NodeAttrView extends Component {
-    findBrushedNodesAndDispatch(whichType, whichAttr, v1, v2) {
-        const h = this.props.nodes
-            .filter((n) => whichType === n.type && v1 <= n[whichAttr] && n[whichAttr] <= v2)
-            .map((n) => n.id);
-        this.props.highlightNodes(h, [v1, v2], "node-attr", whichAttr);
+    findBrushedNodesAndDispatch(whichType, whichRow, whichAttr, v1, v2) {
+        const { nodes } = this.props;
+        let h;
+        if (whichRow === this.props.nodeAttrs) {
+            // first row
+            h = nodes
+                .filter((n) => whichType === n.type && v1 <= n[whichAttr] && n[whichAttr] <= v2)
+                .map((n) => n.id);
+        } else {
+            // foc-i row
+            h = whichRow.nodeIds.filter(
+                (id) =>
+                    whichType === nodes[id].type && v1 <= nodes[id][whichAttr] && nodes[id][whichAttr] <= v2
+            );
+        }
+        this.props.highlightNodes(h, [v1, v2], "node-attr", { attr: whichAttr, row: whichRow });
     }
 
     render() {
@@ -146,75 +157,106 @@ class NodeAttrView extends Component {
             <div id="node-attr-view" className="view">
                 <h5 className="view-title text-center">Node features</h5>
                 <div className="view-body">
-                    <div className="attribute-row">
-                        <div className="attribute-row-title">All</div>
-                        {nodeAttrs.map((a, i) => (
-                            <div key={i} className="histogram-block">
-                                <div className="title">{a.name}</div>
-                                <Histogram
-                                    bins={a.bins}
-                                    spec={histSpec}
-                                    hVal={
-                                        hNodeData && hNodeData.type === a.nodeType ? hNodeData[a.name] : null
-                                    }
-                                    brushedFunc={this.findBrushedNodesAndDispatch.bind(
-                                        this,
-                                        a.nodeType,
-                                        a.name
-                                    )}
-                                    brushedRange={
-                                        nodeFilter.whichAttr === a.name ? nodeFilter.brushedArea : null
-                                    }
-                                />
-                            </div>
-                        ))}
-                        {featureAgg.cnts && (
-                            <FeatureComboVis
-                                data={featureAgg}
-                                spec={this.props.spec.feature}
-                                collapsed={param.features.collapsedAll}
-                                toggleFunc={changeParam.bind(this, "features.collapsedAll", null, true, null)}
-                                legendText={"# nodes that have this attribute"}
-                            />
-                        )}
-                    </div>
-                    {selectedNodes.map((s, k) => (
-                        <div key={k} className="attribute-row">
-                            <div className="attribute-row-title">foc-{k}</div>
-                            {selNodeAttrs[k].map((a, i) => (
+                    <div className="stuff-container-hori">
+                        <div className="container-title">All</div>
+                        <div className="container-body">
+                            {nodeAttrs.map((a, i) => (
                                 <div key={i} className="histogram-block">
-                                    <div className="title"></div>
-                                    {a.values.length === 0 ? (
-                                        <div
-                                            style={{
-                                                width:
-                                                    histSpec.width +
-                                                    histSpec.margins.left +
-                                                    histSpec.margins.right,
-                                            }}
-                                        >
-                                            N/A
-                                        </div>
-                                    ) : (
-                                        <Histogram bins={a.bins} spec={partialHistSpec} />
-                                    )}
+                                    <div className="histogram-title">{a.name}</div>
+                                    <Histogram
+                                        bins={a.bins}
+                                        spec={histSpec}
+                                        hVal={
+                                            hNodeData && hNodeData.type === a.nodeType
+                                                ? hNodeData[a.name]
+                                                : null
+                                        }
+                                        brushedFunc={this.findBrushedNodesAndDispatch.bind(
+                                            this,
+                                            a.nodeType,
+                                            nodeAttrs,
+                                            a.name
+                                        )}
+                                        brushedRange={
+                                            nodeFilter.whichRow === nodeAttrs &&
+                                            nodeFilter.whichAttr === a.name
+                                                ? nodeFilter.brushedArea
+                                                : null
+                                        }
+                                    />
                                 </div>
                             ))}
                             {featureAgg.cnts && (
                                 <FeatureComboVis
-                                    data={selFeatures[k]}
+                                    data={featureAgg}
                                     spec={this.props.spec.feature}
-                                    collapsed={param.features.collapsedSel[k]}
+                                    collapsed={param.features.collapsedAll}
                                     toggleFunc={changeParam.bind(
                                         this,
-                                        "features.collapsedSel",
+                                        "features.collapsedAll",
                                         null,
                                         true,
-                                        k
+                                        null
                                     )}
                                     legendText={"# nodes that have this attribute"}
                                 />
                             )}
+                        </div>
+                    </div>
+                    {selectedNodes.map((s, k) => (
+                        <div key={k} className="stuff-container-hori">
+                            <div className="container-title">foc-{k}</div>
+                            <div className="container-body">
+                                {selNodeAttrs[k].map((a, i) => (
+                                    <div key={i} className="histogram-block">
+                                        {a.values.length === 0 ? (
+                                            <div
+                                                className="text-center"
+                                                style={{
+                                                    width:
+                                                        histSpec.width +
+                                                        histSpec.margins.left +
+                                                        histSpec.margins.right,
+                                                }}
+                                            >
+                                                N/A
+                                            </div>
+                                        ) : (
+                                            <Histogram
+                                                bins={a.bins}
+                                                spec={partialHistSpec}
+                                                brushedFunc={this.findBrushedNodesAndDispatch.bind(
+                                                    this,
+                                                    a.nodeType,
+                                                    a,
+                                                    a.name
+                                                )}
+                                                brushedRange={
+                                                    nodeFilter.whichRow === a &&
+                                                    nodeFilter.whichAttr === a.name
+                                                        ? nodeFilter.brushedArea
+                                                        : null
+                                                }
+                                            />
+                                        )}
+                                    </div>
+                                ))}
+                                {featureAgg.cnts && (
+                                    <FeatureComboVis
+                                        data={selFeatures[k]}
+                                        spec={this.props.spec.feature}
+                                        collapsed={param.features.collapsedSel[k]}
+                                        toggleFunc={changeParam.bind(
+                                            this,
+                                            "features.collapsedSel",
+                                            null,
+                                            true,
+                                            k
+                                        )}
+                                        legendText={"# nodes that have this attribute"}
+                                    />
+                                )}
+                            </div>
                         </div>
                     ))}
                     {selectedNodes.length === 2 && featureAgg.cnts && (

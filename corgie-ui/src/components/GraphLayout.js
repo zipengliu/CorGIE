@@ -86,8 +86,8 @@ class GraphLayout extends Component {
             hoveredEdges,
         } = this.props;
         const { width, height, coords, groups, qt } = layoutData;
-        const canvasW = width + spec.margin,
-            canvasH = height + spec.margin;
+        const canvasW = width + 2,
+            canvasH = height + 2;
         return (
             <ReactReduxContext.Consumer>
                 {({ store }) => (
@@ -183,6 +183,7 @@ function BaseLayerUnconnected({
     hoverNode,
     highlightNodes,
     nodeSize,
+    onlyHighlightOneNode,
 }) {
     console.log("GraphLayout BaseLayer render()");
     const debouncedHover = useCallback(debounce((x) => hoverNode(x), 300));
@@ -233,7 +234,13 @@ function BaseLayerUnconnected({
                                 events={{
                                     onMouseOver: debouncedHover.bind(null, i),
                                     onMouseOut: debouncedHover.bind(null, null),
-                                    onClick: highlightNodes.bind(null, [i], null, "graph-node", null),
+                                    onClick: highlightNodes.bind(
+                                        null,
+                                        [i],
+                                        null,
+                                        `graph-node-${onlyHighlightOneNode ? "only" : "neigh"}`,
+                                        null
+                                    ),
                                 }}
                             />
                         )
@@ -266,6 +273,7 @@ const mapStateToPropsBaseLayer = (state) => ({
     nodes: state.graph.nodes,
     edges: state.graph.edges,
     nodeSize: state.param.nodeSize,
+    onlyHighlightOneNode: state.param.onlyHighlightOneNode,
     nodeColors: state.nodeColors,
 });
 

@@ -19,6 +19,8 @@ export class DatasetList extends Component {
                             <th> #Nodes </th>
                             <th> #Edges </th>
                             <th> #Node types </th>
+                            <th> Node features </th>
+                            <th> #Hops </th>
                             <th> Description </th>
                         </tr>
                     </thead>
@@ -33,6 +35,8 @@ export class DatasetList extends Component {
                                 <td className="cell-num"> {d.numNodes} </td>
                                 <td className="cell-num"> {d.numEdges} </td>
                                 <td className="cell-num"> {d.numTypes} </td>
+                                <td> {d.nodeFeatures} </td>
+                                <td className="cell-num"> {d.hops} </td>
                                 <td> {d.desc} </td>
                             </tr>
                         ))}
