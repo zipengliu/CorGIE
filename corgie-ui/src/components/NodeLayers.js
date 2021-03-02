@@ -49,7 +49,15 @@ export class HighlightLayer extends PureComponent {
     //     }
     // }
     render() {
-        const { highlightedNodes, highlightedEdges, nodes, nodeColors, coords, nodeSize } = this.props;
+        const {
+            highlightedNodes,
+            highlightedEdges,
+            nodes,
+            nodeColors,
+            coords,
+            nodeSize,
+            edgeBundlePoints,
+        } = this.props;
         return (
             <Layer
                 listening={false}
@@ -65,15 +73,20 @@ export class HighlightLayer extends PureComponent {
                                 coords[e.target] && (
                                     <Line
                                         key={i}
-                                        points={[
-                                            coords[e.source].x,
-                                            coords[e.source].y,
-                                            coords[e.target].x,
-                                            coords[e.target].y,
-                                        ]}
+                                        points={
+                                            edgeBundlePoints
+                                                ? edgeBundlePoints[e.eid]
+                                                : [
+                                                      coords[e.source].x,
+                                                      coords[e.source].y,
+                                                      coords[e.target].x,
+                                                      coords[e.target].y,
+                                                  ]
+                                        }
                                         stroke="black"
                                         strokeWidth={1}
                                         opacity={1}
+                                        tension={edgeBundlePoints ? 0.5 : 0}
                                     />
                                 )
                         )}
@@ -99,7 +112,17 @@ export class HighlightLayer extends PureComponent {
 }
 
 export const HoverLayer = memo(
-    ({ hoveredNodes, hoveredEdges, nodes, coords, nodeColors, nodeSize, width, height }) => (
+    ({
+        hoveredNodes,
+        hoveredEdges,
+        nodes,
+        coords,
+        nodeColors,
+        nodeSize,
+        width,
+        height,
+        edgeBundlePoints,
+    }) => (
         <Layer listening={false}>
             <Rect
                 x={0}
@@ -118,13 +141,18 @@ export const HoverLayer = memo(
                             coords[e.target] && (
                                 <Line
                                     key={i}
-                                    points={[
-                                        coords[e.source].x,
-                                        coords[e.source].y,
-                                        coords[e.target].x,
-                                        coords[e.target].y,
-                                    ]}
+                                    points={
+                                        edgeBundlePoints
+                                            ? edgeBundlePoints[e.eid]
+                                            : [
+                                                  coords[e.source].x,
+                                                  coords[e.source].y,
+                                                  coords[e.target].x,
+                                                  coords[e.target].y,
+                                              ]
+                                    }
                                     stroke="black"
+                                    tension={edgeBundlePoints ? 0.5 : 0}
                                     strokeWidth={1}
                                     opacity={0.5}
                                 />

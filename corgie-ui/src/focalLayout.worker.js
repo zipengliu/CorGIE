@@ -14,6 +14,7 @@ import { Layout as cola } from "webcola";
 import { UMAP } from "umap-js";
 import bs from "bitset";
 import { getNeighborDistance } from "./utils";
+import forceBundling from "./forceBundling";
 
 const maxNumNodes = 10000;
 let state = {
@@ -48,7 +49,6 @@ function computeEdgeDict(numNodes, edges) {
     }
     return d;
 }
-
 
 // The bitset class functions are not copied from the main thread,
 // so we need to re-construct the bitsets in-place
@@ -87,12 +87,7 @@ function evaluateLayout(coords, nodesByHop) {
     return energy;
 }
 
-function computeFocalLayoutWithUMAP(
-    selectedNodes,
-    neighArr,
-    localNeighMap,
-    nodeSize 
-) {
+function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, nodeSize, useEdgeBundling) {
     const runUMAP = (nodeIdxArr, masks) => {
         if (nodeIdxArr.length <= 15) {
             // Not enough data to compute UMAP, so we use D3 with edges within this group
@@ -116,7 +111,7 @@ function computeFocalLayoutWithUMAP(
             let simulation = forceSimulation(coords)
                 .force("link", forceLink(withinEdges))
                 .force("charge", forceManyBody().strength(-20))
-                .force('collide', forceCollide().radius(nodeSize + 1))
+                .force("collide", forceCollide().radius(nodeSize + 1))
                 // .force("center", forceCenter(50, 50))   // imaging a 100x100 bounding box
                 .stop();
             simulation.tick(300);
@@ -134,7 +129,7 @@ function computeFocalLayoutWithUMAP(
     reconstructBitsets(localNeighMap);
     const n = state.numNodes,
         numFoc = selectedNodes.length;
-    const { hops, edgeDict } = state;
+    const { hops, edgeDict, edges } = state;
     const { padding, gapBetweenHop } = state.spec;
 
     const nodesByHop = [[]];
@@ -364,12 +359,47 @@ function computeFocalLayoutWithUMAP(
     }
     dfs(0);
 
+    // Perform edge bundling
+    let remappedBundleRes = null;
+    if (useEdgeBundling) {
+        console.log("Edge bundling....");
+        const remainingEdges = [];
+        for (let i = 0; i < edges.length; i++) {
+            const e = edges[i];
+            if (bestCoords[e.source] && bestCoords[e.target]) {
+                remainingEdges.push({ source: e.source, target: e.target, i });
+            }
+        }
+        const fbdl = forceBundling()
+            .nodes(bestCoords)
+            .edges(remainingEdges)
+            .subdivision_rate(1.05)
+            .iterations(40)
+            .iterations_rate(0.5)
+            .cycles(4)
+            // .cycles(6)
+            // .step_size(0.1)
+            // .compatibility_threshold(0.6);
+        const bundleRes = fbdl();
+        // remapp the edge bundle results using the edge id
+        remappedBundleRes = {};
+        for (let i = 0; i < remainingEdges.length; i++) {
+            let flattenCoords = [];
+            for (let c of bundleRes[i]) {
+                flattenCoords.push(c.x);
+                flattenCoords.push(c.y);
+            }
+            remappedBundleRes[remainingEdges[i].i] = flattenCoords;
+        }
+    }
+
     console.log({ numTrans, bestEnergy, bestTrans });
     console.log("UMAP layout finished! ", new Date());
 
     return {
         name: "grouped UMAP",
         coords: bestCoords,
+        edgeBundlePoints: remappedBundleRes,
         groups,
         width: canvasWidth,
         height: canvasHeight,

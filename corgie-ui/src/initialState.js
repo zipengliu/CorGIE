@@ -71,6 +71,7 @@ export default {
         graph: {
             layout: "force-directed-d3",
             // layout: "random",
+            bounded: false,
         },
 
         focalGraph: {
@@ -78,6 +79,7 @@ export default {
             layout: "umap",
             // layout: 'spiral',
             // layout: 'group-constraint-cola',
+            useEdgeBundling: true,
         },
 
         latent: {

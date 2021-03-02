@@ -233,7 +233,8 @@ export function computeNeighborMasks(numNodes, edgeDict, hops) {
 
     // first hop
     for (let sid = 0; sid < edgeDict.length; sid++) {
-        for (let tid of edgeDict[sid]) {
+        for (let targetNode of edgeDict[sid]) {
+            const tid = targetNode.nid;
             masks[sid].set(tid, 1);
             masks[tid].set(sid, 1);
         }
@@ -250,14 +251,14 @@ export function computeNeighborMasks(numNodes, edgeDict, hops) {
         for (let i = 0; i < numNodes; i++) {
             let m = masks[i];
             for (let sid of m.toArray()) {
-                for (let tid of edgeDict[sid]) {
-                    m.set(tid, 1);
+                for (let targetNode of edgeDict[sid]) {
+                    m.set(targetNode.nid, 1);
                 }
             }
 
             for (let sid of last[i].toArray()) {
-                for (let tid of edgeDict[sid]) {
-                    cur[i].set(tid, 1);
+                for (let targetNode of edgeDict[sid]) {
+                    cur[i].set(targetNode.nid, 1);
                 }
             }
         }
@@ -272,9 +273,11 @@ export function computeEdgeDict(numNodes, edges) {
     for (let i = 0; i < numNodes; i++) {
         d[i] = [];
     }
-    for (let e of edges) {
-        d[e.source].push(e.target);
-        d[e.target].push(e.source);
+    for (let i = 0; i < edges.length; i++) {
+    // for (let e of edges) {
+        const e = edges[i];
+        d[e.source].push({nid: e.target, eid: i});
+        d[e.target].push({nid: e.source, eid: i});
     }
     return d;
 }

@@ -35,7 +35,12 @@ class GraphLayout extends Component {
         console.log({ candidates, targetNodes, brushedArea });
         // if (targetNodes.length == 0) return;
 
-        this.props.highlightNodes(targetNodes, brushedArea, "graph-node", null);
+        this.props.highlightNodes(
+            targetNodes,
+            brushedArea,
+            `graph-node-${this.props.onlyHighlightOneNode ? "only" : "neigh"}`,
+            null
+        );
     }
     _onMouseDown() {
         const mousePos = this.stageRef.current.getPointerPosition();
@@ -84,10 +89,13 @@ class GraphLayout extends Component {
             highlightedEdges,
             hoveredNeighbors,
             hoveredEdges,
+            useEdgeBundling,
         } = this.props;
         const { width, height, coords, groups, qt } = layoutData;
         const canvasW = width + 2,
             canvasH = height + 2;
+        const ebp = useEdgeBundling ? layoutData.edgeBundlePoints : null;
+
         return (
             <ReactReduxContext.Consumer>
                 {({ store }) => (
@@ -98,7 +106,7 @@ class GraphLayout extends Component {
                         onMouseDown={!!qt ? this._onMouseDown.bind(this) : () => {}}
                     >
                         <Provider store={store}>
-                            <BaseLayer coords={coords} groups={groups} />
+                            <BaseLayer coords={coords} groups={groups} edgeBundlePoints={ebp} />
 
                             {selectedNodes.length > 0 && (
                                 <FocusLayer
@@ -114,6 +122,7 @@ class GraphLayout extends Component {
                                     highlightedNodes={highlightedNodes}
                                     highlightedEdges={highlightedEdges}
                                     coords={coords}
+                                    edgeBundlePoints={ebp}
                                     nodes={nodes}
                                     nodeColors={nodeColors}
                                     nodeSize={nodeSize}
@@ -127,6 +136,7 @@ class GraphLayout extends Component {
                                     hoveredEdges={hoveredEdges}
                                     coords={coords}
                                     nodes={nodes}
+                                    edgeBundlePoints={ebp}
                                     nodeColors={nodeColors}
                                     nodeSize={nodeSize}
                                 />
@@ -154,6 +164,7 @@ const mapStateToProps = (state) => ({
     edges: state.graph.edges,
     spec: state.spec.graph,
     nodeSize: state.param.nodeSize,
+    useEdgeBundling: state.param.focalGraph.useEdgeBundling,
     nodeColors: state.nodeColors,
     selectedNodes: state.selectedNodes,
     highlightedNodes: state.highlightedNodes,
@@ -178,6 +189,7 @@ function BaseLayerUnconnected({
     nodes,
     edges,
     coords,
+    edgeBundlePoints,
     nodeColors,
     groups,
     hoverNode,
@@ -197,16 +209,21 @@ function BaseLayerUnconnected({
                         coords[e.target] && (
                             <Line
                                 key={i}
-                                points={[
-                                    coords[e.source].x,
-                                    coords[e.source].y,
-                                    coords[e.target].x,
-                                    coords[e.target].y,
-                                ]}
+                                points={
+                                    edgeBundlePoints
+                                        ? edgeBundlePoints[i]
+                                        : [
+                                              coords[e.source].x,
+                                              coords[e.source].y,
+                                              coords[e.target].x,
+                                              coords[e.target].y,
+                                          ]
+                                }
                                 stroke="#aaa"
                                 strokeWidth={1}
                                 hitStrokeWidth={2}
-                                opacity={0.5}
+                                opacity={0.3}
+                                tension={edgeBundlePoints ? 0.5 : 0}
                                 onMouseOver={debouncedHover.bind(null, [e.source, e.target])}
                                 onMouseOut={debouncedHover.bind(null, null)}
                                 onClick={highlightNodes.bind(

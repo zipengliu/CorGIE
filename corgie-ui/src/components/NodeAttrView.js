@@ -82,7 +82,7 @@ function FeatureComboVis({ data, collapsed, toggleFunc, spec, legendText }) {
         colorMax = scale(e[1]);
 
     return (
-        <div>
+        <div className="feature-combo">
             <div>
                 <FeatureStrips compressedCnts={compressedCnts} colorScale={scale} spec={spec} />
             </div>
@@ -260,15 +260,23 @@ class NodeAttrView extends Component {
                         </div>
                     ))}
                     {selectedNodes.length === 2 && featureAgg.cnts && (
-                        <div className="attribute-row">
-                            <div className="attribute-row-title">diff.</div>
-                            <FeatureComboVis
-                                data={selFeatures[2]}
-                                spec={this.props.spec.feature}
-                                collapsed={param.features.collapsedSel[2]}
-                                toggleFunc={changeParam.bind(this, "features.collapsedSel", null, true, 2)}
-                                legendText={"Diff. b/w two selected groups"}
-                            />
+                        <div className="stuff-container-hori">
+                            <div className="container-title">diff.</div>
+                            <div className="container-body">
+                                <FeatureComboVis
+                                    data={selFeatures[2]}
+                                    spec={this.props.spec.feature}
+                                    collapsed={param.features.collapsedSel[2]}
+                                    toggleFunc={changeParam.bind(
+                                        this,
+                                        "features.collapsedSel",
+                                        null,
+                                        true,
+                                        2
+                                    )}
+                                    legendText={"Diff. b/w two selected groups"}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>

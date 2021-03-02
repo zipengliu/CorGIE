@@ -7,6 +7,21 @@ import { computeNeighborMasks, computeEdgeDict } from "./utils";
 import FocalLayoutWorker from "./focalLayout.worker";
 import InitialLayoutWorker from "./initialLayout.worker";
 import DistanceWorker from "./distance.worker";
+// Note that this is a dirty and quick way to retrieve info about dataset
+import datasetsInfo from "./datasets";
+
+function findHopsInDatasetInfo(id) {
+    const defaultHops = 1;
+    for (let d of datasetsInfo) {
+        if (d.id === id) {
+            if (d.hops) {
+                return parseInt(d.hops);
+            }
+            return defaultHops;
+        }
+    }
+    return defaultHops;
+}
 
 const distanceWorker = Comlink.wrap(new DistanceWorker());
 const focalLayoutWorker = Comlink.wrap(new FocalLayoutWorker());
@@ -75,8 +90,9 @@ export function fetchGraphData(homePath, datasetId) {
             ];
 
             const state = getState();
-            const { hops, neighborDistanceMetric } = state.param;
+            const { neighborDistanceMetric } = state.param;
             const { numBins } = state.spec.scatterHist;
+            const hops = findHopsInDatasetInfo(datasetId);
             // Filter the self-loops
             graph.links = graph.links.filter((e) => e.source !== e.target);
             graph.edgeDict = computeEdgeDict(graph.nodes.length, graph.links);
@@ -86,12 +102,12 @@ export function fetchGraphData(homePath, datasetId) {
                 graph.nodes.length,
                 graph.links,
                 graph.neighborMasks.map((x) => x.toString()),
-                state.param.hops,
+                hops,
                 neighborDistanceMetric,
                 state.spec.graph
             );
 
-            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features }));
+            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features, hops }));
 
             initalLayoutWorker
                 .computeForceLayoutWithD3(graph.nodes.length, graph.links, state.spec.graph.padding)
@@ -294,7 +310,8 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     // serializedNeighMap,   // Use local signature
                     // graph.neighborMasksByHop[0].map((x) => x.toArray()), // Use global signature
                     null,
-                    param.nodeSize
+                    param.nodeSize,
+                    param.focalGraph.useEdgeBundling,
                 );
             case "group-constraint-cola":
                 return await focalLayoutWorker.computeFocalLayoutWithCola(

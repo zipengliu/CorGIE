@@ -139,6 +139,7 @@ function computeDistances(mode, targetNodes = null, maxNumPairs = 0) {
         computeDist(p[0], p[1], k);
         k++;
     }
+    console.log('Binning distances...', new Date());
 
     const binGen1d = d3bin().domain([0, 1]).thresholds(state.numBins);
     const binsLatent = binGen1d(distLatent),

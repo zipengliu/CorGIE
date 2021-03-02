@@ -62,7 +62,7 @@ class App extends Component {
                 <AppNav datasetId={datasetId} homePath={homePath} stats={{ numNodes, numEdges }} />
 
                 <div className="App" ref={this.appRef}>
-                    <div ref={this.leftColRef}>
+                    <div ref={this.leftColRef} style={{ flexShrink: 2 }}>
                         <div style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}>
                             <div>
                                 <GlobalControls />

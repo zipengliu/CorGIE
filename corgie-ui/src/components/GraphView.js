@@ -1,7 +1,7 @@
 import React from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Spinner, ButtonGroup, Button } from "react-bootstrap";
+import { Spinner, ButtonGroup, Button, Form } from "react-bootstrap";
 import GraphLayout from "./GraphLayout";
 import { changeParam } from "../actions";
 
@@ -12,20 +12,19 @@ export const ComputingSpinner = () => (
     </div>
 );
 
-function GraphView({ initialLayout, focalLayout, hasFocalNodes, hops, onlyHighlightOneNode, changeParam }) {
+function GraphView({
+    initialLayout,
+    focalLayout,
+    hasFocalNodes,
+    hops,
+    useEdgeBundling,
+    onlyHighlightOneNode,
+    changeParam,
+}) {
     return (
         <div className="view" id="graph-view">
             <h5 className="view-title text-center">Graph topology</h5>
             <div className="view-body">
-                {/* <Form>
-                    <Form.Check
-                        type="switch"
-                        id="graph-highlight-mode-switch"
-                        checked={onlyHighlightOneNode}
-                        onChange={changeParam.bind(null, "onlyHighlightOneNode", null, true, null)}
-                        label="Only highlight one node on click"
-                    />
-                </Form> */}
                 <div>
                     <span style={{ marginRight: "5px" }}>Click to highlight </span>
                     <ButtonGroup size="xs">
@@ -44,6 +43,24 @@ function GraphView({ initialLayout, focalLayout, hasFocalNodes, hops, onlyHighli
                             a node + neighbors
                         </Button>
                     </ButtonGroup>
+
+                    <div style={{ display: "inline-block", marginLeft: '40px' }}>
+                        <Form>
+                            <Form.Check
+                                type="switch"
+                                id="use-edge-bundling-switch"
+                                checked={useEdgeBundling}
+                                onChange={changeParam.bind(
+                                    null,
+                                    "focalGraph.useEdgeBundling",
+                                    null,
+                                    true,
+                                    null
+                                )}
+                                label="use edge bundling for focal layout"
+                            />
+                        </Form>
+                    </div>
                 </div>
                 {/* <div>
                     Hover: show the node and its 1-hop neighbors and hide others. <br />
@@ -88,6 +105,7 @@ function GraphView({ initialLayout, focalLayout, hasFocalNodes, hops, onlyHighli
 const mapStateToProps = (state) => ({
     hasFocalNodes: state.selectedNodes.length > 0,
     hops: state.param.hops,
+    useEdgeBundling: state.param.focalGraph.useEdgeBundling,
     onlyHighlightOneNode: state.param.onlyHighlightOneNode,
     initialLayout: state.initialLayout,
     focalLayout: state.focalLayout,

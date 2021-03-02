@@ -17,6 +17,7 @@
         "numNodes": 780,
         "numEdges": 3200,
         "numTypes": 2,
+        "nodeFeatures": "yes",
         "hops": 2,
         "desc": ""
     },
@@ -82,8 +83,19 @@
         "numEdges": 10556,
         "numTypes": 1,
         "nodeFeatures": "One-hot word vector (binary). Dictionary length: 1433.",
-        "hops": 1,
+        "hops": 2,
         "desc": "Applying GCN on Cora dataset"
+    },
+    {
+        "id": "cora-gcn-link-pred",
+        "name": "cora-gcn-link-predict",
+        "source": "paper citation network",
+        "numNodes": 2708,
+        "numEdges": 10556,
+        "numTypes": 1,
+        "nodeFeatures": "One-hot word vector (binary). Dictionary length: 1433.",
+        "hops": 2,
+        "desc": "Applying GCN on Cora dataset but for link prediction"
     },
     {
         "id": "citeseer-gcn",
@@ -93,7 +105,7 @@
         "numEdges": 4732,
         "numTypes": 1,
         "nodeFeatures": "One-hot word vector (binary).  Dictionary length: 3703.",
-        "hops": 1,
+        "hops": 2,
         "desc": "Applying GCN on CiteSeer dataset"
     },
     {
@@ -104,7 +116,7 @@
         "numEdges": 44338,
         "numTypes": 1,
         "nodeFeatures": "TF/IDF weighted word vector. Dictionary length 500.",
-        "hops": 1,
+        "hops": 2,
         "desc": "Applying GCN on Pubmed dataset"
     },
     {

@@ -23,21 +23,6 @@ import {
     getNodeEmbeddingColor,
     rectBinning,
 } from "./utils";
-// Note that this is a dirty and quick way to retrieve info about dataset
-import datasetsInfo from "./datasets";
-
-function findHopsInDatasetInfo(id) {
-    const defaultHops = 1;
-    for (let d of datasetsInfo) {
-        if (d.id === id) {
-            if (d.hops) {
-                return parseInt(d.hops);
-            }
-            return defaultHops;
-        }
-    }
-    return defaultHops;
-}
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -142,9 +127,10 @@ function getEdgesWithinGroup(edgeDict, nodes, nodeHash = null) {
 
     const edges = [];
     for (let id of nodes) {
-        for (let id2 of edgeDict[id]) {
+        for (let id2struct of edgeDict[id]) {
+            const id2 = id2struct.nid;
             if (id < id2 && h[id2]) {
-                edges.push({ source: id, target: id2 });
+                edges.push({ source: id, target: id2, eid: id2struct.eid });
             }
         }
     }
@@ -599,14 +585,14 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
-            draft.param.hops = findHopsInDatasetInfo(action.data.datasetId);
-            const { graph, emb, emb2d, attrs, features } = action.data;
+            const { graph, emb, emb2d, attrs, features, hops } = action.data;
             // the scalar values in emb are in string format, so convert them to float first
             for (let e of emb) {
                 for (let i = 0; i < e.length; i++) {
                     e[i] = parseFloat(e[i]);
                 }
             }
+            draft.param.hops = hops;
             draft.datasetId = action.data.datasetId;
             draft.graph = {
                 nodes: graph.nodes,
@@ -641,7 +627,7 @@ const reducers = produce((draft, action) => {
                 graph.nodes,
                 graph.links,
                 draft.graph.nodeTypes.length,
-                draft.param.hops
+                hops
             );
             // Bug: only 1-hop is counted in the neighborMasksByType
             // draft.graph.neighborMasks = draft.graph.neighborMasksByType.map((m) =>
@@ -927,7 +913,7 @@ const reducers = produce((draft, action) => {
             // Special param changes
             if (action.param === "colorBy") {
                 setNodeColors(draft, action.value);
-            }
+            } 
             // else if (action.param === "nodePairFilter.ascending") {
             //     draft.highlightedNodePairs.sort(action.value ? ascFunc : descFunc);
             // }

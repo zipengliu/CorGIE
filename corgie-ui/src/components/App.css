@@ -251,11 +251,6 @@
     stroke-width: 1px;
 }
 
-#global-controls {
-    /* width: 100%;
-    margin: 5px 0; */
-}
-
 #focus-control {
     max-width: 400px;
 }
@@ -264,6 +259,7 @@
 }
 
 #node-pair-view {
+    max-width: 800px;
     font-size: 0.875rem;
 }
 
@@ -327,6 +323,9 @@ rect.highlight-strip {
 }
 
 /* node attr view */
+.histogram {
+    font-size: 10px;
+}
 .histogram rect.bar {
     stroke: none;
     fill: grey;
@@ -337,19 +336,17 @@ rect.highlight-strip {
     stroke-width: 1px;
 }
 
-.histogram .axis text {
-    font-size: 10px;
-}
 .histogram .value-marker line {
     stroke: black;
     stroke-width: 1px;
-    stroke-dasharray: 5;
+    stroke-dasharray: 3;
 }
 .histogram .value-marker rect {
     fill: black;
 }
 .histogram .value-marker text {
     fill: white;
+    font-size: 14px;
 }
 
 .scatterplot {

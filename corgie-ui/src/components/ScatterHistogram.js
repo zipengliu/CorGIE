@@ -238,15 +238,15 @@ function ScatterHistogram({
                         <g className="value-marker">
                             <g transform={`translate(0,${(1 - hVals[1]) * scatterHeight})`}>
                                 <line x1={0} y1={0} x2={scatterWidth} y2={0} />
-                                <rect x={scatterWidth} y={-6} width={30} height={12} />
+                                <rect x={scatterWidth} y={-8} width={34} height={16} />
                                 <text x={scatterHeight + 2} y={4}>
                                     {valFormat(hVals[1])}
                                 </text>
                             </g>
                             <g transform={`translate(${hVals[0] * scatterWidth},0)`}>
                                 <line x1={0} y1={0} x2={0} y2={scatterHeight} />
-                                <rect x={-15} y={-12} width={30} height={12} />
-                                <text x={0} y={-2} textAnchor="middle">
+                                <rect x={-20} y={-12} width={40} height={16} />
+                                <text x={0} y={1} textAnchor="middle">
                                     {valFormat(hVals[0])}
                                 </text>
                             </g>

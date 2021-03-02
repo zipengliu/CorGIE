@@ -71,20 +71,6 @@ function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, bru
                             {xLabel}
                         </text>
                     )}
-                    {hVal && (
-                        <g className="value-marker">
-                            <line
-                                x1={xScale(hVal)}
-                                y1={15}
-                                x2={xScale(hVal)}
-                                y2={8}
-                                markerEnd="url(#arrowhead)"
-                            />
-                            <text x={xScale(hVal)} y={25} textAnchor="middle">
-                                {xFormat(hVal)}
-                            </text>
-                        </g>
-                    )}
                 </g>
                 <g className="axis">
                     <line x1={-2} y1={height} x2={-2} y2={-arrowLen} markerEnd="url(#axis-arrow-head)" />
@@ -102,6 +88,15 @@ function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, bru
                         </text>
                     )}
                 </g>
+                {hVal && (
+                    <g className="value-marker" transform={`translate(${xScale(hVal)},0)`}>
+                        <line x1={0} y1={0} x2={0} y2={height} />
+                        <rect x={-25} y={-10} width={50} height={18} />
+                        <text x={0} y={3} textAnchor="middle">
+                            {xFormat(hVal)}
+                        </text>
+                    </g>
+                )}
 
                 {brushedFunc && (
                     <Brush
@@ -126,16 +121,8 @@ function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, bru
                 <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="0" refY="5" orient="auto">
                     <polygon points="0 0, 10 5, 0 10" fill="black" />
                 </marker>
-
-                <marker
-                    id="axis-arrow-head"
-                    orient="auto"
-                    markerWidth="4"
-                    markerHeight="8"
-                    refX="0.1"
-                    refY="4"
-                >
-                    <path d="M0,0 V8 L4,4 Z" fill="black" />
+                <marker id="arrowhead-big" markerWidth="12" markerHeight="12" refX="0" refY="6" orient="auto">
+                    <polygon points="0 0, 12 6, 0 12" fill="black" />
                 </marker>
             </defs>
         </svg>
