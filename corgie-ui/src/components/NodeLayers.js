@@ -12,7 +12,7 @@ export const FocusLayer = memo(({ focalGroups, nodes, coords, focalBBox, nodeSiz
                 focalBBox.map((h, i) => (
                     <Group key={i}>
                         <Text x={h.x} y={h.y - 10} text={`foc-${i}`} fontSize={12} />
-                        <Rect {...h} stroke="#ccc" strokeWidth={1} fill="blue" opacity={0.3} />
+                        <Rect {...h} stroke="black" strokeWidth={1} dash={[2, 2]} fillEnabled={false} />
                     </Group>
                 ))}
         </Group>
@@ -34,20 +34,6 @@ export const FocusLayer = memo(({ focalGroups, nodes, coords, focalBBox, nodeSiz
 ));
 
 export class HighlightLayer extends PureComponent {
-    // componentDidMount() {
-    //     const period = 200;
-
-    //     this.anim = new Animation((frame) => {
-    //         this.layer.opacity((Math.sin(frame.time / period) + 1) / 2);
-    //     }, this.layer);
-
-    //     this.anim.start();
-    // }
-    // componentWillUnmount() {
-    //     if (this.anim) {
-    //         this.anim.stop();
-    //     }
-    // }
     render() {
         const {
             highlightedNodes,
@@ -57,14 +43,20 @@ export class HighlightLayer extends PureComponent {
             coords,
             nodeSize,
             edgeBundlePoints,
+            width,
+            height,
         } = this.props;
         return (
-            <Layer
-                listening={false}
-                ref={(node) => {
-                    this.layer = node;
-                }}
-            >
+            <Layer listening={false}>
+                <Rect
+                    x={0}
+                    y={0}
+                    width={width}
+                    height={height}
+                    fill="white"
+                    opacity={0.7}
+                    strokeEnabled={false}
+                />
                 <Group>
                     {!!highlightedEdges &&
                         highlightedEdges.map(
@@ -99,6 +91,89 @@ export class HighlightLayer extends PureComponent {
                                     key={i}
                                     x={coords[nodeIdx].x}
                                     y={coords[nodeIdx].y}
+                                    radius={nodeSize}
+                                    typeId={nodes[nodeIdx].typeId}
+                                    style={{ fill: nodeColors[nodeIdx], strokeEnabled: false }}
+                                />
+                            )
+                    )}
+                </Group>
+            </Layer>
+        );
+    }
+}
+
+const animPeriod = (2 * Math.PI) / 1500;
+export class HoverLayer extends PureComponent {
+    // componentDidMount() {
+    //     this.anim = new Animation((frame) => {
+    //         this.layer.opacity((Math.sin(frame.time * animPeriod) + 1) / 2);
+    //     }, this.layer);
+
+    //     this.anim.start();
+    // }
+    // componentWillUnmount() {
+    //     if (this.anim) {
+    //         this.anim.stop();
+    //     }
+    // }
+    render() {
+        const {
+            hoveredNodes,
+            hoveredEdges,
+            nodes,
+            coords,
+            nodeColors,
+            nodeSize,
+            edgeBundlePoints,
+            width,
+            height,
+        } = this.props;
+        return (
+            <Layer listening={false}>
+                <Rect
+                    x={0}
+                    y={0}
+                    width={width}
+                    height={height}
+                    fill="white"
+                    opacity={0.7}
+                    strokeEnabled={false}
+                />
+                <Group>
+                    {!!hoveredEdges &&
+                        hoveredEdges.map(
+                            (e, i) =>
+                                coords[e.source] &&
+                                coords[e.target] && (
+                                    <Line
+                                        key={i}
+                                        points={
+                                            edgeBundlePoints
+                                                ? edgeBundlePoints[e.eid]
+                                                : [
+                                                      coords[e.source].x,
+                                                      coords[e.source].y,
+                                                      coords[e.target].x,
+                                                      coords[e.target].y,
+                                                  ]
+                                        }
+                                        stroke="black"
+                                        tension={edgeBundlePoints ? 0.5 : 0}
+                                        strokeWidth={1}
+                                        opacity={1}
+                                    />
+                                )
+                        )}
+                </Group>
+                <Group>
+                    {hoveredNodes.map(
+                        (nodeIdx, i) =>
+                            coords[nodeIdx] && (
+                                <NodeRep
+                                    key={i}
+                                    x={coords[nodeIdx].x}
+                                    y={coords[nodeIdx].y}
                                     radius={nodeSize * 1.5}
                                     typeId={nodes[nodeIdx].typeId}
                                     style={{ fill: nodeColors[nodeIdx], stroke: "black", strokeWidth: 2 }}
@@ -110,70 +185,3 @@ export class HighlightLayer extends PureComponent {
         );
     }
 }
-
-export const HoverLayer = memo(
-    ({
-        hoveredNodes,
-        hoveredEdges,
-        nodes,
-        coords,
-        nodeColors,
-        nodeSize,
-        width,
-        height,
-        edgeBundlePoints,
-    }) => (
-        <Layer listening={false}>
-            <Rect
-                x={0}
-                y={0}
-                width={width}
-                height={height}
-                fill="white"
-                opacity={0.8}
-                strokeEnabled={false}
-            />
-            <Group>
-                {!!hoveredEdges &&
-                    hoveredEdges.map(
-                        (e, i) =>
-                            coords[e.source] &&
-                            coords[e.target] && (
-                                <Line
-                                    key={i}
-                                    points={
-                                        edgeBundlePoints
-                                            ? edgeBundlePoints[e.eid]
-                                            : [
-                                                  coords[e.source].x,
-                                                  coords[e.source].y,
-                                                  coords[e.target].x,
-                                                  coords[e.target].y,
-                                              ]
-                                    }
-                                    stroke="black"
-                                    tension={edgeBundlePoints ? 0.5 : 0}
-                                    strokeWidth={1}
-                                    opacity={0.5}
-                                />
-                            )
-                    )}
-            </Group>
-            <Group>
-                {hoveredNodes.map(
-                    (nodeIdx, i) =>
-                        coords[nodeIdx] && (
-                            <NodeRep
-                                key={i}
-                                x={coords[nodeIdx].x}
-                                y={coords[nodeIdx].y}
-                                radius={nodeSize}
-                                typeId={nodes[nodeIdx].typeId}
-                                style={{ fill: nodeColors[nodeIdx], strokeEnabled: false }}
-                            />
-                        )
-                )}
-            </Group>
-        </Layer>
-    )
-);

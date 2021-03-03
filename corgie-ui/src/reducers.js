@@ -19,6 +19,7 @@ import Quadtree from "@timohausmann/quadtree-js";
 import {
     aggregateBinaryFeatures,
     compressFeatureValues,
+    getCompressFeatureMapping,
     coordsRescale,
     getNodeEmbeddingColor,
     rectBinning,
@@ -469,21 +470,21 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
         for (let e of ref) {
             checkAndCompute(e.source, e.target);
         }
-        data.title = "those connected by edges";
+        data.title = "connected by edges";
     } else if (whichSubset.includes("between")) {
         for (let i = 0; i < ref[0].length; i++) {
             for (let j = 0; j < ref[1].length; j++) {
                 checkAndCompute(ref[0][i], ref[1][j]);
             }
         }
-        data.title = "those between foc-0 and foc-1";
+        data.title = "between foc-0 and foc-1";
     } else if (whichSubset.includes("foc")) {
         for (let i = 0; i < ref.length; i++) {
             for (let j = i + 1; j < ref.length; j++) {
                 checkAndCompute(ref[i], ref[j]);
             }
         }
-        data.title = `those within ${whichSubset}`;
+        data.title = `within ${whichSubset}`;
     }
     binRes = rectBinning(data.dist, [1, 1], numBins);
     Object.assign(data, {
@@ -571,10 +572,28 @@ function setNodeColors(draft, colorBy) {
     }
 }
 
+// Determine if all nodes are in a focal group.  If yes return the gid (>0), else return 0
+function areNodesAllInFocalGroups(nodes, isNodeSelected) {
+    let r = 0;
+    for (let nid of nodes) {
+        if (isNodeSelected[nid]) {
+            if (r > 0 && isNodeSelected[nid] !== r) {
+                // Other nodes are in the focal group r, but this one is not in r or not focal node
+                return 0;
+            }
+            r = isNodeSelected[nid];
+        } else if (r > 0) {
+            // Other nodes are in the focal group, but this one is not
+            return 0;
+        }
+    }
+    return r;
+}
+
 const reducers = produce((draft, action) => {
     // const ascFunc = (x1, x2) => x1[0][0] - x2[0][0],
     //     descFunc = (x1, x2) => x2[0][0] - x1[0][0];
-    let neiRes;
+    let neiRes, fAggCntData, fAggBlock, fidMapping;
     switch (action.type) {
         case ACTION_TYPES.FETCH_DATA_PENDING:
             draft.loaded = false;
@@ -596,39 +615,47 @@ const reducers = produce((draft, action) => {
             draft.datasetId = action.data.datasetId;
             draft.graph = {
                 nodes: graph.nodes,
-                edges: graph.links.map((e, i) => ({ ...e, eid: i })),
+                edges: graph.edges,
                 edgeDict: graph.edgeDict,
                 neighborMasks: graph.neighborMasks,
                 neighborMasksByHop: graph.neighborMasksByHop,
                 nodeTypes: countNodesByType(graph.nodes),
                 features,
             };
-            draft.featureAgg = {
-                cnts: null,
-            };
+            draft.initialLayout.numNodes = graph.nodes.length;
+            draft.initialLayout.numEdges = graph.edges.length;
+
+            // compute feature aggregation
             if (features && features[0][0] % 1 == 0) {
                 // is binary features
-                draft.featureAgg.cnts = aggregateBinaryFeatures(features, null);
-                draft.featureAgg.maxCnts = max(draft.featureAgg.cnts);
-                draft.featureAgg.compressedCnts = compressFeatureValues(
-                    draft.featureAgg.cnts,
+                // TODO deal with general numerical features
+                draft.featureAgg.active = true;
+                draft.featureAgg.numFeatures = features[0].length;
+                draft.featureAgg.stripMapping = getCompressFeatureMapping(
+                    features[0].length,
                     draft.spec.feature.maxNumBars
                 );
-                draft.featureAgg.scale = scaleSequential(interpolateGreys).domain([
-                    0,
-                    draft.featureAgg.maxCnts,
-                ]);
+                fAggCntData = aggregateBinaryFeatures(features, null);
+                fAggBlock = {
+                    title: "All",
+                    cnts: fAggCntData.cnts,
+                    featToNid: fAggCntData.featToNid,
+                    maxCnts: max(fAggCntData.cnts),
+                    compressedCnts: compressFeatureValues(fAggCntData.cnts, draft.spec.feature.maxNumBars),
+                };
+                fAggBlock.scale = scaleSequential(interpolateGreys).domain([0, fAggBlock.maxCnts]);
+                draft.featureAgg.display.push(fAggBlock);
             }
             populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
             mapColorToNodeType(draft.graph.nodeTypes);
 
-            // draft.graph.neighborMasksByHop = getNeighborMasksByHop(graph.nodes, graph.links, draft.param.hops);
-            draft.graph.neighborMasksByType = getNeighborMasksByType(
-                graph.nodes,
-                graph.links,
-                draft.graph.nodeTypes.length,
-                hops
-            );
+            // draft.graph.neighborMasksByHop = getNeighborMasksByHop(graph.nodes, graph.edges, draft.param.hops);
+            // draft.graph.neighborMasksByType = getNeighborMasksByType(
+            //     graph.nodes,
+            //     graph.edges,
+            //     draft.graph.nodeTypes.length,
+            //     hops
+            // );
             // Bug: only 1-hop is counted in the neighborMasksByType
             // draft.graph.neighborMasks = draft.graph.neighborMasksByType.map((m) =>
             //     m.reduce((acc, x) => acc.or(x), bs(0))
@@ -665,15 +692,14 @@ const reducers = produce((draft, action) => {
 
             const numPairs = (graph.nodes.length * (graph.nodes.length - 1)) / 2;
             draft.distances.display[0].title =
-                numPairs <= draft.distances.maxSample
-                    ? "all"
-                    : `random samples (N=${format("~s")(draft.distances.maxSample)})`;
+                numPairs <= draft.distances.maxSample ? "all" : "random samples";
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
             return;
 
         case ACTION_TYPES.COMPUTE_INIT_LAYOUT_DONE:
-            draft.initialLayout = { ...action.layoutRes, running: false };
+            Object.assign(draft.initialLayout, action.layoutRes);
+            draft.initialLayout.running = false;
             return;
 
         case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
@@ -685,23 +711,50 @@ const reducers = produce((draft, action) => {
         case ACTION_TYPES.HIGHLIGHT_NODES:
             draft.highlightedNodes = action.nodeIndices;
             draft.param.nodeFilter = {};
-            switch (action.fromView) {
-                case "node-attr":
+            if (action.fromView === "node-type") {
+                draft.highlightedNodes = [];
+                for (let n of draft.graph.nodes) {
+                    if (n.typeId === action.which) {
+                        draft.highlightedNodes.push(n.id);
+                    }
+                }
+                draft.highlightedEdges = getEdgesWithinGroup(
+                    draft.graph.edgeDict,
+                    draft.highlightedNodes,
+                    null
+                );
+            } else {
+                if (action.fromView === "node-attr") {
                     draft.param.nodeFilter.whichAttr = action.which.attr;
                     draft.param.nodeFilter.whichRow = action.which.row;
                     draft.param.nodeFilter.brushedArea = action.brushedArea;
-                // No break here
-                case "emb":
-                case "graph-node-only":
-                case "graph-edge":
+                }
+                if (action.fromView === "feature") {
+                    fAggCntData = new Array(draft.featureAgg.numFeatures).fill(0);
+                    for (let fid of action.which.cellIds) {
+                        fAggCntData[fid] = 1;
+                    }
+                    draft.featureAgg.highlighted = {
+                        displayId: action.which.displayId,
+                        // cellIds: action.which.cellIds,
+                        cnts: fAggCntData,
+                        compressedCnts: compressFeatureValues(fAggCntData, draft.spec.feature.maxNumBars),
+                    };
+                }
+                if (
+                    action.fromView === "node-attr" ||
+                    action.fromView === "feature" ||
+                    action.fromView === "emb" ||
+                    action.fromView === "graph-edge" ||
+                    draft.param.onlyActivateOne
+                ) {
                     draft.highlightedNodes = action.nodeIndices;
                     draft.highlightedEdges = getEdgesWithinGroup(
                         draft.graph.edgeDict,
                         draft.highlightedNodes,
                         null
                     );
-                    break;
-                case "graph-node-neigh":
+                } else {
                     // Highlight their neighbors as well
                     neiRes = getNeighbors(
                         draft.graph.neighborMasksByHop,
@@ -712,21 +765,7 @@ const reducers = produce((draft, action) => {
                     );
                     draft.highlightedNodes = neiRes.nodes;
                     draft.highlightedEdges = neiRes.edges;
-                    break;
-                case "node-type":
-                    draft.highlightedNodes = [];
-                    for (let n of draft.graph.nodes) {
-                        if (n.typeId === action.which) {
-                            draft.highlightedNodes.push(n.id);
-                        }
-                    }
-                    draft.highlightedEdges = getEdgesWithinGroup(
-                        draft.graph.edgeDict,
-                        draft.highlightedNodes,
-                        null
-                    );
-                    break;
-                default:
+                }
             }
 
             if (
@@ -735,6 +774,15 @@ const reducers = produce((draft, action) => {
             ) {
                 draft.highlightedNodes = [];
                 draft.highlightedEdges = [];
+                draft.featureAgg.highlighted = null;
+            } else if (draft.featureAgg.active && action.fromView !== "feature") {
+                // Compute which cell needs to be highlighted
+                fAggCntData = aggregateBinaryFeatures(draft.graph.features, draft.highlightedNodes, false);
+                draft.featureAgg.highlighted = {
+                    displayId: areNodesAllInFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
+                    cnts: fAggCntData.cnts,
+                    compressedCnts: compressFeatureValues(fAggCntData.cnts, draft.spec.feature.maxNumBars),
+                };
             }
             return;
         case ACTION_TYPES.HIGHLIGHT_NODE_PAIRS:
@@ -753,31 +801,71 @@ const reducers = produce((draft, action) => {
         case ACTION_TYPES.HOVER_NODE:
             if (action.nodeIdx === null) {
                 draft.hoveredNodes = [];
-                draft.hoveredNeighbors = [];
+                draft.hoveredNodesAndNeighbors = [];
                 draft.hoveredEdges = [];
+                draft.featureAgg.hovered = null;
             } else if (Number.isInteger(action.nodeIdx)) {
                 // Hover on a node
                 draft.hoveredNodes = [action.nodeIdx];
-                neiRes = getNeighbors(
-                    draft.graph.neighborMasksByHop,
-                    draft.param.hopsHover,
-                    draft.graph.edgeDict,
-                    draft.hoveredNodes,
-                    true
-                );
-                draft.hoveredNeighbors = neiRes.nodes;
-                draft.hoveredEdges = neiRes.edges;
+                if (draft.param.onlyActivateOne) {
+                    draft.hoveredNodesAndNeighbors = [action.nodeIdx];
+                    draft.hoveredEdges = [];
+                } else {
+                    neiRes = getNeighbors(
+                        draft.graph.neighborMasksByHop,
+                        draft.param.hopsHover,
+                        draft.graph.edgeDict,
+                        draft.hoveredNodes,
+                        true
+                    );
+                    draft.hoveredNodesAndNeighbors = neiRes.nodes;
+                    draft.hoveredEdges = neiRes.edges;
+                }
             } else {
-                // Hover on a node pair or edge
+                // Hover on a node pair or edge (or a node type)
                 draft.hoveredNodes = action.nodeIdx;
-                draft.hoveredNeighbors = action.nodeIdx;
+                draft.hoveredNodesAndNeighbors = action.nodeIdx;
                 draft.hoveredEdges = getEdgesWithinGroup(draft.graph.edgeDict, draft.hoveredNodes, null);
+            }
+            if (draft.hoveredNodesAndNeighbors.length && draft.featureAgg.active) {
+                if (action.fromFeature === null) {
+                    // Handle the features of hovered nodes
+                    fAggCntData = aggregateBinaryFeatures(
+                        draft.graph.features,
+                        draft.hoveredNodesAndNeighbors,
+                        false
+                    );
+                    draft.featureAgg.hovered = {
+                        displayId: areNodesAllInFocalGroups(
+                            draft.hoveredNodesAndNeighbors,
+                            draft.isNodeSelected
+                        ),
+                        cnts: fAggCntData.cnts,
+                        compressedCnts: compressFeatureValues(
+                            fAggCntData.cnts,
+                            draft.spec.feature.maxNumBars
+                        ),
+                    };
+                } else if (action.fromFeature.cellIds.length > 0) {
+                    // also highlight some of the feature cells
+                    fidMapping = {};
+                    for (let fid of action.fromFeature.cellIds) {
+                        fidMapping[fid] = 1;
+                    }
+                    draft.featureAgg.hovered = {
+                        displayId: action.fromFeature.displayId,
+                        cnts: fidMapping,
+                    };
+                }
             }
             return;
         case ACTION_TYPES.SELECT_NODES_PENDING:
             let { newSel, neighRes } = action;
             draft.selectedNodes = newSel;
+            // Remove the computation results for previous focal groups
             draft.distances.display.length = 2;
+            draft.featureAgg.display.length = 1;
+            draft.param.features.collapsed.length = 1;
             if (newSel.length == 0) {
                 // Clear selection
                 draft.neighArr = null;
@@ -786,10 +874,8 @@ const reducers = produce((draft, action) => {
                 draft.isNodeSelectedNeighbor = {};
                 draft.neighGrp = null;
                 draft.selNodeAttrs = [];
-                draft.selFeatures = [];
                 draft.focalLayout = { running: false };
                 draft.selBoundingBox = [];
-                draft.distances.display.length = 2;
             } else {
                 draft.isNodeSelected = neighRes.isNodeSelected;
                 draft.isNodeSelectedNeighbor = neighRes.isNodeSelectedNeighbor;
@@ -812,22 +898,36 @@ const reducers = produce((draft, action) => {
                         sel
                     )
                 );
-                draft.focalLayout.running = true;
+                Object.assign(draft.focalLayout, {
+                    running: true,
+                    layoutId: action.layoutId,
+                    numNodes: null,
+                    numEdges: null,
+                });
                 draft.selBoundingBox = newSel.map((s) => computeBoundingBox(draft.latent.coords, s));
 
                 // Compute the features for the focal nodes
-                if (draft.featureAgg.cnts) {
-                    draft.selFeatures = newSel.map((s) => {
-                        const cnts = aggregateBinaryFeatures(draft.graph.features, s);
-                        const maxCnts = max(cnts);
-                        const compressedCnts = compressFeatureValues(cnts, draft.spec.feature.maxNumBars);
-                        const scale = scaleSequential(interpolateGreys).domain([0, maxCnts]);
-                        return { mode: "highlight", cnts, compressedCnts, maxCnts, scale };
+                if (draft.featureAgg.active) {
+                    newSel.map((s, i) => {
+                        fAggCntData = aggregateBinaryFeatures(draft.graph.features, s);
+                        fAggBlock = {
+                            title: `foc-${i}`,
+                            cnts: fAggCntData.cnts,
+                            featToNid: fAggCntData.featToNid,
+                            maxCnts: max(fAggCntData.cnts),
+                            compressedCnts: compressFeatureValues(
+                                fAggCntData.cnts,
+                                draft.spec.feature.maxNumBars
+                            ),
+                        };
+                        fAggBlock.scale = scaleSequential(interpolateGreys).domain([0, fAggBlock.maxCnts]);
+                        draft.featureAgg.display.push(fAggBlock);
+                        draft.param.features.collapsed.push(true);
                     });
-                    if (newSel.length == 2) {
+                    if (newSel.length === 2) {
                         // Compute the diff feature data
-                        const diffCnts = draft.selFeatures[0].cnts.map(
-                            (c1, i) => c1 - draft.selFeatures[1].cnts[i]
+                        const diffCnts = draft.featureAgg.display[1].cnts.map(
+                            (c1, i) => c1 - draft.featureAgg.display[2].cnts[i]
                         );
                         const diffExtent = extent(diffCnts);
                         const t = Math.max(Math.abs(diffExtent[0]), Math.abs(diffExtent[1]));
@@ -835,56 +935,68 @@ const reducers = produce((draft, action) => {
                             diffCnts,
                             draft.spec.feature.maxNumBars
                         );
-                        draft.selFeatures.push({
-                            mode: "diff",
+                        const diffFeatToNid = {};
+                        for (let i = 0; i < diffCnts.length; i++) {
+                            if (diffCnts[i] !== 0) {
+                                let ftn1 = draft.featureAgg.display[1].featToNid[i] || [],
+                                    ftn2 = draft.featureAgg.display[2].featToNid[i] || [];
+                                diffFeatToNid[i] = ftn1.concat(ftn2);
+                            }
+                        }
+                        draft.featureAgg.display.push({
+                            title: "diff",
                             cnts: diffCnts,
                             compressedCnts: diffCompressedCnts,
+                            featToNid: diffFeatToNid,
                             scale: scaleSequential(interpolateRdBu).domain([-t, t]),
                         });
+                        draft.param.features.collapsed.push(false);
                     }
                 }
                 // Allocate space for the distance data, waiting for worker to return the actual computed values
-                if (newSel[0].length > 1) {
-                    draft.distances.display.push({ isComputing: true, title: "those within foc-0" });
+                for (let i = 0; i < newSel.length; i++) {
+                    if (newSel[i].length > 1) {
+                        draft.distances.display.push({ isComputing: true, title: `within foc-${i}` });
+                    }
                 }
-                if (newSel.length > 1 && newSel[1].length > 1) {
-                    draft.distances.display.push({ isComputing: true, title: "those within foc-1" });
-                }
-                if (newSel.length > 1 && (newSel[0].length > 1 || newSel[1].length > 1)) {
+                if (newSel.length === 2 && (newSel[0].length > 1 || newSel[1].length > 1)) {
                     draft.distances.display.push({
                         isComputing: true,
-                        title: "those between foc-0 and foc-1",
+                        title: "between foc-0 and foc-1",
                     });
                 }
                 // Clear the highlight (blinking) nodes
                 draft.param.nodeFilter = {};
                 draft.highlightedNodes = [];
+                draft.featureAgg.highlighted = null;
             }
-            draft.param.features.collapsedSel = new Array(newSel.length + 1).fill(true);
 
             return;
         case ACTION_TYPES.SELECT_NODES_DONE:
-            draft.focalLayout = {
-                ...action.layoutRes,
-                running: false,
-            };
-            if (action.layoutRes.coords) {
-                draft.focalLayout.qt = new Quadtree({
-                    x: 0,
-                    y: 0,
-                    width: action.layoutRes.width,
-                    height: action.layoutRes.height,
-                });
-                for (let i = 0; i < action.layoutRes.coords.length; i++) {
-                    const c = action.layoutRes.coords[i];
-                    if (c) {
-                        draft.focalLayout.qt.insert({
-                            id: i,
-                            x: c.x - 0.5,
-                            y: c.y - 0.5,
-                            width: 1,
-                            height: 1,
-                        });
+            // Avoid racing condition
+            if (action.layoutId && action.layoutId === draft.focalLayout.layoutId) {
+                draft.focalLayout = {
+                    ...action.layoutRes,
+                    running: false,
+                };
+                if (action.layoutRes.coords) {
+                    draft.focalLayout.qt = new Quadtree({
+                        x: 0,
+                        y: 0,
+                        width: action.layoutRes.width,
+                        height: action.layoutRes.height,
+                    });
+                    for (let i = 0; i < action.layoutRes.coords.length; i++) {
+                        const c = action.layoutRes.coords[i];
+                        if (c) {
+                            draft.focalLayout.qt.insert({
+                                id: i,
+                                x: c.x - 0.5,
+                                y: c.y - 0.5,
+                                width: 1,
+                                height: 1,
+                            });
+                        }
                     }
                 }
             }
@@ -913,7 +1025,7 @@ const reducers = produce((draft, action) => {
             // Special param changes
             if (action.param === "colorBy") {
                 setNodeColors(draft, action.value);
-            } 
+            }
             // else if (action.param === "nodePairFilter.ascending") {
             //     draft.highlightedNodePairs.sort(action.value ? ascFunc : descFunc);
             // }

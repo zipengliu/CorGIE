@@ -1,37 +1,62 @@
 import bs from "bitset";
 import { scaleLinear, extent, lab } from "d3";
 
-export function aggregateBinaryFeatures(features, highlightNodes) {
+export function aggregateBinaryFeatures(features, highlightNodes, computeMapping = true) {
     const m = features[0].length;
-    const res = new Array(m).fill(0);
-    if (!highlightNodes) {
-        for (let f of features) {
-            for (let i = 0; i < m; i++) {
-                res[i] += f[i];
-            }
-        }
-    } else {
-        for (let nodeId of highlightNodes) {
-            for (let i = 0; i < m; i++) {
-                res[i] += features[nodeId][i];
+    const cnts = new Array(m).fill(0);
+    const featToNid = {};
+
+    function handleFeature(nid, f) {
+        for (let i = 0; i < m; i++) {
+            if (f[i] > 0) {
+                cnts[i] += f[i];
+                if (computeMapping) {
+                    if (!featToNid.hasOwnProperty(i)) {
+                        featToNid[i] = [];
+                    }
+                    featToNid[i].push(nid);
+                }
             }
         }
     }
-    return res;
+    if (!highlightNodes) {
+        for (let nid = 0; nid < features.length; nid++) {
+            handleFeature(nid, features[nid]);
+        }
+    } else {
+        for (let nodeId of highlightNodes) {
+            handleFeature(nodeId, features[nodeId]);
+        }
+    }
+    return { cnts, featToNid };
 }
 
+export function getCompressFeatureMapping(numFeatures, maxNumStrips) {
+    const r = Math.ceil(numFeatures / maxNumStrips);
+    const numStrips = Math.ceil(numFeatures / r);
+    const m = new Array(numStrips).fill(0).map((_, i) => {
+        const x = [];
+        const start = i * r;
+        for (let j = 0; j < r && start + j < numFeatures; j++) {
+            x.push(start + j);
+        }
+        return x;
+    });
+    return m;
+}
 // maxWidth: max number of bins / strips
-export function compressFeatureValues(values, maxWidth, sort = false) {
+export function compressFeatureValues(values, maxNumStrips, sort = false) {
     const sortedVal = sort ? values.slice().sort((a, b) => b - a) : values;
     const n = values.length;
     // Compression ratio
-    const r = Math.ceil(n / maxWidth);
+    const r = Math.ceil(n / maxNumStrips);
+    // console.log("feature compress rate = ", r);
 
     const compValues = [];
     for (let i = 0; i < n; i += r) {
         let t = 0;
-        for (let j = i; j < n && j < i + r; j++) {
-            t = Math.max(t, sortedVal[j]); // Use the max function to aggreagte
+        for (let j = 0; j < r && i + j < n; j++) {
+            t = Math.max(t, sortedVal[i + j]); // Use the max function to aggreagte
         }
         compValues.push(t);
     }
@@ -110,9 +135,11 @@ export function getSelectedNeighbors(selectedNodes, neighborMasks, hops) {
         neighArr = [],
         neighMap = {};
 
+    let gid = 0;
     for (let g of selectedNodes) {
+        gid++;
         for (let nodeIdx of g) {
-            isNodeSelected[nodeIdx] = true;
+            isNodeSelected[nodeIdx] = gid;
             // Iterate its neighbors by hops
             // Compute whether a node is the neighbor of selected nodes, if yes, specify the #hops
             // The closest / smallest hop wins if it is neighbor of multiple selected nodes
@@ -268,16 +295,33 @@ export function computeNeighborMasks(numNodes, edgeDict, hops) {
     return { neighborMasks: masks, neighborMasksByHop: masksByHop };
 }
 
-export function computeEdgeDict(numNodes, edges) {
+// Filter edges: self loop and duplicates are removed.
+// Note: we treat all edges as undirectional.
+// Compute an edge dictionary by its source ID
+export function filterEdgeAndComputeDict(numNodes, edges) {
+    const filteredEdges = [];
+
     const d = new Array(numNodes);
+    const h = {};
     for (let i = 0; i < numNodes; i++) {
         d[i] = [];
+        h[i] = {};
     }
-    for (let i = 0; i < edges.length; i++) {
-    // for (let e of edges) {
-        const e = edges[i];
-        d[e.source].push({nid: e.target, eid: i});
-        d[e.target].push({nid: e.source, eid: i});
+    let k = 0;
+    for (let e of edges) {
+        if (e.source !== e.target) {
+            // not self loops
+            let s = Math.min(e.source, e.target),
+                t = Math.max(e.source, e.target);
+            if (!h[s].hasOwnProperty(t)) {
+                // remove dup edges
+                d[e.source].push({ nid: e.target, eid: k });
+                d[e.target].push({ nid: e.source, eid: k });
+                filteredEdges.push({ ...e, eid: k });
+                k++;
+            }
+            h[s][t] = true;
+        }
     }
-    return d;
+    return { edges: filteredEdges, edgeDict: d };
 }

@@ -47,7 +47,7 @@ class EmbeddingsView extends Component {
                 </div>
 
                 <div className="view-footer">
-                    Click to highlight one node. Brush to highlight a cluster.
+                    Click to highlight one node. Brush to highlight a cluster (w/o neighbors).
                 </div>
             </div>
         );

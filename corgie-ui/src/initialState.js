@@ -10,14 +10,16 @@ export default {
     nodeColors: [],
 
     featureAgg: {
-        cnts: null
+        active: false,
+        hovered: null,
+        highlighted: null,
+        display: [],
     },
 
     selectedNodes: [], // Array of array
     selBoundingBox: [],
     isNodeSelected: {}, // Dict for ALL selected nodes
     selNodeAttrs: [], // Attribute distributions for selected nodes, each selection group is an array in selNodeAttrs
-    selFeatures: [], // Binary feature distribution for each selected group
     isNodeSelectedNeighbor: {},
 
     highlightedNodes: [],
@@ -25,14 +27,14 @@ export default {
     highlightedEdges: [], // list of edges between highlighted nodes
 
     hoveredNodes: [], // either one or two nodes (when hovering on an edge)
-    hoveredNeighbors: [], // neighbors of hovered nodes + hovered nodes
+    hoveredNodesAndNeighbors: [], // neighbors of hovered nodes + hovered nodes
     hoveredEdges: [], // list of edges between hovered nodes and their neighbors
 
     neighborIntersections: null,
 
     distances: {
         maxSample: 1000000,
-        display: [{isComputing: true, title: 'all (down-sampled)'}, {isComputing: true, title: 'those connected by edges'}],
+        display: [{isComputing: true, title: 'all (down-sampled)'}, {isComputing: true, title: 'connected by edges'}],
     },
 
     initialLayout: {
@@ -57,7 +59,7 @@ export default {
     param: {
         hops: 2,
         hopsHover: 1,
-        onlyHighlightOneNode: false,
+        onlyActivateOne: false,     // whether to activate one node or one node + its neighbors
 
         colorBy: -1, // Could be -1 (for emb 2d postion) or a name of the attribute
         colorScale: null,
@@ -87,8 +89,7 @@ export default {
         },
 
         features: {
-            collapsedAll: false,
-            collapsedSel: [],
+            collapsed: [false],
         },
 
         // Highlight nodes with the following filter in the node attributes
@@ -117,7 +118,7 @@ export default {
     spec: {
         graph: {
             margin: 5,
-            padding: 14,    // padding of group
+            padding: 16,    // padding of group
             gapBetweenHop: 8,
 
             edgeType: "line",

@@ -4,6 +4,7 @@ import { bindActionCreators } from "redux";
 import debounce from "lodash.debounce";
 import { Form, ButtonGroup, Button, Badge } from "react-bootstrap";
 import { FixedSizeList } from "react-window";
+import { format } from "d3";
 import { getNeighborDistance, getCosineDistance } from "../utils";
 import { highlightNodePairs, hoverNode, selectNodePair, changeParam } from "../actions";
 import { ComputingSpinner } from "./GraphView";
@@ -24,6 +25,7 @@ export class NodePairView extends Component {
         const labelOrId = nodes && nodes[0].label ? "label" : "id";
         const { display } = distances;
         const { useLinearScale } = nodePairFilter;
+        const numFormat = format(".2~s");
 
         const NodePairItem = memo(({ index, style }) => {
             const p = highlightedNodePairs[index];
@@ -145,7 +147,9 @@ export class NodePairView extends Component {
                         <div className="scatter-hist-list">
                             {display.map((d, i) => (
                                 <div className="stuff-container" key={i}>
-                                    <div className="container-title">{d.title}</div>
+                                    <div className="container-title">
+                                        {d.title} (#={d.src? numFormat(d.src.length): ''})
+                                    </div>
                                     <div className="container-body">
                                         {d.isComputing ? (
                                             <ComputingSpinner />

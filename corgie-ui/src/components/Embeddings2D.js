@@ -85,7 +85,7 @@ class Embeddings2D extends Component {
             selectedNodes,
             selBoundingBox,
             highlightedNodes,
-            hoveredNeighbors,
+            hoveredNodesAndNeighbors,
         } = this.props;
         return (
             <ReactReduxContext.Consumer>
@@ -117,18 +117,20 @@ class Embeddings2D extends Component {
                                     nodes={nodes}
                                     nodeColors={nodeColors}
                                     nodeSize={nodeSize}
-                                />
-                            )}
-                            {hoveredNeighbors.length > 0 && (
-                                <HoverLayer
                                     width={spec.width}
                                     height={spec.height}
-                                    hoveredNodes={hoveredNeighbors}
+                                />
+                            )}
+                            {hoveredNodesAndNeighbors.length > 0 && (
+                                <HoverLayer
+                                    hoveredNodes={hoveredNodesAndNeighbors}
                                     hoveredEdges={null}
                                     coords={coords}
                                     nodes={nodes}
                                     nodeColors={nodeColors}
                                     nodeSize={nodeSize}
+                                    width={spec.width}
+                                    height={spec.height}
                                 />
                             )}
                             {this.state.brushedArea && (
@@ -161,7 +163,7 @@ const mapStateToProps = (state) => ({
     selectedNodeType: state.param.latent.selectedNodeType,
     selBoundingBox: state.selBoundingBox,
     highlightedNodes: state.highlightedNodes,
-    hoveredNeighbors: state.hoveredNeighbors,
+    hoveredNodesAndNeighbors: state.hoveredNodesAndNeighbors,
     nodeSize: state.param.nodeSize - 1,
 });
 

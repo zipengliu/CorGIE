@@ -18,7 +18,7 @@ function GraphView({
     hasFocalNodes,
     hops,
     useEdgeBundling,
-    onlyHighlightOneNode,
+    onlyActivateOne,
     changeParam,
 }) {
     return (
@@ -26,53 +26,33 @@ function GraphView({
             <h5 className="view-title text-center">Graph topology</h5>
             <div className="view-body">
                 <div>
-                    <span style={{ marginRight: "5px" }}>Click to highlight </span>
-                    <ButtonGroup size="xs">
-                        <Button
-                            variant="outline-secondary"
-                            active={onlyHighlightOneNode}
-                            onClick={changeParam.bind(this, "onlyHighlightOneNode", true, false, null)}
-                        >
-                            a node
-                        </Button>
-                        <Button
-                            variant="outline-secondary"
-                            active={!onlyHighlightOneNode}
-                            onClick={changeParam.bind(this, "onlyHighlightOneNode", false, false, null)}
-                        >
-                            a node + neighbors
-                        </Button>
-                    </ButtonGroup>
-
-                    <div style={{ display: "inline-block", marginLeft: '40px' }}>
-                        <Form>
-                            <Form.Check
-                                type="switch"
-                                id="use-edge-bundling-switch"
-                                checked={useEdgeBundling}
-                                onChange={changeParam.bind(
-                                    null,
-                                    "focalGraph.useEdgeBundling",
-                                    null,
-                                    true,
-                                    null
-                                )}
-                                label="use edge bundling for focal layout"
-                            />
-                        </Form>
-                    </div>
+                    <Form>
+                        <Form.Check
+                            type="switch"
+                            id="use-edge-bundling-switch"
+                            checked={useEdgeBundling}
+                            onChange={changeParam.bind(null, "focalGraph.useEdgeBundling", null, true, null)}
+                            label="use edge bundling for focal layout"
+                        />
+                    </Form>
                 </div>
                 {/* <div>
                     Hover: show the node and its 1-hop neighbors and hide others. <br />
                     Click: highlight the node and its 1-hop neighbors.
                 </div> */}
-                <div className="graph-layout-list">
+                <div
+                    className="graph-layout-list"
+                    style={{ minWidth: Math.max(initialLayout.width || 0, focalLayout.width || 0) + 35 }}
+                >
                     {hasFocalNodes && (
                         <div
                             className="stuff-container"
                             style={{ width: focalLayout.running ? 400 : focalLayout.width + 25 }}
                         >
-                            <div className="container-title">Focal layout: {focalLayout.name}</div>
+                            <div className="container-title">
+                                Focal layout: {focalLayout.name} (V={focalLayout.numNodes}, E=
+                                {focalLayout.numEdges})
+                            </div>
                             <div className="container-body">
                                 {focalLayout.running ? (
                                     <ComputingSpinner />
@@ -87,7 +67,10 @@ function GraphView({
                         </div>
                     )}
                     <div className="stuff-container">
-                        <div className="container-title">Original layout: {initialLayout.name}</div>
+                        <div className="container-title">
+                            Original layout: {initialLayout.name} (V={initialLayout.numNodes}, E=
+                            {initialLayout.numEdges})
+                        </div>
                         <div className="container-body">
                             {initialLayout.running ? (
                                 <ComputingSpinner />
@@ -106,7 +89,7 @@ const mapStateToProps = (state) => ({
     hasFocalNodes: state.selectedNodes.length > 0,
     hops: state.param.hops,
     useEdgeBundling: state.param.focalGraph.useEdgeBundling,
-    onlyHighlightOneNode: state.param.onlyHighlightOneNode,
+    onlyActivateOne: state.param.onlyActivateOne,
     initialLayout: state.initialLayout,
     focalLayout: state.focalLayout,
 });

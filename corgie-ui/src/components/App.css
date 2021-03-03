@@ -82,6 +82,33 @@
     padding: 3px 0;
 }
 
+@keyframes blinkingEffect {
+    0% {
+        fill-opacity: 0;
+        stroke: none;
+    }
+    25% {
+        fill-opacity: 0.5;
+        stroke: black;
+    }
+    50% {
+        fill-opacity: 1;
+        stroke: black;
+    }
+    75% {
+        fill-opacity: 0.5;
+        stroke: black;
+    }
+    100% {
+        fill-opacity: 0;
+        stroke: none;
+    }
+}
+.blinking {
+    -webkit-animation: blinkingEffect 1.5s infinite;
+    animation: blinkingEffect 1.5s infinite;
+}
+
 #node-attr-view .stuff-container-hori .container-title {
     width: 40px;
 }
@@ -220,32 +247,6 @@
     stroke-opacity: 1;
 }
 
-@keyframes blinkingEffect {
-    0% {
-        fill-opacity: 0.2;
-        stroke: none;
-    }
-    25% {
-        fill-opacity: 0.6;
-        stroke-width: 1px;
-        stroke: black;
-    }
-    50% {
-        fill-opacity: 1;
-        stroke-width: 1px;
-        stroke: black;
-    }
-    75% {
-        fill-opacity: 0.6;
-        stroke-width: 1px;
-        stroke: black;
-    }
-    100% {
-        fill-opacity: 0.2;
-        stroke: none;
-    }
-}
-
 .nodes .selected-neighbor-glyph {
     stroke: black;
     stroke-width: 1px;
@@ -358,18 +359,45 @@ rect.highlight-strip {
 }
 
 .feature-matrix rect.cell {
-    border: none;
+    stroke: none;
+}
+.feature-matrix rect.cell.hovered {
+    stroke-width: 1px;
+    stroke: black;
+    -webkit-animation: blinkingEffect 1.5s infinite;
+    animation: blinkingEffect 1.5s infinite;
+}
+.feature-matrix rect.cell.highlighted {
+    stroke-width: 2px;
+    stroke: black;
 }
 .feature-matrix .legend rect {
-    border: none;
+    stroke: none;
 }
 .feature-matrix {
     font-size: 12px;
 }
 
-.feature-barcode line {
+.feature-strips line.strip {
     stroke-width: 1px;
 }
+.feature-strips line.strip.hovered {
+    transform: translateY(-50%) scaleY(2);
+    -webkit-animation: blinkingEffect 1.5s infinite;
+    animation: blinkingEffect 1.5s infinite;
+}
+.feature-strips line.strip.highlighted {
+    transform: translateY(-50%) scaleY(2);
+    stroke: black;
+    /* TODO: what else */
+}
+/* .feature-strips line.hovered[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    font-size: 20px;
+    top: -200%;
+    left: 0;
+} */
 
 .attribute-row {
     display: flex;

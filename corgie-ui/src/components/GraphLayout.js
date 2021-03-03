@@ -38,7 +38,7 @@ class GraphLayout extends Component {
         this.props.highlightNodes(
             targetNodes,
             brushedArea,
-            `graph-node-${this.props.onlyHighlightOneNode ? "only" : "neigh"}`,
+            `graph-node-${this.props.onlyActivateOne ? "only" : "neigh"}`,
             null
         );
     }
@@ -87,7 +87,7 @@ class GraphLayout extends Component {
             selectedNodes,
             highlightedNodes,
             highlightedEdges,
-            hoveredNeighbors,
+            hoveredNodesAndNeighbors,
             hoveredEdges,
             useEdgeBundling,
         } = this.props;
@@ -126,19 +126,21 @@ class GraphLayout extends Component {
                                     nodes={nodes}
                                     nodeColors={nodeColors}
                                     nodeSize={nodeSize}
-                                />
-                            )}
-                            {hoveredNeighbors.length > 0 && (
-                                <HoverLayer
                                     width={canvasW}
                                     height={canvasH}
-                                    hoveredNodes={hoveredNeighbors}
+                                />
+                            )}
+                            {hoveredNodesAndNeighbors.length > 0 && (
+                                <HoverLayer
+                                    hoveredNodes={hoveredNodesAndNeighbors}
                                     hoveredEdges={hoveredEdges}
                                     coords={coords}
                                     nodes={nodes}
                                     edgeBundlePoints={ebp}
                                     nodeColors={nodeColors}
                                     nodeSize={nodeSize}
+                                    width={canvasW}
+                                    height={canvasH}
                                 />
                             )}
                             {this.state.brushedArea && (
@@ -169,8 +171,9 @@ const mapStateToProps = (state) => ({
     selectedNodes: state.selectedNodes,
     highlightedNodes: state.highlightedNodes,
     highlightedEdges: state.highlightedEdges,
-    hoveredNeighbors: state.hoveredNeighbors,
+    hoveredNodesAndNeighbors: state.hoveredNodesAndNeighbors,
     hoveredEdges: state.hoveredEdges,
+    onlyActivateOne: state.param.onlyActivateOne,
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -195,7 +198,7 @@ function BaseLayerUnconnected({
     hoverNode,
     highlightNodes,
     nodeSize,
-    onlyHighlightOneNode,
+    onlyActivateOne,
 }) {
     console.log("GraphLayout BaseLayer render()");
     const debouncedHover = useCallback(debounce((x) => hoverNode(x), 300));
@@ -222,7 +225,7 @@ function BaseLayerUnconnected({
                                 stroke="#aaa"
                                 strokeWidth={1}
                                 hitStrokeWidth={2}
-                                opacity={0.3}
+                                opacity={edgeBundlePoints ? 0.1 : 0.3}
                                 tension={edgeBundlePoints ? 0.5 : 0}
                                 onMouseOver={debouncedHover.bind(null, [e.source, e.target])}
                                 onMouseOut={debouncedHover.bind(null, null)}
@@ -255,7 +258,7 @@ function BaseLayerUnconnected({
                                         null,
                                         [i],
                                         null,
-                                        `graph-node-${onlyHighlightOneNode ? "only" : "neigh"}`,
+                                        "graph-layout",
                                         null
                                     ),
                                 }}
@@ -272,12 +275,12 @@ function BaseLayerUnconnected({
                                 y={g.bounds.y}
                                 width={g.bounds.width}
                                 height={g.bounds.height}
-                                stroke="grey"
+                                stroke="black"
                                 strokeWidth={1}
-                                dash={[5, 5]}
+                                dash={[2, 2]}
                                 fillEnabled={false}
                             />
-                            <Text text={g.name} x={g.bounds.x + 2} y={g.bounds.y + 2} fontSize={12} />
+                            <Text text={`${g.name} (#=${g.num})`} x={g.bounds.x + 2} y={g.bounds.y + 2} fontSize={12} />
                         </Group>
                     ))}
                 </Group>
@@ -290,7 +293,7 @@ const mapStateToPropsBaseLayer = (state) => ({
     nodes: state.graph.nodes,
     edges: state.graph.edges,
     nodeSize: state.param.nodeSize,
-    onlyHighlightOneNode: state.param.onlyHighlightOneNode,
+    onlyActivateOne: state.param.onlyActivateOne,
     nodeColors: state.nodeColors,
 });
 

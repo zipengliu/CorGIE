@@ -16,8 +16,8 @@ export class GlobalControls extends Component {
 
     render() {
         const { graph, param, attrMeta, changeParam, hoverNode, highlightNodes } = this.props;
-        const { nodes, edges, nodeTypes } = graph;
-        const { colorBy, colorScale, nodeSize, hops, hopsHover } = param;
+        const { nodeTypes } = graph;
+        const { colorBy, colorScale, nodeSize, hops, hopsHover, onlyActivateOne } = param;
         let e, numberFormat, colorMin, colorMax;
         if (colorBy !== -1) {
             e = colorScale.domain();
@@ -136,7 +136,7 @@ export class GlobalControls extends Component {
                     </div>
 
                     <div className="setting-item">
-                        <div style={{ marginRight: "5px" }}>#hops to highlight: </div>
+                        <div style={{ marginRight: "5px" }}>#Hops to highlight: </div>
                         <Dropdown
                             onSelect={(h) => {
                                 this.props.changeParam("hopsHover", parseInt(h), false);
@@ -156,6 +156,23 @@ export class GlobalControls extends Component {
                         </Dropdown>
                     </div>
 
+                    <div className="setting-item">
+                        <Form>
+                            <Form.Check
+                                type="switch"
+                                id="activate-one-or-neighbor-switch"
+                                checked={!onlyActivateOne}
+                                onChange={changeParam.bind(
+                                    null,
+                                    "onlyActivateOne",
+                                    null,
+                                    true,
+                                    null
+                                )}
+                                label="Activate neighbors on hover / click"
+                            />
+                        </Form>
+                    </div>
                 </div>
             </div>
         );

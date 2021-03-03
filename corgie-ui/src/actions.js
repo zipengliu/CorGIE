@@ -2,7 +2,7 @@ import "whatwg-fetch";
 import * as Comlink from "comlink";
 import { csvParseRows } from "d3";
 import { getSelectedNeighbors } from "./utils";
-import { computeNeighborMasks, computeEdgeDict } from "./utils";
+import { computeNeighborMasks, filterEdgeAndComputeDict } from "./utils";
 
 import FocalLayoutWorker from "./focalLayout.worker";
 import InitialLayoutWorker from "./initialLayout.worker";
@@ -24,7 +24,8 @@ function findHopsInDatasetInfo(id) {
 }
 
 const distanceWorker = Comlink.wrap(new DistanceWorker());
-const focalLayoutWorker = Comlink.wrap(new FocalLayoutWorker());
+const focalLayoutWorkerBeforeWrap = new FocalLayoutWorker();
+const focalLayoutWorker = Comlink.wrap(focalLayoutWorkerBeforeWrap);
 const initalLayoutWorker = Comlink.wrap(new InitialLayoutWorker());
 
 const ACTION_TYPES = {
@@ -93,14 +94,15 @@ export function fetchGraphData(homePath, datasetId) {
             const { neighborDistanceMetric } = state.param;
             const { numBins } = state.spec.scatterHist;
             const hops = findHopsInDatasetInfo(datasetId);
-            // Filter the self-loops
-            graph.links = graph.links.filter((e) => e.source !== e.target);
-            graph.edgeDict = computeEdgeDict(graph.nodes.length, graph.links);
+
+            const edgeRes = filterEdgeAndComputeDict(graph.nodes.length, graph.links);
+            graph.edges = edgeRes.edges;
+            graph.edgeDict = edgeRes.edgeDict;
             Object.assign(graph, computeNeighborMasks(graph.nodes.length, graph.edgeDict, hops));
 
             focalLayoutWorker.initializeState(
                 graph.nodes.length,
-                graph.links,
+                graph.edges,
                 graph.neighborMasks.map((x) => x.toString()),
                 hops,
                 neighborDistanceMetric,
@@ -110,7 +112,7 @@ export function fetchGraphData(homePath, datasetId) {
             dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features, hops }));
 
             initalLayoutWorker
-                .computeForceLayoutWithD3(graph.nodes.length, graph.links, state.spec.graph.padding)
+                .computeForceLayoutWithD3(graph.nodes.length, graph.edges, state.spec.graph.padding)
                 .then((layoutRes) => {
                     dispatch(computeInitLayoutDone(layoutRes));
                 });
@@ -118,7 +120,7 @@ export function fetchGraphData(homePath, datasetId) {
             await distanceWorker.initializeState(
                 emb,
                 graph.nodes.length,
-                graph.links,
+                graph.edges,
                 graph.neighborMasks.map((x) => x.toString()),
                 neighborDistanceMetric,
                 numBins
@@ -165,8 +167,8 @@ export function highlightNodePairs(which, brushedArea, brushedPairs) {
     return { type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS, brushedArea, which, brushedPairs };
 }
 
-export function hoverNode(nodeIdx) {
-    return { type: ACTION_TYPES.HOVER_NODE, nodeIdx };
+export function hoverNode(nodeIdx, fromFeature=null) {
+    return { type: ACTION_TYPES.HOVER_NODE, nodeIdx, fromFeature};
 }
 
 export function toggleHighlightNodesAttr(delIdx = null) {
@@ -174,6 +176,7 @@ export function toggleHighlightNodesAttr(delIdx = null) {
 }
 
 // Mode could be one of CREATE, APPEND, DELETE, CLEAR, or REMOVE FROM
+let focalLayoutIDcounter = 1;
 export function selectNodes(mode, targetNodes, targetGroupIdx) {
     // return { type: ACTION_TYPES.SELECT_NODES, nodeIdx, selectionBox, mode };
     return async function (dispatch, getState) {
@@ -228,29 +231,23 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
         console.log("calling action.selectNodes() ", { mode, targetNodes, targetGroupIdx, newSel });
 
         const neighRes = getSelectedNeighbors(newSel, state.graph.neighborMasksByHop, state.param.hops);
-        dispatch(selectNodesPending(newSel, neighRes));
+        const curLayoutID = focalLayoutIDcounter++;
+        dispatch(selectNodesPending(newSel, neighRes, curLayoutID));
 
         if (newSel.length) {
             let distGrpIdx = 2;
-            if (newSel[0].length > 1) {
-                dispatch(
-                    computeDistancesDone(
-                        await distanceWorker.computeDistances("within", newSel[0]),
-                        distGrpIdx
-                    )
-                );
-                distGrpIdx++;
+            for (let i = 0; i < newSel.length; i++) {
+                if (newSel[i].length > 1) {
+                    dispatch(
+                        computeDistancesDone(
+                            await distanceWorker.computeDistances("within", newSel[i]),
+                            distGrpIdx
+                        )
+                    );
+                    distGrpIdx++;
+                }
             }
-            if (newSel.length > 1 && newSel[1].length > 1) {
-                dispatch(
-                    computeDistancesDone(
-                        await distanceWorker.computeDistances("within", newSel[1]),
-                        distGrpIdx
-                    )
-                );
-                distGrpIdx++;
-            }
-            if (newSel.length > 1 && (newSel[0].length > 1 || newSel[1].length > 1)) {
+            if (newSel.length === 2 && (newSel[0].length > 1 || newSel[1].length > 1)) {
                 dispatch(
                     computeDistancesDone(await distanceWorker.computeDistances("between", newSel), distGrpIdx)
                 );
@@ -263,9 +260,9 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
                 state.param,
                 state.spec.graph
             );
-            dispatch(selectNodesDone(layoutRes));
+            dispatch(selectNodesDone(layoutRes, curLayoutID));
         } else {
-            dispatch(selectNodesDone({}));
+            dispatch(selectNodesDone({}, null));
         }
     };
 }
@@ -276,7 +273,8 @@ export function selectNodePair(node1, node2) {
         let newSel = [[node1], [node2]];
 
         const neighRes = getSelectedNeighbors(newSel, state.graph.neighborMasksByHop, state.param.hops);
-        dispatch(selectNodesPending(newSel, neighRes));
+        const curLayoutID = focalLayoutIDcounter++;
+        dispatch(selectNodesPending(newSel, neighRes, curLayoutID));
 
         const layoutRes = await callFocalLayoutFunc(
             state.graph,
@@ -285,7 +283,7 @@ export function selectNodePair(node1, node2) {
             state.param,
             state.spec.graph
         );
-        dispatch(selectNodesDone(layoutRes));
+        dispatch(selectNodesDone(layoutRes, curLayoutID));
     };
 }
 
@@ -302,6 +300,8 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                 serializedNeighMap[id] = neighMap[id].mask.toArray();
             }
 
+        // terminate the previous invocation if it is still ongoing
+        // focalLayoutWorkerBeforeWrap.terminate();
         switch (param.focalGraph.layout) {
             case "umap":
                 return await focalLayoutWorker.computeFocalLayoutWithUMAP(
@@ -311,7 +311,7 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     // graph.neighborMasksByHop[0].map((x) => x.toArray()), // Use global signature
                     null,
                     param.nodeSize,
-                    param.focalGraph.useEdgeBundling,
+                    param.focalGraph.useEdgeBundling
                 );
             case "group-constraint-cola":
                 return await focalLayoutWorker.computeFocalLayoutWithCola(
@@ -346,12 +346,12 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
     }
 }
 
-export function selectNodesPending(newSel, neighRes) {
-    return { type: ACTION_TYPES.SELECT_NODES_PENDING, newSel, neighRes };
+export function selectNodesPending(newSel, neighRes, layoutId) {
+    return { type: ACTION_TYPES.SELECT_NODES_PENDING, newSel, neighRes, layoutId };
 }
 
-export function selectNodesDone(layoutRes) {
-    return { type: ACTION_TYPES.SELECT_NODES_DONE, layoutRes };
+export function selectNodesDone(layoutRes, layoutId) {
+    return { type: ACTION_TYPES.SELECT_NODES_DONE, layoutRes, layoutId };
 }
 
 export function changeParam(param, value, inverse = false, arrayIdx = null) {

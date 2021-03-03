@@ -13,6 +13,7 @@ import {
 import { Layout as cola } from "webcola";
 import { UMAP } from "umap-js";
 import bs from "bitset";
+import { sampleSize } from "lodash";
 import { getNeighborDistance } from "./utils";
 import forceBundling from "./forceBundling";
 
@@ -63,27 +64,39 @@ function getDistance2D(u, v) {
     return Math.sqrt(Math.pow(u.x - v.x, 2) + Math.pow(u.y - v.y, 2));
 }
 
-// Evaluate the readability of a layout.
-// Return the node-repulsion LinLog energy (only consider edges and node pairs between groups)
-function evaluateLayout(coords, nodesByHop) {
-    const { edgeDict } = state;
+const getMaxSampleNodes = (numGroups) => Math.floor(200 / numGroups);
+function computeEnergyBetweenHop(coords, curHop, nextHop, maxSampleNodes = 100) {
     let energy = 0;
-    let numEdges = 0,
-        numPairs = 0;
-    for (let i = 0; i < nodesByHop.length - 1; i++) {
-        for (let prevHopNode of nodesByHop[i]) {
-            for (let nextHopNode of nodesByHop[i + 1]) {
-                const d = getDistance2D(coords[prevHopNode], coords[nextHopNode]);
-                numPairs++;
-                energy += -Math.log(d);
-                if (edgeDict[prevHopNode].hasOwnProperty(nextHopNode)) {
-                    energy += d;
-                    numEdges++;
-                }
+    const { edgeDict } = state;
+
+    let h1 = curHop,
+        h2 = nextHop;
+    if (curHop.length > maxSampleNodes * 1.2) {
+        h1 = sampleSize(curHop, maxSampleNodes);
+    }
+    if (nextHop.length > maxSampleNodes * 1.2) {
+        h2 = sampleSize(nextHop, maxSampleNodes);
+    }
+
+    for (let prevHopNode of h1) {
+        for (let nextHopNode of h2) {
+            const d = getDistance2D(coords[prevHopNode], coords[nextHopNode]);
+            energy += -Math.log(d);
+            if (edgeDict[prevHopNode].hasOwnProperty(nextHopNode)) {
+                energy += d;
             }
         }
     }
-    // console.log("Evaluate: ", { numEdges, numPairs, energy });
+    return energy;
+}
+
+// Evaluate the readability of a layout.
+// Return the node-repulsion LinLog energy (only consider edges and node pairs between groups)
+function evaluateLayout(coords, nodesByHop) {
+    let energy = 0;
+    for (let i = 0; i < nodesByHop.length - 1; i++) {
+        energy += computeEnergyBetweenHop(coords, nodesByHop[i], nodesByHop[i + 1]);
+    }
     return energy;
 }
 
@@ -118,13 +131,15 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
             return coords.map((c) => [c.x, c.y]);
         } else {
             console.log("Calling UMAP... #nodes =", nodeIdxArr.length);
+            // TODO: get a distmat?
             const distFunc = (x, y) => getNeighborDistance(masks[x], masks[y], state.distMetric); // Global signature
             const sim = new UMAP({ distanceFn: distFunc });
             return sim.fit(nodeIdxArr);
         }
     };
 
-    console.log("Computing local layout with UMAP...", new Date());
+    const startTime = new Date();
+    console.log("Computing local layout with UMAP...");
 
     reconstructBitsets(localNeighMap);
     const n = state.numNodes,
@@ -257,7 +272,11 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
     const groupWidths = nums.map((ni, i) => ((weights[i] * Math.log2(ni + 1)) / weightedSum) * usableWidth);
     const groupHeights = [
         selectedNodes.map((s) =>
-            Math.min(groupWidths[0], ((canvasHeight - (numFoc - 1) * gapBetweenHop) / nums[0]) * s.length)
+            Math.min(
+                groupWidths[0],
+                ((canvasHeight - (numFoc - 1) * gapBetweenHop - numFoc * 2 * padding) / nums[0]) * s.length +
+                    2 * padding
+            )
         ),
     ];
     let maxNeighHeight = 0;
@@ -287,12 +306,12 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
     for (let j = 0; j < numFoc; j++) {
         const w = Math.min(groupHeights[0][j], groupWidths[0]);
         const bbox = {
-            x: xOffset + (groupWidths[0] - w),
+            x: xOffset + (groupWidths[0] - w) / 2,
             y: yOffset,
             width: w,
             height: groupHeights[0][j],
         };
-        groups.push({ bounds: bbox, name: `foc-${j}` });
+        groups.push({ bounds: bbox, name: `foc-${j}`, num: selectedNodes[j].length });
         rescale(selectedNodes[j], embeddings[0][j], bbox.width, bbox.height, bbox.x, bbox.y, padding);
         yOffset += bbox.height + actualGapFocal;
     }
@@ -304,11 +323,12 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
             width: groupWidths[i],
             height: groupHeights[i],
         };
-        groups.push({ bounds: bbox, name: `hop-${i}` });
+        groups.push({ bounds: bbox, name: `hop-${i}`, num: neighArr[i - 1].length });
         rescale(neighArr[i - 1], embeddings[i], bbox.width, bbox.height, bbox.x, bbox.y, padding);
         xOffset += groupWidths[i] + gapBetweenHop;
     }
 
+    const optTime = new Date();
     // Find the best rotation
     const rotDegrees = [0, 90, 180, 270];
     let bestCoords = coords,
@@ -317,14 +337,29 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
     const newCoords = coords.map((c) => ({ ...c }));
     const trans = [];
     let numTrans = 0;
+    const ss = getMaxSampleNodes(groups.length);
+    console.log("max sample size = ", ss);
+    function getDeltaE(groupIdx) {
+        if (groupIdx >= numFoc) {
+            return computeEnergyBetweenHop(
+                newCoords,
+                nodesByHop[groupIdx - numFoc],
+                nodesByHop[groupIdx - numFoc + 1],
+                ss
+            );
+        } else {
+            return 0;
+        }
+    }
     // enumerate transformation of each group
-    function dfs(groupIdx) {
+    function dfs(groupIdx, curEnergy) {
+        let deltaE = 0;
         if (groupIdx == groups.length) {
             numTrans++;
-            // console.log(`Transformation settings #${numTrans}: `, trans.slice());
-            const e = evaluateLayout(newCoords, nodesByHop);
-            if (e < bestEnergy) {
-                bestEnergy = e;
+            // console.log(`Transformation settings #${numTrans}: ${curEnergy} `, trans.slice());
+            // const e = evaluateLayout(newCoords, nodesByHop);
+            if (curEnergy < bestEnergy) {
+                bestEnergy = curEnergy;
                 bestCoords = newCoords.map((c) => ({ ...c }));
                 bestTrans = trans.slice();
             }
@@ -338,48 +373,64 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
                     rotateGroup(groupNodes, coords, newCoords, d, bbox);
                 }
                 trans.push(`rotate ${d}`);
-                dfs(groupIdx + 1);
+                deltaE = getDeltaE(groupIdx);
+                dfs(groupIdx + 1, curEnergy + deltaE);
                 trans.pop();
             }
             flipGroup(groupNodes, coords, newCoords, true, bbox);
             trans.push("flip horizontally");
-            dfs(groupIdx + 1);
+            deltaE = getDeltaE(groupIdx);
+            dfs(groupIdx + 1, curEnergy + deltaE);
             trans.pop();
 
             flipGroup(groupNodes, coords, newCoords, false, bbox);
             trans.push("flip vertically");
-            dfs(groupIdx + 1);
+            deltaE = getDeltaE(groupIdx);
+            dfs(groupIdx + 1, curEnergy + deltaE);
             trans.pop();
         } else {
             if (groupNodes.length === 1) {
                 newCoords[groupNodes[0]] = coords[groupNodes[0]];
             }
-            dfs(groupIdx + 1);
+            deltaE = getDeltaE(groupIdx);
+            dfs(groupIdx + 1, curEnergy + deltaE);
         }
     }
-    dfs(0);
+    dfs(0, 0);
 
     // Perform edge bundling
     let remappedBundleRes = null;
+    const remainingEdges = [];
+    for (let i = 0; i < edges.length; i++) {
+        const e = edges[i];
+        if (bestCoords[e.source] && bestCoords[e.target]) {
+            remainingEdges.push({ source: e.source, target: e.target, i });
+        }
+    }
+    // // Test if dup edge
+    // let hdup = {};
+    // for (let e of remainingEdges) {
+    //     if (!hdup.hasOwnProperty(e.source)) {
+    //         hdup[e.source] = {};
+    //     }
+    //     if (hdup[e.source].hasOwnProperty(e.target)) {
+    //         console.error('Dup edge: ', e.source, e.target);
+    //     }
+    //     hdup[e.source][e.target] = 0;
+    // }
+    const edgeBundlingTime = new Date();
     if (useEdgeBundling) {
         console.log("Edge bundling....");
-        const remainingEdges = [];
-        for (let i = 0; i < edges.length; i++) {
-            const e = edges[i];
-            if (bestCoords[e.source] && bestCoords[e.target]) {
-                remainingEdges.push({ source: e.source, target: e.target, i });
-            }
-        }
         const fbdl = forceBundling()
             .nodes(bestCoords)
             .edges(remainingEdges)
             .subdivision_rate(1.05)
-            .iterations(40)
+            .iterations(10)
             .iterations_rate(0.5)
-            .cycles(4)
-            // .cycles(6)
-            // .step_size(0.1)
-            // .compatibility_threshold(0.6);
+            .cycles(2);
+        // .cycles(6)
+        // .step_size(0.1)
+        // .compatibility_threshold(0.6);
         const bundleRes = fbdl();
         // remapp the edge bundle results using the edge id
         remappedBundleRes = {};
@@ -394,7 +445,14 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
     }
 
     console.log({ numTrans, bestEnergy, bestTrans });
-    console.log("UMAP layout finished! ", new Date());
+
+    const endTime = new Date();
+    const secTaken = (endTime.getTime() - startTime.getTime()) / 1000;
+    const optTaken = (edgeBundlingTime.getTime() - optTime.getTime()) / 1000;
+    const edgeBundleTaken = (endTime.getTime() - edgeBundlingTime.getTime()) / 1000;
+    console.log(
+        `UMAP layout finished! Total time: ${secTaken}s, affine trans. time: ${optTaken}s, edge bundling time: ${edgeBundleTaken}s.`
+    );
 
     return {
         name: "grouped UMAP",
@@ -403,6 +461,8 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
         groups,
         width: canvasWidth,
         height: canvasHeight,
+        numNodes: totalNum,
+        numEdges: remainingEdges.length,
     };
 }
 
@@ -585,9 +645,12 @@ function computeFocalLayoutWithCola(selectedNodes, neighArr, localNeighMap, node
             id: g.id,
             bounds: { x: g.bounds.x, y: g.bounds.y, width: g.bounds.width(), height: g.bounds.height() },
             name: g.name,
+            num: g.leaves.length,
         })),
         width: canvasSize,
         height: canvasSize,
+        numNodes: coords.length,
+        numEdges: remappedEdges.length,
         // simulation,
         // simulationTickNumber: 10,
     };
