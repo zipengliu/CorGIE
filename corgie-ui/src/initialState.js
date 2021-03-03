@@ -15,11 +15,16 @@ export default {
         highlighted: null,
         display: [],
     },
+    nodeAttrs: {
+        active: false,
+        hovered: null,
+        highlighted: null,
+        display: [],
+    }, 
 
     selectedNodes: [], // Array of array
     selBoundingBox: [],
     isNodeSelected: {}, // Dict for ALL selected nodes
-    selNodeAttrs: [], // Attribute distributions for selected nodes, each selection group is an array in selNodeAttrs
     isNodeSelectedNeighbor: {},
 
     highlightedNodes: [],
@@ -44,15 +49,14 @@ export default {
         running: false,
     },
 
-    nodeAttrs: [], // Attribute distributions for all nodes
-    edgeAttributes: {
-        type: {
-            type: "categorical",
-            values: ["train", "valid", "test"],
-            show: [true, true, true],
-            counts: [0, 0, 0],
-        },
-    },
+    // edgeAttributes: {
+    //     type: {
+    //         type: "categorical",
+    //         values: ["train", "valid", "test"],
+    //         show: [true, true, true],
+    //         counts: [0, 0, 0],
+    //     },
+    // },
     // showEdges: [],
     // selectedEdge: null,
 

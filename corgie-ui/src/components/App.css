@@ -331,6 +331,12 @@ rect.highlight-strip {
     stroke: none;
     fill: grey;
 }
+.histogram rect.bar.hovered,
+.histogram rect.bar.highlighted {
+    stroke: none;
+    fill: black;
+}
+
 
 .histogram .axis line {
     stroke: black;
@@ -364,8 +370,8 @@ rect.highlight-strip {
 .feature-matrix rect.cell.hovered {
     stroke-width: 1px;
     stroke: black;
-    -webkit-animation: blinkingEffect 1.5s infinite;
-    animation: blinkingEffect 1.5s infinite;
+    -webkit-animation: blinkingEffect 1s infinite;
+    animation: blinkingEffect 1s infinite;
 }
 .feature-matrix rect.cell.highlighted {
     stroke-width: 2px;
@@ -383,8 +389,8 @@ rect.highlight-strip {
 }
 .feature-strips line.strip.hovered {
     transform: translateY(-50%) scaleY(2);
-    -webkit-animation: blinkingEffect 1.5s infinite;
-    animation: blinkingEffect 1.5s infinite;
+    -webkit-animation: blinkingEffect 1s infinite;
+    animation: blinkingEffect 1s infinite;
 }
 .feature-strips line.strip.highlighted {
     transform: translateY(-50%) scaleY(2);

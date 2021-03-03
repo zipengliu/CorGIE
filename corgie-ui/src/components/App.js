@@ -94,7 +94,7 @@ const mapStateToProps = (state) => ({
     loaded: state.loaded,
     numNodes: state.loaded ? state.graph.nodes.length : 0,
     numEdges: state.loaded ? state.graph.edges.length : 0,
-    hasNodeFeatures: state.loaded && (state.nodeAttrs.length > 0 || state.featureAgg.active),
+    hasNodeFeatures: state.loaded && (state.nodeAttrs.active || state.featureAgg.active),
     error: state.error,
 });
 

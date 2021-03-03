@@ -98,7 +98,7 @@ export class HighlightControl extends Component {
                             )}
                             <div>
                                 <Button
-                                    variant="outline-secondary"
+                                    variant="outline-danger"
                                     size="xs"
                                     onClick={highlightNodes.bind(null, [], null, null, null)}
                                 >

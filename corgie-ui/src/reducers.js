@@ -2,7 +2,7 @@ import produce, { freeze } from "immer";
 import initialState from "./initialState";
 import ACTION_TYPES from "./actions";
 // import { computeForceLayoutWithD3, computeDummyLayout, computeForceLayoutWithCola } from "./layouts";
-import { schemeCategory10 } from "d3";
+import { schemeCategory10, sum } from "d3";
 import bs from "bitset";
 import {
     bin as d3bin,
@@ -364,10 +364,10 @@ function summarizeNodeAttrs(nodes, attrMeta, nodeTypes, attrs = null, included =
         } else if (a.type === "categorical") {
             a.values = {}; // A mapping from value to count
         }
-        if (included) {
-            // Only record the nodes when computing partial histogram data
-            a.nodeIds = [];
-        }
+        // if (included) {
+        //     // Only record the nodes when computing partial histogram data
+        //     a.nodeIds = [];
+        // }
     }
 
     // Count
@@ -382,9 +382,9 @@ function summarizeNodeAttrs(nodes, attrMeta, nodeTypes, attrs = null, included =
                     }
                     a.values[n[a.name]]++;
                 }
-                if (included) {
-                    a.nodeIds.push(n.id);
-                }
+                // if (included) {
+                //     a.nodeIds.push(n.id);
+                // }
             }
         }
     }
@@ -687,7 +687,14 @@ const reducers = produce((draft, action) => {
             );
 
             draft.attrMeta = attrs;
-            draft.nodeAttrs = summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes);
+            draft.nodeAttrs.active = attrs.length > 0;
+            if (draft.nodeAttrs.active) {
+                draft.nodeAttrs.numAttrs = attrs.length;
+                draft.nodeAttrs.display.push({
+                    title: "All",
+                    data: summarizeNodeAttrs(graph.nodes, attrs, draft.graph.nodeTypes),
+                });
+            }
             setNodeColors(draft, draft.param.colorBy);
 
             const numPairs = (graph.nodes.length * (graph.nodes.length - 1)) / 2;
@@ -783,6 +790,17 @@ const reducers = produce((draft, action) => {
                     cnts: fAggCntData.cnts,
                     compressedCnts: compressFeatureValues(fAggCntData.cnts, draft.spec.feature.maxNumBars),
                 };
+            } else if (draft.nodeAttrs.active && action.fromView !== 'node-attr') {
+                draft.nodeAttrs.highlighted = {
+                    displayId: areNodesAllInFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
+                    data: summarizeNodeAttrs(
+                        draft.graph.nodes,
+                        draft.attrMeta,
+                        draft.graph.nodeTypes,
+                        draft.nodeAttrs.display[0].data,
+                        draft.highlightedNodes,
+                    ),
+                };
             }
             return;
         case ACTION_TYPES.HIGHLIGHT_NODE_PAIRS:
@@ -804,6 +822,7 @@ const reducers = produce((draft, action) => {
                 draft.hoveredNodesAndNeighbors = [];
                 draft.hoveredEdges = [];
                 draft.featureAgg.hovered = null;
+                draft.nodeAttrs.hovered = null;
             } else if (Number.isInteger(action.nodeIdx)) {
                 // Hover on a node
                 draft.hoveredNodes = [action.nodeIdx];
@@ -827,34 +846,51 @@ const reducers = produce((draft, action) => {
                 draft.hoveredNodesAndNeighbors = action.nodeIdx;
                 draft.hoveredEdges = getEdgesWithinGroup(draft.graph.edgeDict, draft.hoveredNodes, null);
             }
-            if (draft.hoveredNodesAndNeighbors.length && draft.featureAgg.active) {
-                if (action.fromFeature === null) {
-                    // Handle the features of hovered nodes
-                    fAggCntData = aggregateBinaryFeatures(
-                        draft.graph.features,
-                        draft.hoveredNodesAndNeighbors,
-                        false
-                    );
-                    draft.featureAgg.hovered = {
+            if (draft.hoveredNodesAndNeighbors.length) {
+                if (draft.featureAgg.active) {
+                    if (action.fromFeature === null) {
+                        // Handle the features of hovered nodes
+                        fAggCntData = aggregateBinaryFeatures(
+                            draft.graph.features,
+                            draft.hoveredNodesAndNeighbors,
+                            false
+                        );
+                        draft.featureAgg.hovered = {
+                            displayId: areNodesAllInFocalGroups(
+                                draft.hoveredNodesAndNeighbors,
+                                draft.isNodeSelected
+                            ),
+                            cnts: fAggCntData.cnts,
+                            compressedCnts: compressFeatureValues(
+                                fAggCntData.cnts,
+                                draft.spec.feature.maxNumBars
+                            ),
+                        };
+                    } else if (action.fromFeature.cellIds.length > 0) {
+                        // also highlight some of the feature cells
+                        fidMapping = {};
+                        for (let fid of action.fromFeature.cellIds) {
+                            fidMapping[fid] = 1;
+                        }
+                        draft.featureAgg.hovered = {
+                            displayId: action.fromFeature.displayId,
+                            cnts: fidMapping,
+                        };
+                    }
+                }
+                if (draft.nodeAttrs.active) {
+                    draft.nodeAttrs.hovered = {
                         displayId: areNodesAllInFocalGroups(
                             draft.hoveredNodesAndNeighbors,
                             draft.isNodeSelected
                         ),
-                        cnts: fAggCntData.cnts,
-                        compressedCnts: compressFeatureValues(
-                            fAggCntData.cnts,
-                            draft.spec.feature.maxNumBars
+                        data: summarizeNodeAttrs(
+                            draft.graph.nodes,
+                            draft.attrMeta,
+                            draft.graph.nodeTypes,
+                            draft.nodeAttrs.display[0].data,
+                            draft.hoveredNodesAndNeighbors
                         ),
-                    };
-                } else if (action.fromFeature.cellIds.length > 0) {
-                    // also highlight some of the feature cells
-                    fidMapping = {};
-                    for (let fid of action.fromFeature.cellIds) {
-                        fidMapping[fid] = 1;
-                    }
-                    draft.featureAgg.hovered = {
-                        displayId: action.fromFeature.displayId,
-                        cnts: fidMapping,
                     };
                 }
             }
@@ -864,6 +900,7 @@ const reducers = produce((draft, action) => {
             draft.selectedNodes = newSel;
             // Remove the computation results for previous focal groups
             draft.distances.display.length = 2;
+            draft.nodeAttrs.display.length = 1;
             draft.featureAgg.display.length = 1;
             draft.param.features.collapsed.length = 1;
             if (newSel.length == 0) {
@@ -873,7 +910,6 @@ const reducers = produce((draft, action) => {
                 draft.isNodeSelected = {};
                 draft.isNodeSelectedNeighbor = {};
                 draft.neighGrp = null;
-                draft.selNodeAttrs = [];
                 draft.focalLayout = { running: false };
                 draft.selBoundingBox = [];
             } else {
@@ -889,15 +925,20 @@ const reducers = produce((draft, action) => {
                 //     neighRes.neighMap
                 // );
 
-                draft.selNodeAttrs = newSel.map((sel) =>
-                    summarizeNodeAttrs(
-                        draft.graph.nodes,
-                        draft.attrMeta,
-                        draft.graph.nodeTypes,
-                        draft.nodeAttrs,
-                        sel
-                    )
-                );
+                if (draft.nodeAttrs.active) {
+                    for (let i = 0; i < newSel.length; i++) {
+                        draft.nodeAttrs.display.push({
+                            title: `foc-${i}`,
+                            data: summarizeNodeAttrs(
+                                draft.graph.nodes,
+                                draft.attrMeta,
+                                draft.graph.nodeTypes,
+                                draft.nodeAttrs.display[0].data,
+                                newSel[i]
+                            ),
+                        });
+                    }
+                }
                 Object.assign(draft.focalLayout, {
                     running: true,
                     layoutId: action.layoutId,
@@ -969,6 +1010,7 @@ const reducers = produce((draft, action) => {
                 draft.param.nodeFilter = {};
                 draft.highlightedNodes = [];
                 draft.featureAgg.highlighted = null;
+                draft.nodeAttrs.highlighted = null;
             }
 
             return;
@@ -1085,9 +1127,9 @@ const reducers = produce((draft, action) => {
             }
             return;
 
-        case ACTION_TYPES.CHANGE_EDGE_TYPE_STATE:
-            draft.edgeAttributes.type.show[action.idx] = !draft.edgeAttributes.type.show[action.idx];
-            return;
+        // case ACTION_TYPES.CHANGE_EDGE_TYPE_STATE:
+        //     draft.edgeAttributes.type.show[action.idx] = !draft.edgeAttributes.type.show[action.idx];
+        //     return;
 
         case ACTION_TYPES.SEARCH_NODES:
             // Remove other node filters, e.g. node attributes

@@ -7,7 +7,18 @@ import Brush from "./Brush";
 //   spec is the specification for rendering: {margins: {left: 10, ...}, width: xxx, height: xxx}
 //   xDomain (optional) is the domain of x axis.  If not specified, it will use first and last bin to compute the min and max value
 //   hVal is the value to highlight in this histogram
-function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, brushedRange }) {
+function Histogram({
+    bins,
+    spec,
+    xDomain,
+    xLabel,
+    yLabel,
+    hVal,
+    brushedFunc,
+    brushedRange,
+    hovered,
+    highlighted,
+}) {
     const { margins, width, height } = spec;
     const yScaleMax = max(bins.map((b) => b.length));
     const yScale = scaleLinear().domain([0, yScaleMax]).range([0, height]).nice();
@@ -88,15 +99,6 @@ function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, bru
                         </text>
                     )}
                 </g>
-                {hVal && (
-                    <g className="value-marker" transform={`translate(${xScale(hVal)},0)`}>
-                        <line x1={0} y1={0} x2={0} y2={height} />
-                        <rect x={-25} y={-10} width={50} height={18} />
-                        <text x={0} y={3} textAnchor="middle">
-                            {xFormat(hVal)}
-                        </text>
-                    </g>
-                )}
 
                 {brushedFunc && (
                     <Brush
@@ -116,6 +118,56 @@ function Histogram({ bins, spec, xDomain, xLabel, yLabel, hVal, brushedFunc, bru
                         }
                     />
                 )}
+
+                {/* a half-transparant mask rect */}
+                {(hovered || highlighted) && (
+                    <rect
+                        x={0}
+                        y={0}
+                        width={width}
+                        height={height}
+                        style={{ stroke: "none", fill: "white", fillOpacity: ".7" }}
+                    />
+                )}
+                {hVal && (
+                    <g className="value-marker" transform={`translate(${xScale(hVal)},0)`}>
+                        <line x1={0} y1={0} x2={0} y2={height} />
+                        <rect x={-25} y={-10} width={50} height={18} />
+                        <text x={0} y={3} textAnchor="middle">
+                            {xFormat(hVal)}
+                        </text>
+                    </g>
+                )}
+                {highlighted &&
+                    highlighted.bins.map((b, i) => (
+                        <rect
+                            className="bar highlighted"
+                            key={i}
+                            x={xScale(b.x0)}
+                            y={height - yScale(b.length)}
+                            width={xScale(b.x1) - xScale(b.x0) - 1}
+                            height={yScale(b.length)}
+                        >
+                            <title>
+                                [{b.x0}-{b.x1}] count: {b.length}
+                            </title>
+                        </rect>
+                    ))}
+                {hovered &&
+                    hovered.bins.map((b, i) => (
+                        <rect
+                            className="bar hovered"
+                            key={i}
+                            x={xScale(b.x0)}
+                            y={height - yScale(b.length)}
+                            width={xScale(b.x1) - xScale(b.x0) - 1}
+                            height={yScale(b.length)}
+                        >
+                            <title>
+                                [{b.x0}-{b.x1}] count: {b.length}
+                            </title>
+                        </rect>
+                    ))}
             </g>
             <defs>
                 <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="0" refY="5" orient="auto">

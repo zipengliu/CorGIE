@@ -206,16 +206,16 @@ const FeatureComboVisConnected = connect(null, mapDispatchToPropsFeature)(Featur
 
 class NodeAttrView extends Component {
     findBrushedNodesAndDispatch(whichType, whichRow, whichAttr, v1, v2) {
-        const { nodes } = this.props;
+        const { nodes, selectedNodes } = this.props;
         let h;
-        if (whichRow === this.props.nodeAttrs) {
+        if (whichRow === 0) {
             // first row
             h = nodes
                 .filter((n) => whichType === n.type && v1 <= n[whichAttr] && n[whichAttr] <= v2)
                 .map((n) => n.id);
         } else {
             // foc-i row
-            h = whichRow.nodeIds.filter(
+            h = selectedNodes[whichRow - 1].filter(
                 (id) =>
                     whichType === nodes[id].type && v1 <= nodes[id][whichAttr] && nodes[id][whichAttr] <= v2
             );
@@ -224,15 +224,7 @@ class NodeAttrView extends Component {
     }
 
     render() {
-        const {
-            param,
-            nodeAttrs,
-            selNodeAttrs,
-            featureAgg,
-            hoveredNodes,
-            selectedNodes,
-            changeParam,
-        } = this.props;
+        const { param, nodeAttrs, featureAgg, hoveredNodes, changeParam } = this.props;
         const histSpec = this.props.spec.histogram,
             partialHistSpec = this.props.spec.partialHistogram;
         const { nodeFilter } = param;
@@ -242,113 +234,101 @@ class NodeAttrView extends Component {
             hNodeData = this.props.nodes[hoveredNodes[0]];
         }
 
+        let featureVisBlock;
+        if (featureAgg.active) {
+            featureVisBlock = featureAgg.display.map((d, i) => (
+                <div className="stuff-container-hori" key={i}>
+                    <div className="container-title">{d.title}</div>
+                    <div className="container-body">
+                        <FeatureComboVisConnected
+                            displayId={i}
+                            data={d}
+                            stripMapping={featureAgg.stripMapping}
+                            spec={this.props.spec.feature}
+                            collapsed={param.features.collapsed[i]}
+                            hovered={featureAgg.hovered}
+                            highlighted={featureAgg.highlighted}
+                            toggleFunc={changeParam.bind(this, "features.collapsed", null, true, i)}
+                            legendText={"#nodes"}
+                        />
+                    </div>
+                </div>
+            ));
+        }
+
+        let nodeAttrVisBlock;
+        if (nodeAttrs.active) {
+            nodeAttrVisBlock = nodeAttrs.display.map((d, k) => (
+                <div key={k} className="stuff-container-hori">
+                    <div className="container-title">{d.title}</div>
+                    <div className="container-body">
+                        {d.data.map((a, i) => (
+                            <div key={i} className="histogram-block">
+                                {k === 0 && <div className="histogram-title">{a.name}</div>}
+                                {a.values.length === 0 ? (
+                                    <div
+                                        className="text-center"
+                                        style={{
+                                            width:
+                                                histSpec.width +
+                                                histSpec.margins.left +
+                                                histSpec.margins.right,
+                                        }}
+                                    >
+                                        N/A
+                                    </div>
+                                ) : (
+                                    <Histogram
+                                        bins={a.bins}
+                                        spec={k ? partialHistSpec : histSpec}
+                                        hVal={
+                                            nodeAttrs.hovered &&
+                                            nodeAttrs.hovered.displayId === k &&
+                                            hNodeData &&
+                                            hNodeData.type === a.nodeType
+                                                ? hNodeData[a.name]
+                                                : null
+                                        }
+                                        hovered={
+                                            nodeAttrs.hovered && nodeAttrs.hovered.displayId === k
+                                                ? nodeAttrs.hovered.data[i]
+                                                : null
+                                        }
+                                        highlighted={
+                                            nodeAttrs.highlighted &&
+                                            !nodeAttrs.hovered &&
+                                            nodeAttrs.highlighted.displayId === k
+                                                ? nodeAttrs.highlighted.data[i]
+                                                : null
+                                        }
+                                        brushedFunc={this.findBrushedNodesAndDispatch.bind(
+                                            this,
+                                            a.nodeType,
+                                            k,
+                                            a.name
+                                        )}
+                                        brushedRange={
+                                            nodeFilter.whichRow === k && nodeFilter.whichAttr === a.name
+                                                ? nodeFilter.brushedArea
+                                                : null
+                                        }
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ));
+        }
+
         return (
             <div id="node-attr-view" className="view">
                 <h5 className="view-title text-center">
-                    Node features (#={featureAgg.active ? featureAgg.numFeatures : nodeAttrs.length})
+                    Node features (#={featureAgg.active ? featureAgg.numFeatures : nodeAttrs.numAttrs})
                 </h5>
                 <div className="view-body">
-                    {featureAgg.active ? (
-                        featureAgg.display.map((d, i) => (
-                            <div className="stuff-container-hori" key={i}>
-                                <div className="container-title">{d.title}</div>
-                                <div className="container-body">
-                                    <FeatureComboVisConnected
-                                        displayId={i}
-                                        data={d}
-                                        stripMapping={featureAgg.stripMapping}
-                                        spec={this.props.spec.feature}
-                                        collapsed={param.features.collapsed[i]}
-                                        hovered={featureAgg.hovered}
-                                        highlighted={featureAgg.highlighted}
-                                        toggleFunc={changeParam.bind(
-                                            this,
-                                            "features.collapsed",
-                                            null,
-                                            true,
-                                            i
-                                        )}
-                                        legendText={"#nodes"}
-                                    />
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <div>
-                            <div className="stuff-container-hori">
-                                <div className="container-title">All</div>
-                                <div className="container-body">
-                                    {nodeAttrs.map((a, i) => (
-                                        <div key={i} className="histogram-block">
-                                            <div className="histogram-title">{a.name}</div>
-                                            <Histogram
-                                                bins={a.bins}
-                                                spec={histSpec}
-                                                hVal={
-                                                    hNodeData && hNodeData.type === a.nodeType
-                                                        ? hNodeData[a.name]
-                                                        : null
-                                                }
-                                                brushedFunc={this.findBrushedNodesAndDispatch.bind(
-                                                    this,
-                                                    a.nodeType,
-                                                    nodeAttrs,
-                                                    a.name
-                                                )}
-                                                brushedRange={
-                                                    nodeFilter.whichRow === nodeAttrs &&
-                                                    nodeFilter.whichAttr === a.name
-                                                        ? nodeFilter.brushedArea
-                                                        : null
-                                                }
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            {selectedNodes.map((_, k) => (
-                                <div key={k} className="stuff-container-hori">
-                                    <div className="container-title">foc-{k}</div>
-                                    <div className="container-body">
-                                        {selNodeAttrs[k].map((a, i) => (
-                                            <div key={i} className="histogram-block">
-                                                {a.values.length === 0 ? (
-                                                    <div
-                                                        className="text-center"
-                                                        style={{
-                                                            width:
-                                                                histSpec.width +
-                                                                histSpec.margins.left +
-                                                                histSpec.margins.right,
-                                                        }}
-                                                    >
-                                                        N/A
-                                                    </div>
-                                                ) : (
-                                                    <Histogram
-                                                        bins={a.bins}
-                                                        spec={partialHistSpec}
-                                                        brushedFunc={this.findBrushedNodesAndDispatch.bind(
-                                                            this,
-                                                            a.nodeType,
-                                                            a,
-                                                            a.name
-                                                        )}
-                                                        brushedRange={
-                                                            nodeFilter.whichRow === a &&
-                                                            nodeFilter.whichAttr === a.name
-                                                                ? nodeFilter.brushedArea
-                                                                : null
-                                                        }
-                                                    />
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    {featureVisBlock}
+                    {nodeAttrVisBlock}
                 </div>
             </div>
         );
@@ -359,7 +339,6 @@ const mapStateToProps = (state) => ({
     nodes: state.graph.nodes,
     param: state.param,
     nodeAttrs: state.nodeAttrs,
-    selNodeAttrs: state.selNodeAttrs,
     featureAgg: state.featureAgg,
     hoveredNodes: state.hoveredNodes,
     selectedNodes: state.selectedNodes,
