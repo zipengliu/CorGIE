@@ -126,12 +126,13 @@ export function isPointInBox(p, box) {
 
 // Given selected nodes (in the form of array of array), compute relevant data structures for their neighbors
 // isNodeSelected, isNodeSelectedNeighbor, neighArr, neighMap
+// Note neighMap is no longer needed!
 export function getSelectedNeighbors(selectedNodes, neighborMasks, hops) {
     if (!selectedNodes) return;
     let isNodeSelected = {},
         isNodeSelectedNeighbor = {},
-        neighArr = [],
-        neighMap = {};
+        neighArr = [];
+    // neighMap = {};
 
     let gid = 0;
     for (let g of selectedNodes) {
@@ -167,36 +168,36 @@ export function getSelectedNeighbors(selectedNodes, neighborMasks, hops) {
             neighArr[isNodeSelectedNeighbor[nodeId] - 1].push(parseInt(nodeId));
         }
 
-    let h = 0;
-    let prevHopNodes = selectedNodes.flat();
-    for (let curHopNeigh of neighArr) {
-        // const curMasks = neighborMasks[h];
-        // compute a mask for the selected nodes
-        let prevHopNodesMask = bs(0);
-        for (let nodeId of prevHopNodes) {
-            prevHopNodesMask.set(nodeId, 1);
-        }
+    // let h = 0;
+    // let prevHopNodes = selectedNodes.flat();
+    // for (let curHopNeigh of neighArr) {
+    //     // const curMasks = neighborMasks[h];
+    //     // compute a mask for the selected nodes
+    //     let prevHopNodesMask = bs(0);
+    //     for (let nodeId of prevHopNodes) {
+    //         prevHopNodesMask.set(nodeId, 1);
+    //     }
 
-        // Find out #connections to nodes in previous hop
-        for (let neighId of curHopNeigh) {
-            neighMap[neighId] = {
-                mask: neighborMasks[0][neighId].and(prevHopNodesMask),
-                h: h + 1,
-            };
-            neighMap[neighId].cnt = neighMap[neighId].mask.cardinality();
-        }
+    //     // Find out #connections to nodes in previous hop
+    //     for (let neighId of curHopNeigh) {
+    //         neighMap[neighId] = {
+    //             mask: neighborMasks[0][neighId].and(prevHopNodesMask),
+    //             h: h + 1,
+    //         };
+    //         neighMap[neighId].cnt = neighMap[neighId].mask.cardinality();
+    //     }
 
-        // Sort array by #conn
-        curHopNeigh.sort((a, b) => neighMap[b].cnt - neighMap[a].cnt);
-        // Populate the order of the node in that hop
-        for (let i = 0; i < curHopNeigh.length; i++) {
-            neighMap[curHopNeigh[i]].order = i;
-        }
-        prevHopNodes = curHopNeigh;
-        h++;
-    }
+    //     // Sort array by #conn
+    //     curHopNeigh.sort((a, b) => neighMap[b].cnt - neighMap[a].cnt);
+    //     // Populate the order of the node in that hop
+    //     for (let i = 0; i < curHopNeigh.length; i++) {
+    //         neighMap[curHopNeigh[i]].order = i;
+    //     }
+    //     prevHopNodes = curHopNeigh;
+    //     h++;
+    // }
 
-    return { isNodeSelected, isNodeSelectedNeighbor, neighArr, neighMap };
+    return { isNodeSelected, isNodeSelectedNeighbor, neighArr };
 }
 
 export function binarySearch(arr, v) {
@@ -331,8 +332,8 @@ export function isNodeBrushable(nodeData, highlightNodeType, highlightNodeLabel)
         if (highlightNodeLabel === "wrong" && !nodeData.isWrong) return false;
         // Assuming highlightNodeLabel must be "pred-k" or "true-k"
         const k = parseInt(highlightNodeLabel.slice(5));
-        if (highlightNodeLabel.indexOf('pred') !== -1 && nodeData.pl !== k) return false;
-        if (highlightNodeLabel.indexOf('true') !== -1 && nodeData.tl !== k) return false;
+        if (highlightNodeLabel.indexOf("pred") !== -1 && nodeData.pl !== k) return false;
+        if (highlightNodeLabel.indexOf("true") !== -1 && nodeData.tl !== k) return false;
     }
     return true;
 }

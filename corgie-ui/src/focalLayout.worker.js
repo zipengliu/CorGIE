@@ -25,15 +25,17 @@ let state = {
     distMetric: null,
     hops: 0,
     neighborMasks: null,
+    neighborMasks1hop: null,
     getCanvasSize: scaleSqrt().domain([1, maxNumNodes]).range([400, 1000]).clamp(true),
     spec: null,
 };
 
-function initializeState(numNodes, edges, neighborMasks, hops, distMetric, spec) {
+function initializeState(numNodes, edges, neighborMasks, neighborMasks1hop, hops, distMetric, spec) {
     state.numNodes = numNodes;
     state.edges = edges;
     state.edgeDict = computeEdgeDict(numNodes, edges);
     state.neighborMasks = neighborMasks.map((m) => bs(m));
+    state.neighborMasks1hop = neighborMasks1hop.map((m) => bs(m));
     state.hops = hops;
     state.distMetric = distMetric;
     state.spec = spec;
@@ -100,7 +102,7 @@ function evaluateLayout(coords, nodesByHop) {
     return energy;
 }
 
-function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, nodeSize, useEdgeBundling) {
+function computeFocalLayoutWithUMAP(selectedNodes, neighArr, useGlobalMask, nodeSize, useEdgeBundling) {
     const runUMAP = (nodeIdxArr, masks) => {
         if (nodeIdxArr.length <= 15) {
             // Not enough data to compute UMAP, so we use D3 with edges within this group
@@ -141,7 +143,6 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
     const startTime = new Date();
     console.log("Computing local layout with UMAP...");
 
-    reconstructBitsets(localNeighMap);
     const n = state.numNodes,
         numFoc = selectedNodes.length;
     const { hops, edgeDict, edges } = state;
@@ -156,7 +157,9 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
         nodesByHop[0] = nodesByHop[0].concat(s);
     }
     for (let i = 1; i <= hops; i++) {
-        embeddings.push(runUMAP(neighArr[i - 1], localNeighMap ? localNeighMap : state.neighborMasks));
+        embeddings.push(
+            runUMAP(neighArr[i - 1], useGlobalMask ? state.neighborMasks : state.neighborMasks1hop)
+        );
         nodesByHop.push(neighArr[i - 1]);
     }
     // Use random for the others as they are not important at the moment
@@ -466,11 +469,10 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, localNeighMap, node
     };
 }
 
-function computeFocalLayoutWithCola(selectedNodes, neighArr, localNeighMap, nodeSize) {
+function computeFocalLayoutWithCola(selectedNodes, neighArr, useGlobalMask, nodeSize) {
     console.log("Computing local layout with WebCola...", new Date());
 
-    reconstructBitsets(localNeighMap);
-    const { numNodes, spec, distMetric, edges, hops, neighborMasks } = state;
+    const { numNodes, spec, distMetric, edges, hops } = state;
     const { padding, gapBetweenHop } = spec;
     const numFoc = selectedNodes.length;
 
@@ -582,18 +584,12 @@ function computeFocalLayoutWithCola(selectedNodes, neighArr, localNeighMap, node
     // }
     // console.log("layout constraints: ", constraints);
 
+    const masks = useGlobalMask ? state.neighborMasks : state.neighborMasks1hop;
     function getDist(x, y) {
         const orix = reverseMapping[x],
             oriy = reverseMapping[y];
-        const maskx =
-                localNeighMap && localNeighMap.hasOwnProperty(orix)
-                    ? localNeighMap[orix]
-                    : neighborMasks[orix],
-            masky =
-                localNeighMap && localNeighMap.hasOwnProperty(oriy)
-                    ? localNeighMap[oriy]
-                    : neighborMasks[oriy];
-
+        const maskx = masks[orix],
+            masky = masks[oriy];
         if (maskx && masky) {
             return getNeighborDistance(maskx, masky, distMetric);
         } else {
@@ -662,11 +658,10 @@ function computeFocalLayoutWithD3(
     hops,
     isNodeSelected,
     isNodeSelectedNeighbor,
-    neighMap,
+    useGlobalMask,
     distMetric,
-    spec
 ) {
-    reconstructBitsets(neighMap);
+    const masks = useGlobalMask ? state.neighborMasks : state.neighborMasks1hop;
     const getHopGroup = (i) =>
         isNodeSelected[i] ? 0 : isNodeSelectedNeighbor[i] ? isNodeSelectedNeighbor[i] : hops + 1;
     let coords = nodes.map((n, i) => ({ index: i, group: getHopGroup(i) }));
@@ -686,21 +681,21 @@ function computeFocalLayoutWithD3(
     }
     console.log({ groupCounts, groupPos });
 
-    // Construct virtual links for group of neighbor nodes using Hamming distance
+    // Construct virtual links for group of neighbor nodes 
     const groupLinks = [];
-    for (let neighId1 in neighMap)
-        if (neighMap.hasOwnProperty(neighId1)) {
-            for (let neighId2 in neighMap)
-                if (neighId1 !== neighId2 && neighMap.hasOwnProperty(neighId2)) {
+    for (let neighId1 in isNodeSelectedNeighbor)
+        if (isNodeSelectedNeighbor.hasOwnProperty(neighId1)) {
+            for (let neighId2 in isNodeSelectedNeighbor)
+                if (neighId1 !== neighId2 && isNodeSelectedNeighbor.hasOwnProperty(neighId2)) {
                     groupLinks.push({
                         source: parseInt(neighId1),
                         target: parseInt(neighId2),
-                        dist: getNeighborDistance(neighMap[neighId1], neighMap[neighId2], distMetric) + 1,
+                        dist: getNeighborDistance(masks[neighId1], masks[neighId2], distMetric) + 1,
                     });
                 }
         }
     console.log(groupLinks);
-    const n = Object.keys(neighMap).length;
+    const n = Object.keys(isNodeSelectedNeighbor).length;
 
     let simulation = forceSimulation(coords)
         .force("link", forceLink(copiedEdges))
@@ -735,14 +730,13 @@ function computeFocalLayoutWithD3(
 
 function computeSpaceFillingCurveLayout(
     nodes,
-    hops,
     isNodeSelected,
     isNodeSelectedNeighbor,
     neighArr,
-    neighMap,
+    useGlobalMask,
     distMetric
 ) {
-    reconstructBitsets(neighMap);
+    const masks = useGlobalMask ? state.neighborMasks : state.neighborMasks1hop;
     const n = nodes.length;
     const orderedNodes = [];
     for (let nodeId in isNodeSelected)
@@ -767,10 +761,10 @@ function computeSpaceFillingCurveLayout(
         let d = 1.2;
         if (
             i > 0 &&
-            neighMap.hasOwnProperty(orderedNodes[i]) &&
-            neighMap.hasOwnProperty(orderedNodes[i - 1])
+            isNodeSelectedNeighbor.hasOwnProperty(orderedNodes[i]) &&
+            isNodeSelectedNeighbor.hasOwnProperty(orderedNodes[i - 1])
         ) {
-            d = getNeighborDistance(neighMap[orderedNodes[i]], neighMap[orderedNodes[i - 1]], distMetric);
+            d = getNeighborDistance(masks[orderedNodes[i]], masks[orderedNodes[i - 1]], distMetric);
             d = Math.max(d, 0.1);
         }
         curPos += d;

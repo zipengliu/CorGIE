@@ -634,6 +634,14 @@ function areNodesAllInFocalGroups(nodes, isNodeSelected) {
     return r;
 }
 
+function clearHighlights(draft) {
+    draft.param.nodeFilter = {};
+    draft.highlightedNodes = [];
+    draft.highlightedEdges = [];
+    draft.featureAgg.highlighted = null;
+    draft.nodeAttrs.highlighted = null;
+}
+
 function buildQT(coords, width, height) {
     const qt = new Quadtree({
         x: 0,
@@ -785,12 +793,7 @@ const reducers = produce((draft, action) => {
             return;
 
         case ACTION_TYPES.HIGHLIGHT_NODES:
-            draft.highlightedNodes = action.nodeIndices;
-            draft.param.nodeFilter = {};
-            draft.highlightedNodes = [];
-            draft.highlightedEdges = [];
-            draft.featureAgg.highlighted = null;
-            draft.nodeAttrs.highlighted = null;
+            clearHighlights(draft);
             if (action.fromView === "node-type") {
                 for (let n of draft.graph.nodes) {
                     if (n.typeId === action.which) {
@@ -992,7 +995,7 @@ const reducers = produce((draft, action) => {
             if (newSel.length == 0) {
                 // Clear selection
                 draft.neighArr = null;
-                draft.neighMap = null;
+                // draft.neighMap = null;
                 draft.isNodeSelected = {};
                 draft.isNodeSelectedNeighbor = {};
                 draft.neighGrp = null;
@@ -1001,7 +1004,7 @@ const reducers = produce((draft, action) => {
             } else {
                 draft.isNodeSelected = neighRes.isNodeSelected;
                 draft.isNodeSelectedNeighbor = neighRes.isNodeSelectedNeighbor;
-                draft.neighMap = neighRes.neighMap;
+                // draft.neighMap = neighRes.neighMap;
                 draft.neighArr = neighRes.neighArr;
                 // neighGrp is for the roll-up matrix of neighbor counts
                 // draft.neighGrp = countSelectedNeighborsByHop(
@@ -1056,8 +1059,9 @@ const reducers = produce((draft, action) => {
                         const diffCnts = draft.featureAgg.display[1].cnts.map(
                             (c1, i) => c1 - draft.featureAgg.display[2].cnts[i]
                         );
-                        const diffExtent = extent(diffCnts);
-                        const t = Math.max(Math.abs(diffExtent[0]), Math.abs(diffExtent[1]));
+                        // const diffExtent = extent(diffCnts);
+                        // const t = Math.max(Math.abs(diffExtent[0]), Math.abs(diffExtent[1]));
+                        const t = Math.max(newSel[0].length, newSel[1].length);
                         const diffCompressedCnts = compressFeatureValues(
                             diffCnts,
                             draft.spec.feature.maxNumStrips
@@ -1137,18 +1141,23 @@ const reducers = produce((draft, action) => {
                 }
             }
 
+            if (['hopsActivated', 'highlightNodeType', 'highlightNodeLabel'].indexOf(action.param) !== -1) {
+                clearHighlights(draft);
+            }
+
             // Special param changes
             if (action.param === "colorBy") {
                 setNodeColors(draft, action.value);
             } else if (action.param === "hopsActivated") {
                 draft.param.onlyActivateOne = action.value === 0;
-            } else if (action.param === "onlyActivateOne") {
-                if (draft.param.onlyActivateOne) {
-                    draft.param.hopsActivated = 0;
-                } else if (draft.param.hopsActivated === 0) {
-                    draft.param.hopsActivated = 1;
-                }
             }
+            // else if (action.param === "onlyActivateOne") {
+            //     if (draft.param.onlyActivateOne) {
+            //         draft.param.hopsActivated = 0;
+            //     } else if (draft.param.hopsActivated === 0) {
+            //         draft.param.hopsActivated = 1;
+            //     }
+            // }
             // else if (action.param === "nodePairFilter.ascending") {
             //     draft.highlightedNodePairs.sort(action.value ? ascFunc : descFunc);
             // }

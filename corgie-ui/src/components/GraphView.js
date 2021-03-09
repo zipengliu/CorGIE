@@ -18,28 +18,67 @@ function GraphView({
     hasFocalNodes,
     hops,
     useEdgeBundling,
-    onlyActivateOne,
+    useGlobalMask,
     changeParam,
 }) {
     return (
         <div className="view" id="graph-view">
             <h5 className="view-title text-center">Graph topology</h5>
             <div className="view-body">
-                <div>
-                    <Form>
+                <div style={{ display: "flex", flexDirection: "row" }}>
+                    <div style={{ marginRight: "10px" }}>Focal layout settings: </div>
+                    <Form inline>
                         <Form.Check
-                            type="switch"
-                            id="use-edge-bundling-switch"
+                            custom
+                            type="radio"
+                            id="use-edge-bundling-1"
                             checked={useEdgeBundling}
                             onChange={changeParam.bind(null, "focalGraph.useEdgeBundling", null, true, null)}
-                            label="use edge bundling for focal layout"
+                            label="edge bundling (curved edges)"
+                        />
+                        <Form.Check
+                            custom
+                            type="radio"
+                            id="use-edge-bundling-2"
+                            checked={!useEdgeBundling}
+                            onChange={changeParam.bind(null, "focalGraph.useEdgeBundling", null, true, null)}
+                            label="straight edges"
                         />
                     </Form>
+                    {hops > 1 && <div style={{ marginRight: "20px" }}></div>}
+                    {hops > 1 && (
+                        <Form inline>
+                            <Form.Check
+                                custom
+                                type="radio"
+                                id="use-global-mask-1"
+                                checked={useGlobalMask}
+                                onChange={changeParam.bind(
+                                    null,
+                                    "focalGraph.useGlobalMask",
+                                    null,
+                                    true,
+                                    null
+                                )}
+                                label={`use ${hops} hops to compute distance (as in GNN trainning)`}
+                            />
+                            <Form.Check
+                                custom
+                                type="radio"
+                                id="use-global-mask-2"
+                                checked={!useGlobalMask}
+                                onChange={changeParam.bind(
+                                    null,
+                                    "focalGraph.useGlobalMask",
+                                    null,
+                                    true,
+                                    null
+                                )}
+                                label="use 1 hop only"
+                            />
+                        </Form>
+                    )}
                 </div>
-                {/* <div>
-                    Hover: show the node and its 1-hop neighbors and hide others. <br />
-                    Click: highlight the node and its 1-hop neighbors.
-                </div> */}
                 <div
                     className="graph-layout-list"
                     style={{ minWidth: Math.max(initialLayout.width || 0, focalLayout.width || 0) + 35 }}
@@ -89,7 +128,7 @@ const mapStateToProps = (state) => ({
     hasFocalNodes: state.selectedNodes.length > 0,
     hops: state.param.hops,
     useEdgeBundling: state.param.focalGraph.useEdgeBundling,
-    onlyActivateOne: state.param.onlyActivateOne,
+    useGlobalMask: state.param.focalGraph.useGlobalMask,
     initialLayout: state.initialLayout,
     focalLayout: state.focalLayout,
 });

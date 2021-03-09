@@ -96,6 +96,7 @@ export default {
             // layout: 'spiral',
             // layout: 'group-constraint-cola',
             useEdgeBundling: true,
+            useGlobalMask: true,
         },
 
         features: {

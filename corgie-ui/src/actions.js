@@ -114,6 +114,7 @@ export function fetchGraphData(homePath, datasetId) {
                 graph.nodes.length,
                 graph.edges,
                 graph.neighborMasks.map((x) => x.toString()),
+                graph.neighborMasksByHop[0].map((x) => x.toString()),
                 hops,
                 neighborDistanceMetric,
                 state.spec.graph
@@ -263,13 +264,7 @@ export function selectNodes(mode, targetNodes, targetGroupIdx) {
                 );
             }
 
-            const layoutRes = await callFocalLayoutFunc(
-                state.graph,
-                newSel,
-                neighRes,
-                state.param,
-                state.spec.graph
-            );
+            const layoutRes = await callFocalLayoutFunc(state.graph, newSel, neighRes, state.param);
             dispatch(selectNodesDone(layoutRes, curLayoutID));
         } else {
             dispatch(selectNodesDone({}, null));
@@ -286,30 +281,16 @@ export function selectNodePair(node1, node2) {
         const curLayoutID = focalLayoutIDcounter++;
         dispatch(selectNodesPending(newSel, neighRes, curLayoutID));
 
-        const layoutRes = await callFocalLayoutFunc(
-            state.graph,
-            newSel,
-            neighRes,
-            state.param,
-            state.spec.graph
-        );
+        const layoutRes = await callFocalLayoutFunc(state.graph, newSel, neighRes, state.param);
         dispatch(selectNodesDone(layoutRes, curLayoutID));
     };
 }
 
-async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) {
-    // Compute the force layout for focal nodes (selected + k-hop neighbors)
+async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param) {
+    // Compute the force layout for focal nodes (focal nodes + k-hop neighbors)
     if (selectedNodes.length === 0) {
         return {};
     } else {
-        // Serialize the bitset data structure to pass it to the web worker
-        const { neighMap } = neighRes;
-        let serializedNeighMap = {};
-        for (let id in neighMap)
-            if (neighMap.hasOwnProperty(id)) {
-                serializedNeighMap[id] = neighMap[id].mask.toArray();
-            }
-
         // terminate the previous invocation if it is still ongoing
         // focalLayoutWorkerBeforeWrap.terminate();
         switch (param.focalGraph.layout) {
@@ -317,9 +298,7 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                 return await focalLayoutWorker.computeFocalLayoutWithUMAP(
                     selectedNodes,
                     neighRes.neighArr,
-                    // serializedNeighMap,   // Use local signature
-                    // graph.neighborMasksByHop[0].map((x) => x.toArray()), // Use global signature
-                    null,
+                    param.focalGraph.useGlobalMask,
                     param.nodeSize,
                     param.focalGraph.useEdgeBundling
                 );
@@ -327,18 +306,16 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                 return await focalLayoutWorker.computeFocalLayoutWithCola(
                     selectedNodes,
                     neighRes.neighArr,
-                    // serializedNeighMap,
-                    null,
+                    param.focalGraph.useGlobalMask,
                     param.nodeSize
                 );
             case "spiral":
                 return await focalLayoutWorker.computeSpaceFillingCurveLayout(
                     graph.nodes,
-                    param.hops,
                     neighRes.isNodeSelected,
                     neighRes.isNodeSelectedNeighbor,
                     neighRes.neighArr,
-                    serializedNeighMap,
+                    param.focalGraph.useGlobalMask,
                     param.neighborDistanceMetric
                 );
             default:
@@ -348,9 +325,8 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param, spec) 
                     param.hops,
                     neighRes.isNodeSelected,
                     neighRes.isNodeSelectedNeighbor,
-                    serializedNeighMap,
-                    param.neighborDistanceMetric,
-                    spec.graph
+                    param.focalGraph.useGlobalMask,
+                    param.neighborDistanceMetric
                 );
         }
     }

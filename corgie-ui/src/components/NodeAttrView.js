@@ -181,7 +181,7 @@ function FeatureComboVis({
             )}
             <div style={{ marginLeft: "10px" }}>
                 <span>
-                    <Button variant="outline-secondary" size="xs" onClick={toggleFunc}>
+                    <Button variant="outline-secondary" size="xxs" onClick={toggleFunc}>
                         {collapsed ? "Show" : "Hide"} feature matrix
                     </Button>
                 </span>
@@ -249,7 +249,7 @@ class NodeAttrView extends Component {
                             hovered={featureAgg.hovered}
                             highlighted={featureAgg.highlighted}
                             toggleFunc={changeParam.bind(this, "features.collapsed", null, true, i)}
-                            legendText={"#nodes"}
+                            legendText={d.title === "diff" ? "counts of foc-0 - counts of foc-1" : "#nodes"}
                         />
                     </div>
                 </div>
@@ -329,6 +329,20 @@ class NodeAttrView extends Component {
                 <div className="view-body">
                     {featureVisBlock}
                     {nodeAttrVisBlock}
+                </div>
+                <div className="view-footer">
+                    <span>Each row shows feature distribution of all / a focal group of nodes.</span>
+                    {featureAgg.active && (
+                        <span style={{ marginLeft: "5px" }}>
+                            More saturated color indicates a bigger count of nodes for row foc-i, or a bigger
+                            difference for row diff.
+                        </span>
+                    )}
+                    {this.props.selectedNodes.length > 2 && (
+                        <div style={{ fontWeight: "bold" }}>
+                            Note: the diff will only show up when there are exactly 2 focal groups.
+                        </div>
+                    )}
                 </div>
             </div>
         );

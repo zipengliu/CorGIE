@@ -487,6 +487,10 @@ rect.highlight-strip {
     padding: 10px;
 }
 
+#graph-view .custom-control {
+    margin-right: 8px;
+}
+
 .scatter-hist-list {
     display: flex;
     flex-direction: row;
@@ -560,7 +564,7 @@ rect.highlight-strip {
 }
 #global-controls .table td,
 #global-controls .table th {
-    padding: .1rem;
+    padding: 0.1rem;
 }
 #global-controls .dropdown {
     display: inline-block;

@@ -103,7 +103,7 @@ export class NodePairView extends Component {
                                 </div> */}
                                 <div>
                                     <Button
-                                        variant="outline-secondary"
+                                        variant="outline-danger"
                                         size="xs"
                                         onClick={highlightNodePairs.bind(null, null, null)}
                                     >
@@ -179,6 +179,11 @@ export class NodePairView extends Component {
                     nodes. <br />
                     Latent distance of node pair = cosine distance of node embeddings. <br />
                     Luminance ~ #node pairs with specific distance values.
+                    {this.props.selectedNodes.length > 2 && (
+                        <div style={{ fontWeight: "bold" }}>
+                            Note: the diff will only show up when there are exactly 2 focal groups.
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -214,6 +219,7 @@ const mapStateToProps = (state) => {
     }
     return {
         nodes: state.graph.nodes,
+        selectedNodes,
         highlightedNodePairs: state.highlightedNodePairs,
         highlightDistVals,
         distances: state.distances,
