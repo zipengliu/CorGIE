@@ -129,15 +129,6 @@ function Histogram({
                         style={{ stroke: "none", fill: "white", fillOpacity: ".7" }}
                     />
                 )}
-                {hVal && (
-                    <g className="value-marker" transform={`translate(${xScale(hVal)},0)`}>
-                        <line x1={0} y1={0} x2={0} y2={height} />
-                        <rect x={-25} y={-10} width={50} height={18} />
-                        <text x={0} y={3} textAnchor="middle">
-                            {xFormat(hVal)}
-                        </text>
-                    </g>
-                )}
                 {highlighted &&
                     highlighted.bins.map((b, i) => (
                         <rect
@@ -168,6 +159,15 @@ function Histogram({
                             </title>
                         </rect>
                     ))}
+                {hVal && (
+                    <g className="value-marker" transform={`translate(${xScale(hVal)},0)`}>
+                        <line x1={0} y1={0} x2={0} y2={height} />
+                        <rect x={-25} y={-10} width={50} height={18} />
+                        <text x={0} y={3} textAnchor="middle">
+                            {xFormat(hVal)}
+                        </text>
+                    </g>
+                )}
             </g>
             <defs>
                 <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="0" refY="5" orient="auto">

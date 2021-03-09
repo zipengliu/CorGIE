@@ -76,6 +76,17 @@
         "desc": "Sampled 50 restaurants in Toronto and sampled 50 users each."
     },
     {
+        "id": "cora-gat",
+        "name": "cora-GAT",
+        "source": "paper citation network",
+        "numNodes": 2708,
+        "numEdges": 10556,
+        "numTypes": 1,
+        "nodeFeatures": "One-hot word vector (binary). Dictionary length: 1433.",
+        "hops": 2,
+        "desc": "Applying GAT on Cora dataset"
+    },
+    {
         "id": "cora-gcn",
         "name": "cora-gcn",
         "source": "paper citation network",

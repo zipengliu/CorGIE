@@ -6,6 +6,9 @@ export default {
     homePath: "",
     // homePath: '/~zipeng/private/cofegrem-prototype',
 
+    numNodeClasses: false,
+    hasLinkPrections: false,
+
     centralNodeType: 0,
     nodeColors: [],
 
@@ -20,7 +23,7 @@ export default {
         hovered: null,
         highlighted: null,
         display: [],
-    }, 
+    },
 
     selectedNodes: [], // Array of array
     selBoundingBox: [],
@@ -39,7 +42,10 @@ export default {
 
     distances: {
         maxSample: 1000000,
-        display: [{isComputing: true, title: 'all (down-sampled)'}, {isComputing: true, title: 'connected by edges'}],
+        display: [
+            { isComputing: true, title: "all (down-sampled)" },
+            { isComputing: true, title: "connected by edges" },
+        ],
     },
 
     initialLayout: {
@@ -63,9 +69,9 @@ export default {
     param: {
         hops: 2,
         hopsHover: 1,
-        onlyActivateOne: false,     // whether to activate one node or one node + its neighbors
+        onlyActivateOne: false, // whether to activate one node or one node + its neighbors
 
-        colorBy: -1, // Could be -1 (for emb 2d postion) or a name of the attribute
+        colorBy: "umap", // Could be "umap" (for emb 2d postion), "pred-labels", "true-labels", "correctness", or a name of the attribute
         colorScale: null,
 
         // neighborDistanceMetric: 'hamming',
@@ -73,6 +79,10 @@ export default {
 
         nodeSize: 4,
         embNodeSize: 3,
+
+        // Only highlight nodes of type / label
+        highlightNodeType: "all", // "all" or integer for a specific node type
+        highlightNodeLabel: "all", // "all", "correct", "wrong", "pred-${k}", "true-${k}" where k is the label ID
 
         graph: {
             layout: "force-directed-d3",
@@ -86,10 +96,6 @@ export default {
             // layout: 'spiral',
             // layout: 'group-constraint-cola',
             useEdgeBundling: true,
-        },
-
-        latent: {
-            selectedNodeType: 0,
         },
 
         features: {
@@ -108,7 +114,7 @@ export default {
 
         nodePairFilter: {
             // ascending: true, // sort the node pairs by latent distance in ascending order
-            which: null, 
+            which: null,
             brushedArea: null,
             useLinearScale: true,
         },
@@ -122,7 +128,7 @@ export default {
     spec: {
         graph: {
             margin: 5,
-            padding: 16,    // padding of group
+            padding: 16, // padding of group
             gapBetweenHop: 8,
 
             edgeType: "line",
@@ -185,11 +191,11 @@ export default {
         feature: {
             cellSize: 6,
             cellGap: 1,
-            margins: { top: 5, bottom: 5, left: 10, right: 10 },
-            barcodeMaxWidth: 1000,
-            barWidth: 2,
-            maxNumBars: 500,    // remember to sync these three values
-            barcodeHeight: 15,
+            margins: { top: 8, bottom: 8, left: 10, right: 10 },
+            stripMaxWidth: 1000,
+            stripWidth: 2,
+            maxNumStrips: 500, // remember to sync these three values
+            stripHeight: 15,
         },
     },
 };

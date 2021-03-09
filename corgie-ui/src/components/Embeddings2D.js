@@ -7,7 +7,7 @@ import NodeRep from "./NodeRep";
 import { FocusLayer, HighlightLayer, HoverLayer } from "./NodeLayers";
 import { getNodeEmbeddingColor } from "../utils";
 import { highlightNodes, hoverNode } from "../actions";
-import { isPointInBox } from "../utils";
+import { isPointInBox, isNodeBrushable } from "../utils";
 
 const initState = {
     mouseDown: false,
@@ -23,12 +23,12 @@ class Embeddings2D extends Component {
         this.state = initState;
     }
     callHighlightNodes(brushedArea) {
-        const { nodes, selectedNodeType } = this.props;
+        const { nodes, highlightNodeType, highlightNodeLabel } = this.props;
         const candidates = this.props.qt.retrieve(brushedArea);
         const targetNodes = [];
         for (let c of candidates) {
             if (
-                nodes[c.id].typeId === selectedNodeType &&
+                isNodeBrushable(nodes[c.id], highlightNodeType, highlightNodeLabel) &&
                 isPointInBox({ x: c.x + 0.5, y: c.y + 0.5 }, brushedArea)
             ) {
                 targetNodes.push(c.id);
@@ -98,7 +98,7 @@ class Embeddings2D extends Component {
                         onMouseDown={this._onMouseDown.bind(this)}
                     >
                         <Provider store={store}>
-                            {colorBy === -1 && <ColorTiles w={spec.width} />}
+                            {colorBy === "umap" && <ColorTiles w={spec.width} />}
                             <BaseLayer />
                             {selectedNodes.length > 0 && (
                                 <FocusLayer
@@ -160,7 +160,8 @@ const mapStateToProps = (state) => ({
     nodeColors: state.nodeColors,
     colorBy: state.param.colorBy,
     selectedNodes: state.selectedNodes,
-    selectedNodeType: state.param.latent.selectedNodeType,
+    highlightNodeType: state.param.highlightNodeType,
+    highlightNodeLabel: state.param.highlightNodeLabel,
     selBoundingBox: state.selBoundingBox,
     highlightedNodes: state.highlightedNodes,
     hoveredNodesAndNeighbors: state.hoveredNodesAndNeighbors,
@@ -193,7 +194,7 @@ function BaseLayerUnconnected({ nodeColors, colorBy, nodeSize, coords, nodes, ho
                         radius={nodeSize}
                         typeId={nodes[i].typeId}
                         style={{
-                            fill: colorBy === -1 ? "grey" : nodeColors[i],
+                            fill: colorBy === "umap" ? "grey" : nodeColors[i],
                             strokeEnabled: false,
                         }}
                         events={{

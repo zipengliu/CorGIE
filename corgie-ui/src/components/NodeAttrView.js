@@ -8,12 +8,12 @@ import { changeParam, highlightNodes, hoverNode } from "../actions";
 import Histogram from "./Histogram";
 
 function FeatureMatrix({ values, hovered, highlighted, scale, spec, hoverFunc, highlightFunc }) {
-    const { margins, cellSize, cellGap, barcodeMaxWidth } = spec;
+    const { margins, cellSize, cellGap, stripMaxWidth } = spec;
 
     const n = values.length;
     const size = cellSize + cellGap;
     // Make a square matrix instead of a long line
-    const numCols = Math.floor(barcodeMaxWidth / size);
+    const numCols = Math.floor(stripMaxWidth / size);
     const numRows = Math.ceil(n / numCols);
 
     const width = size * numCols + margins.left + margins.right,
@@ -58,9 +58,9 @@ function FeatureStrips({
     hoverFunc,
     highlightFunc,
 }) {
-    const { barcodeHeight, margins, barWidth } = spec;
-    const width = compressedCnts.length * barWidth + margins.left + margins.right;
-    const height = barcodeHeight + margins.top + margins.bottom;
+    const { stripHeight, margins, stripWidth } = spec;
+    const width = compressedCnts.length * stripWidth + margins.left + margins.right;
+    const height = stripHeight + margins.top + margins.bottom;
 
     return (
         <svg width={width} height={height} className="feature-strips">
@@ -74,12 +74,12 @@ function FeatureStrips({
                                     highlighted && highlighted.hasOwnProperty(i) && highlighted[i] !== 0,
                             })}
                             key={i}
-                            x1={i * barWidth}
+                            x1={i * stripWidth}
                             y1={0}
-                            x2={i * barWidth}
-                            y2={barcodeHeight}
+                            x2={i * stripWidth}
+                            y2={stripHeight}
                             stroke={colorScale(v)}
-                            style={{ strokeWidth: `${barWidth}px` }}
+                            style={{ strokeWidth: `${stripWidth}px` }}
                             onMouseEnter={hoverFunc.bind(null, stripMapping[i])}
                             onMouseLeave={hoverFunc.bind(null, null)}
                             onClick={highlightFunc.bind(null, stripMapping[i])}
@@ -93,8 +93,8 @@ function FeatureStrips({
                 <rect
                     x={-2}
                     y={0}
-                    width={compressedCnts.length * barWidth + 2}
-                    height={barcodeHeight}
+                    width={compressedCnts.length * stripWidth + 2}
+                    height={stripHeight}
                     style={{ strokeWidth: "1px", stroke: "grey", strokeDasharray: "5,5", fill: "None" }}
                 />
             </g>

@@ -6,7 +6,7 @@ import debounce from "lodash.debounce";
 import NodeRep from "./NodeRep";
 import { FocusLayer, HighlightLayer, HoverLayer } from "./NodeLayers";
 import { highlightNodes, hoverNode, selectNodePair } from "../actions";
-import { isPointInBox } from "../utils";
+import { isPointInBox, isNodeBrushable } from "../utils";
 
 const initState = {
     mouseDown: false,
@@ -24,11 +24,15 @@ class GraphLayout extends Component {
 
     // Dup code as in Embeddings2D.js.  TODO: reuse instead dup.
     callHighlightNodes(brushedArea) {
+        const { nodes, highlightNodeType, highlightNodeLabel } = this.props;
         const { qt } = this.props.layoutData;
         const candidates = qt.retrieve(brushedArea);
         const targetNodes = [];
         for (let c of candidates) {
-            if (isPointInBox({ x: c.x + 0.5, y: c.y + 0.5 }, brushedArea)) {
+            if (
+                isNodeBrushable(nodes[c.id], highlightNodeType, highlightNodeLabel) &&
+                isPointInBox({ x: c.x + 0.5, y: c.y + 0.5 }, brushedArea)
+            ) {
                 targetNodes.push(c.id);
             }
         }
@@ -82,7 +86,6 @@ class GraphLayout extends Component {
             layoutData,
             nodes,
             nodeColors,
-            spec,
             nodeSize,
             selectedNodes,
             highlightedNodes,
@@ -164,7 +167,6 @@ class GraphLayout extends Component {
 const mapStateToProps = (state) => ({
     nodes: state.graph.nodes,
     edges: state.graph.edges,
-    spec: state.spec.graph,
     nodeSize: state.param.nodeSize,
     useEdgeBundling: state.param.focalGraph.useEdgeBundling,
     nodeColors: state.nodeColors,
@@ -174,6 +176,8 @@ const mapStateToProps = (state) => ({
     hoveredNodesAndNeighbors: state.hoveredNodesAndNeighbors,
     hoveredEdges: state.hoveredEdges,
     onlyActivateOne: state.param.onlyActivateOne,
+    highlightNodeType: state.param.highlightNodeType,
+    highlightNodeLabel: state.param.highlightNodeLabel,
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -254,13 +258,7 @@ function BaseLayerUnconnected({
                                 events={{
                                     onMouseOver: debouncedHover.bind(null, i),
                                     onMouseOut: debouncedHover.bind(null, null),
-                                    onClick: highlightNodes.bind(
-                                        null,
-                                        [i],
-                                        null,
-                                        "graph-layout",
-                                        null
-                                    ),
+                                    onClick: highlightNodes.bind(null, [i], null, "graph-layout", null),
                                 }}
                             />
                         )
@@ -280,7 +278,12 @@ function BaseLayerUnconnected({
                                 dash={[2, 2]}
                                 fillEnabled={false}
                             />
-                            <Text text={`${g.name} (#=${g.num})`} x={g.bounds.x + 2} y={g.bounds.y + 2} fontSize={12} />
+                            <Text
+                                text={`${g.name} (#=${g.num})`}
+                                x={g.bounds.x + 2}
+                                y={g.bounds.y + 2}
+                                fontSize={12}
+                            />
                         </Group>
                     ))}
                 </Group>

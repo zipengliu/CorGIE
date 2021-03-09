@@ -94,6 +94,7 @@ export function getNeighborDistance(mask1, mask2, metric) {
     }
 }
 
+const sim2dist = scaleLinear().domain([-1, 1]).range([1, 0]);
 export function getCosineDistance(u, v) {
     let p = 0,
         magU = 0,
@@ -103,12 +104,9 @@ export function getCosineDistance(u, v) {
         magU += Math.pow(u[i], 2);
         magV += Math.pow(v[i], 2);
     }
-    let mag = Math.sqrt(magU) * Math.sqrt(magV);
-    if (mag > Number.EPSILON) {
-        return Math.max(0, 1.0 - p / mag);
-    } else {
-        return 1.0;
-    }
+    const mag = Math.sqrt(magU) * Math.sqrt(magV);
+    const sim = p / mag;
+    return sim2dist(sim);
 }
 
 // Get the positional color for a node that sits at (x, y), where x,y is in [0,1]
@@ -324,4 +322,17 @@ export function filterEdgeAndComputeDict(numNodes, edges) {
         }
     }
     return { edges: filteredEdges, edgeDict: d };
+}
+
+export function isNodeBrushable(nodeData, highlightNodeType, highlightNodeLabel) {
+    if (highlightNodeType !== "all" && nodeData.typeId !== highlightNodeType) return false;
+    if (highlightNodeLabel !== "all") {
+        if (highlightNodeLabel === "correct" && nodeData.isWrong) return false;
+        if (highlightNodeLabel === "wrong" && !nodeData.isWrong) return false;
+        // Assuming highlightNodeLabel must be "pred-k" or "true-k"
+        const k = parseInt(highlightNodeLabel.slice(5));
+        if (highlightNodeLabel.indexOf('pred') !== -1 && nodeData.pl !== k) return false;
+        if (highlightNodeLabel.indexOf('true') !== -1 && nodeData.tl !== k) return false;
+    }
+    return true;
 }

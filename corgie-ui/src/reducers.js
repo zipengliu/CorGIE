@@ -2,7 +2,6 @@ import produce, { freeze } from "immer";
 import initialState from "./initialState";
 import ACTION_TYPES from "./actions";
 // import { computeForceLayoutWithD3, computeDummyLayout, computeForceLayoutWithCola } from "./layouts";
-import { schemeCategory10, sum } from "d3";
 import bs from "bitset";
 import {
     bin as d3bin,
@@ -13,7 +12,8 @@ import {
     interpolateGreys,
     interpolateRdBu,
     scaleLinear,
-    format,
+    scaleOrdinal,
+    schemeTableau10,
 } from "d3";
 import Quadtree from "@timohausmann/quadtree-js";
 import {
@@ -27,10 +27,10 @@ import {
 
 function mapColorToNodeType(nodeTypes) {
     for (let i = 0; i < nodeTypes.length; i++) {
-        if (i > schemeCategory10.length - 1) {
+        if (i > schemeTableau10.length - 1) {
             nodeTypes[i].color = "black";
         } else {
-            nodeTypes[i].color = schemeCategory10[i];
+            nodeTypes[i].color = schemeTableau10[i];
         }
     }
 }
@@ -497,6 +497,23 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
     return data;
 };
 
+function processPredictionResults(nodes, edges, predRes) {
+    if (!predRes) return;
+    if (predRes.trueLabels && predRes.predLabels) {
+        // node classification results
+        for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            n.pl = predRes.predLabels[i];
+            n.tl = predRes.trueLabels[i];
+            n.isWrong = n.pl !== n.tl;
+        }
+    }
+    if (predRes.posLinkRes && predRes.negLinkRes) {
+        // link prediction results
+        // TODO
+    }
+}
+
 // const getIntraDistances = (nodes, distMatrix) => {
 //     const n = nodes.length;
 //     const d = [];
@@ -554,22 +571,49 @@ const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
 // }
 
 function setNodeColors(draft, colorBy) {
-    if (colorBy === -1) {
-        draft.nodeColors = draft.latent.posColor;
-        draft.param.colorScale = null;
-    } else {
-        const colorAttr = draft.nodeAttrs[colorBy];
-        const attrDomain = [colorAttr.bins[0].x0, colorAttr.bins[colorAttr.bins.length - 1].x1];
-        const leftMargin = 0.2 * (attrDomain[1] - attrDomain[0]);
-        draft.param.colorScale = scaleSequential(interpolateGreens).domain([
-            attrDomain[0] > 0 ? Math.max(0, attrDomain[0] - leftMargin) : attrDomain[0],
-            attrDomain[1],
-        ]);
-        draft.param.colorBy = colorAttr.name; // Use the attribute name as colorBy for convinience
-        draft.nodeColors = draft.graph.nodes.map((n) =>
-            n.hasOwnProperty(colorAttr.name) ? draft.param.colorScale(n[colorAttr.name]) : "grey"
-        );
+    let s = null,
+        d = [];
+    switch (colorBy) {
+        case "umap":
+            draft.nodeColors = draft.latent.posColor;
+            break;
+        case "pred-labels":
+            for (let i = 0; i < draft.numNodeClasses; i++) {
+                d.push(i);
+            }
+            s = scaleOrdinal(d, schemeTableau10);
+            draft.nodeColors = draft.graph.nodes.map((n) => s(n.pl));
+            break;
+        case "true-labels":
+            for (let i = 0; i < draft.numNodeClasses; i++) {
+                d.push(i);
+            }
+            s = scaleOrdinal(d, schemeTableau10);
+            draft.nodeColors = draft.graph.nodes.map((n) => s(n.tl));
+            break;
+        case "correctness":
+            s = (isWrong) => (isWrong ? "red" : "blue");
+            draft.nodeColors = draft.graph.nodes.map((n) => s(n.isWrong));
+            break;
+        case "node-types":
+            s = (i) => draft.graph.nodeTypes[i].color;
+            draft.nodeColors = draft.graph.nodes.map((n) => s(n.typeId));
+            break;
+        default:
+            colorBy = parseInt(colorBy);
+            const colorAttr = draft.nodeAttrs.display[0].data[colorBy];
+            const attrDomain = [colorAttr.bins[0].x0, colorAttr.bins[colorAttr.bins.length - 1].x1];
+            const leftMargin = 0.2 * (attrDomain[1] - attrDomain[0]);
+            s = scaleSequential(interpolateGreens).domain([
+                attrDomain[0] > 0 ? Math.max(0, attrDomain[0] - leftMargin) : attrDomain[0],
+                attrDomain[1],
+            ]);
+            draft.nodeColors = draft.graph.nodes.map((n) =>
+                n.hasOwnProperty(colorAttr.name) ? s(n[colorAttr.name]) : "grey"
+            );
     }
+    draft.param.colorBy = colorBy;
+    draft.param.colorScale = s;
 }
 
 // Determine if all nodes are in a focal group.  If yes return the gid (>0), else return 0
@@ -590,6 +634,28 @@ function areNodesAllInFocalGroups(nodes, isNodeSelected) {
     return r;
 }
 
+function buildQT(coords, width, height) {
+    const qt = new Quadtree({
+        x: 0,
+        y: 0,
+        width,
+        height,
+    });
+    for (let i = 0; i < coords.length; i++) {
+        const c = coords[i];
+        if (c) {
+            qt.insert({
+                id: i,
+                x: c.x - 0.5,
+                y: c.y - 0.5,
+                width: 1,
+                height: 1,
+            });
+        }
+    }
+    return qt;
+}
+
 const reducers = produce((draft, action) => {
     // const ascFunc = (x1, x2) => x1[0][0] - x2[0][0],
     //     descFunc = (x1, x2) => x2[0][0] - x1[0][0];
@@ -604,13 +670,18 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
-            const { graph, emb, emb2d, attrs, features, hops } = action.data;
+            const { graph, emb, emb2d, attrs, features, hops, predRes } = action.data;
             // the scalar values in emb are in string format, so convert them to float first
             for (let e of emb) {
                 for (let i = 0; i < e.length; i++) {
                     e[i] = parseFloat(e[i]);
                 }
             }
+
+            processPredictionResults(graph.nodes, graph.edges, predRes);
+            draft.numNodeClasses = predRes ? predRes.numNodeClasses : null;
+            draft.hasLinkPrections = predRes && predRes.posLinkRes && predRes.negLinkRes;
+
             draft.param.hops = hops;
             draft.datasetId = action.data.datasetId;
             draft.graph = {
@@ -633,7 +704,7 @@ const reducers = produce((draft, action) => {
                 draft.featureAgg.numFeatures = features[0].length;
                 draft.featureAgg.stripMapping = getCompressFeatureMapping(
                     features[0].length,
-                    draft.spec.feature.maxNumBars
+                    draft.spec.feature.maxNumStrips
                 );
                 fAggCntData = aggregateBinaryFeatures(features, null);
                 fAggBlock = {
@@ -641,7 +712,7 @@ const reducers = produce((draft, action) => {
                     cnts: fAggCntData.cnts,
                     featToNid: fAggCntData.featToNid,
                     maxCnts: max(fAggCntData.cnts),
-                    compressedCnts: compressFeatureValues(fAggCntData.cnts, draft.spec.feature.maxNumBars),
+                    compressedCnts: compressFeatureValues(fAggCntData.cnts, draft.spec.feature.maxNumStrips),
                 };
                 fAggBlock.scale = scaleSequential(interpolateGreys).domain([0, fAggBlock.maxCnts]);
                 draft.featureAgg.display.push(fAggBlock);
@@ -670,18 +741,9 @@ const reducers = produce((draft, action) => {
                     draft.spec.latent.height,
                     draft.spec.latent.paddings
                 ),
-                qt: new Quadtree({
-                    x: 0,
-                    y: 0,
-                    width: draft.spec.latent.width,
-                    height: draft.spec.latent.height,
-                }),
             };
             // Build quadtree for the embedding 2D coordinates
-            for (let i = 0; i < draft.latent.coords.length; i++) {
-                const c = draft.latent.coords[i];
-                draft.latent.qt.insert({ id: i, x: c.x - 0.5, y: c.y - 0.5, width: 1, height: 1 });
-            }
+            draft.latent.qt = buildQT(draft.latent.coords, draft.spec.latent.width, draft.spec.latent.height);
             draft.latent.posColor = draft.latent.coords.map((c) =>
                 getNodeEmbeddingColor(c.x / draft.spec.latent.width, c.y / draft.spec.latent.height)
             );
@@ -706,20 +768,31 @@ const reducers = produce((draft, action) => {
 
         case ACTION_TYPES.COMPUTE_INIT_LAYOUT_DONE:
             Object.assign(draft.initialLayout, action.layoutRes);
+            draft.initialLayout.qt = buildQT(
+                action.layoutRes.coords,
+                action.layoutRes.width,
+                action.layoutRes.height
+            );
             draft.initialLayout.running = false;
             return;
 
         case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
             console.log("Data recieved.  Storing data...", new Date());
-            Object.assign(draft.distances.display[action.idx], action.distData);
-            draft.distances.display[action.idx].isComputing = false;
+            if (action.idx < draft.distances.display.length) {
+                Object.assign(draft.distances.display[action.idx], action.distData);
+                draft.distances.display[action.idx].isComputing = false;
+            }
             return;
 
         case ACTION_TYPES.HIGHLIGHT_NODES:
             draft.highlightedNodes = action.nodeIndices;
             draft.param.nodeFilter = {};
+            draft.highlightedNodes = [];
+            draft.highlightedEdges = [];
+            draft.featureAgg.highlighted = null;
+            draft.nodeAttrs.highlighted = null;
             if (action.fromView === "node-type") {
-                draft.highlightedNodes = [];
+                // draft.highlightedNodes = [];
                 for (let n of draft.graph.nodes) {
                     if (n.typeId === action.which) {
                         draft.highlightedNodes.push(n.id);
@@ -745,7 +818,7 @@ const reducers = produce((draft, action) => {
                         displayId: action.which.displayId,
                         // cellIds: action.which.cellIds,
                         cnts: fAggCntData,
-                        compressedCnts: compressFeatureValues(fAggCntData, draft.spec.feature.maxNumBars),
+                        compressedCnts: compressFeatureValues(fAggCntData, draft.spec.feature.maxNumStrips),
                     };
                 }
                 if (
@@ -775,32 +848,34 @@ const reducers = produce((draft, action) => {
                 }
             }
 
-            if (
-                action.fromView === null &&
-                (action.nodeIndices === null || action.nodeIndices.length === 0)
-            ) {
-                draft.highlightedNodes = [];
-                draft.highlightedEdges = [];
-                draft.featureAgg.highlighted = null;
-            } else if (draft.featureAgg.active && action.fromView !== "feature") {
-                // Compute which cell needs to be highlighted
-                fAggCntData = aggregateBinaryFeatures(draft.graph.features, draft.highlightedNodes, false);
-                draft.featureAgg.highlighted = {
-                    displayId: areNodesAllInFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
-                    cnts: fAggCntData.cnts,
-                    compressedCnts: compressFeatureValues(fAggCntData.cnts, draft.spec.feature.maxNumBars),
-                };
-            } else if (draft.nodeAttrs.active && action.fromView !== 'node-attr') {
-                draft.nodeAttrs.highlighted = {
-                    displayId: areNodesAllInFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
-                    data: summarizeNodeAttrs(
-                        draft.graph.nodes,
-                        draft.attrMeta,
-                        draft.graph.nodeTypes,
-                        draft.nodeAttrs.display[0].data,
+            if (draft.highlightedNodes.length) {
+                if (draft.featureAgg.active && action.fromView !== "feature") {
+                    // Compute which cell needs to be highlighted
+                    fAggCntData = aggregateBinaryFeatures(
+                        draft.graph.features,
                         draft.highlightedNodes,
-                    ),
-                };
+                        false
+                    );
+                    draft.featureAgg.highlighted = {
+                        displayId: areNodesAllInFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
+                        cnts: fAggCntData.cnts,
+                        compressedCnts: compressFeatureValues(
+                            fAggCntData.cnts,
+                            draft.spec.feature.maxNumStrips
+                        ),
+                    };
+                } else if (draft.nodeAttrs.active && action.fromView !== "node-attr") {
+                    draft.nodeAttrs.highlighted = {
+                        displayId: areNodesAllInFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
+                        data: summarizeNodeAttrs(
+                            draft.graph.nodes,
+                            draft.attrMeta,
+                            draft.graph.nodeTypes,
+                            draft.nodeAttrs.display[0].data,
+                            draft.highlightedNodes
+                        ),
+                    };
+                }
             }
             return;
         case ACTION_TYPES.HIGHLIGHT_NODE_PAIRS:
@@ -863,7 +938,7 @@ const reducers = produce((draft, action) => {
                             cnts: fAggCntData.cnts,
                             compressedCnts: compressFeatureValues(
                                 fAggCntData.cnts,
-                                draft.spec.feature.maxNumBars
+                                draft.spec.feature.maxNumStrips
                             ),
                         };
                     } else if (action.fromFeature.cellIds.length > 0) {
@@ -958,7 +1033,7 @@ const reducers = produce((draft, action) => {
                             maxCnts: max(fAggCntData.cnts),
                             compressedCnts: compressFeatureValues(
                                 fAggCntData.cnts,
-                                draft.spec.feature.maxNumBars
+                                draft.spec.feature.maxNumStrips
                             ),
                         };
                         fAggBlock.scale = scaleSequential(interpolateGreys).domain([0, fAggBlock.maxCnts]);
@@ -974,7 +1049,7 @@ const reducers = produce((draft, action) => {
                         const t = Math.max(Math.abs(diffExtent[0]), Math.abs(diffExtent[1]));
                         const diffCompressedCnts = compressFeatureValues(
                             diffCnts,
-                            draft.spec.feature.maxNumBars
+                            draft.spec.feature.maxNumStrips
                         );
                         const diffFeatToNid = {};
                         for (let i = 0; i < diffCnts.length; i++) {
@@ -1022,24 +1097,11 @@ const reducers = produce((draft, action) => {
                     running: false,
                 };
                 if (action.layoutRes.coords) {
-                    draft.focalLayout.qt = new Quadtree({
-                        x: 0,
-                        y: 0,
-                        width: action.layoutRes.width,
-                        height: action.layoutRes.height,
-                    });
-                    for (let i = 0; i < action.layoutRes.coords.length; i++) {
-                        const c = action.layoutRes.coords[i];
-                        if (c) {
-                            draft.focalLayout.qt.insert({
-                                id: i,
-                                x: c.x - 0.5,
-                                y: c.y - 0.5,
-                                width: 1,
-                                height: 1,
-                            });
-                        }
-                    }
+                    draft.focalLayout.qt = buildQT(
+                        action.layoutRes.coords,
+                        action.layoutRes.width,
+                        action.layoutRes.height
+                    );
                 }
             }
             return;

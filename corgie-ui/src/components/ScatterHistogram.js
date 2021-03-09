@@ -80,13 +80,13 @@ function ScatterHistogram({
         function constrain(x) {
             return Math.max(0, Math.min(x, numBins - 1));
         }
-        const x1 = constrain(Math.floor(a.x / uLat)),
-            y1 = constrain(Math.ceil((scatterHeight - a.y) / uTopo)),
-            x2 = constrain(Math.ceil((a.x + a.width) / uLat)),
-            y2 = constrain(Math.floor((scatterHeight - a.y - a.height) / uTopo));
+        const x1 = constrain(Math.round(a.x / uLat)),
+            y1 = constrain(Math.round((scatterHeight - a.y) / uTopo)),
+            x2 = constrain(Math.round((a.x + a.width) / uLat)),
+            y2 = constrain(Math.round((scatterHeight - a.y - a.height) / uTopo));
         let brushedPairIdx = [];
-        for (let i = x1; i < x2; i++) {
-            for (let j = y2; j < y1; j++) {
+        for (let i = x1; i <= x2; i++) {
+            for (let j = y2; j <= y1; j++) {
                 brushedPairIdx = brushedPairIdx.concat(gridBins[i][j]);
             }
         }
@@ -94,9 +94,9 @@ function ScatterHistogram({
         brushedFunc(
             {
                 x: x1 * uLat,
-                y: scatterHeight - y1 * uTopo,
-                width: (x2 - x1) * uLat,
-                height: (y1 - y2) * uTopo,
+                y: scatterHeight - (y1 + 1) * uTopo,
+                width: (x2 - x1 + 1) * uLat,
+                height: (y1 - y2 + 1) * uTopo,
             },
             brushedPairs
         );

@@ -11,7 +11,7 @@ import DistanceWorker from "./distance.worker";
 import datasetsInfo from "./datasets";
 
 function findHopsInDatasetInfo(id) {
-    const defaultHops = 1;
+    const defaultHops = 2;
     for (let d of datasetsInfo) {
         if (d.id === id) {
             if (d.hops) {
@@ -59,7 +59,16 @@ export function fetchGraphData(homePath, datasetId) {
         dispatch(fetchDataPending());
 
         try {
-            let [graph, emb, emb2d, attrs, features] = [
+            // graph: nodes, node attributes, edges
+            // emb: node embeddings
+            // emb2d: umap results of node embeddings
+            // attrs: meta data for dense features with independent semantics (optional)
+            // features: feature matrix for sparse features with combined semantics (optional)
+            // predRes: prediction results
+            //          node classification: a json dict with two arrays "predLabels", "trueLabels"
+            //          link prediction: a json dict with two arrays "posLinkRes", "negLinkRes"
+            //              Each item in the array is four numbers: src, tgt, prediction (1/0), truth (1/0)
+            let [graph, emb, emb2d, attrs, features, predRes] = [
                 await fetch(`${where}/graph.json`).then((r) => r.json()),
                 await fetch(`${where}/node-embeddings.csv`)
                     .then((r) => r.text())
@@ -85,9 +94,10 @@ export function fetchGraphData(homePath, datasetId) {
                         // Convert a 2D matrix of numbers
                         return d.map((row) => row.map((x) => func(x)));
                     })
-                    .catch(() => {
-                        return null; // In case there is no meta data
-                    }),
+                    .catch(() => null),
+                await fetch(`${where}/prediction-results.json`)
+                    .then((r) => r.json())
+                    .catch(() => null),
             ];
 
             const state = getState();
@@ -109,7 +119,7 @@ export function fetchGraphData(homePath, datasetId) {
                 state.spec.graph
             );
 
-            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features, hops }));
+            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features, hops, predRes }));
 
             initalLayoutWorker
                 .computeForceLayoutWithD3(graph.nodes.length, graph.edges, state.spec.graph.padding)
@@ -167,8 +177,8 @@ export function highlightNodePairs(which, brushedArea, brushedPairs) {
     return { type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS, brushedArea, which, brushedPairs };
 }
 
-export function hoverNode(nodeIdx, fromFeature=null) {
-    return { type: ACTION_TYPES.HOVER_NODE, nodeIdx, fromFeature};
+export function hoverNode(nodeIdx, fromFeature = null) {
+    return { type: ACTION_TYPES.HOVER_NODE, nodeIdx, fromFeature };
 }
 
 export function toggleHighlightNodesAttr(delIdx = null) {

@@ -45,7 +45,7 @@ export class NodePairView extends Component {
 
         return (
             <div className="view" id="node-pair-view">
-                <h5 className="view-title text-center">Node Pair</h5>
+                <h5 className="view-title text-center">Node Pairs</h5>
                 <div className="view-body">
                     <div style={{ paddingRight: "5px", borderRight: "1px dotted grey" }}>
                         <h6>Highlighted</h6>
@@ -118,9 +118,6 @@ export class NodePairView extends Component {
                         <h6>Compare distances of node pairs in latent vs. topo</h6>
                         <div>
                             <Form inline>
-                                <Form.Label style={{ marginRight: "5px" }}>
-                                    Luminance ~ #node pairs with specific distance values.
-                                </Form.Label>
                                 <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
                                 <Form.Check
                                     inline
@@ -148,7 +145,7 @@ export class NodePairView extends Component {
                             {display.map((d, i) => (
                                 <div className="stuff-container" key={i}>
                                     <div className="container-title">
-                                        {d.title} (#={d.src? numFormat(d.src.length): ''})
+                                        {d.title} (#={d.src ? numFormat(d.src.length) : ""})
                                     </div>
                                     <div className="container-body">
                                         {d.isComputing ? (
@@ -180,7 +177,8 @@ export class NodePairView extends Component {
                 <div className="view-footer">
                     Topological distance of node pair = 1.0 - Jaccard Index of {hops}-hop neighbor sets of two
                     nodes. <br />
-                    Latent distance of node pair = cosine distance of node embeddings.
+                    Latent distance of node pair = cosine distance of node embeddings. <br />
+                    Luminance ~ #node pairs with specific distance values.
                 </div>
             </div>
         );

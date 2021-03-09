@@ -337,7 +337,6 @@ rect.highlight-strip {
     fill: black;
 }
 
-
 .histogram .axis line {
     stroke: black;
     stroke-width: 1px;
@@ -388,12 +387,12 @@ rect.highlight-strip {
     stroke-width: 1px;
 }
 .feature-strips line.strip.hovered {
-    transform: translateY(-50%) scaleY(2);
+    transform: translateY(-25%) scaleY(2);
     -webkit-animation: blinkingEffect 1s infinite;
     animation: blinkingEffect 1s infinite;
 }
 .feature-strips line.strip.highlighted {
-    transform: translateY(-50%) scaleY(2);
+    transform: translateY(-25%) scaleY(2);
     stroke: black;
     /* TODO: what else */
 }
@@ -499,4 +498,28 @@ rect.highlight-strip {
     display: flex;
     flex-direction: row;
     margin: 5px 0;
+}
+
+#global-controls .dropdown .dropdown-menu {
+    position: fixed !important;
+}
+
+.node-color-legends {
+    font-size: 14px;
+}
+.node-color-legends .color-item {
+    display: inline-block;
+}
+.node-color-legends .color-item:not(:first-child) {
+    margin-left: 10px;
+}
+.node-color-legends .color-item .color-block {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    margin-right: 3px;
+}
+.node-color-legends .color-item .color-label {
+    display: inline-block;
 }
