@@ -595,7 +595,7 @@ function setNodeColors(draft, colorBy) {
             s = (isWrong) => (isWrong ? "red" : "blue");
             draft.nodeColors = draft.graph.nodes.map((n) => s(n.isWrong));
             break;
-        case "node-types":
+        case "node-type":
             s = (i) => draft.graph.nodeTypes[i].color;
             draft.nodeColors = draft.graph.nodes.map((n) => s(n.typeId));
             break;
@@ -792,9 +792,20 @@ const reducers = produce((draft, action) => {
             draft.featureAgg.highlighted = null;
             draft.nodeAttrs.highlighted = null;
             if (action.fromView === "node-type") {
-                // draft.highlightedNodes = [];
                 for (let n of draft.graph.nodes) {
                     if (n.typeId === action.which) {
+                        draft.highlightedNodes.push(n.id);
+                    }
+                }
+                draft.highlightedEdges = getEdgesWithinGroup(
+                    draft.graph.edgeDict,
+                    draft.highlightedNodes,
+                    null
+                );
+            } else if (action.fromView === "node-label") {
+                const f = draft.param.colorBy === "pred-labels" ? "pl" : "tl";
+                for (let n of draft.graph.nodes) {
+                    if (n[f] === action.which) {
                         draft.highlightedNodes.push(n.id);
                     }
                 }
@@ -838,7 +849,7 @@ const reducers = produce((draft, action) => {
                     // Highlight their neighbors as well
                     neiRes = getNeighbors(
                         draft.graph.neighborMasksByHop,
-                        draft.param.hopsHover,
+                        draft.param.hopsActivated,
                         draft.graph.edgeDict,
                         action.nodeIndices,
                         true
@@ -907,7 +918,7 @@ const reducers = produce((draft, action) => {
                 } else {
                     neiRes = getNeighbors(
                         draft.graph.neighborMasksByHop,
-                        draft.param.hopsHover,
+                        draft.param.hopsActivated,
                         draft.graph.edgeDict,
                         draft.hoveredNodes,
                         true
@@ -1129,6 +1140,14 @@ const reducers = produce((draft, action) => {
             // Special param changes
             if (action.param === "colorBy") {
                 setNodeColors(draft, action.value);
+            } else if (action.param === "hopsActivated") {
+                draft.param.onlyActivateOne = action.value === 0;
+            } else if (action.param === "onlyActivateOne") {
+                if (draft.param.onlyActivateOne) {
+                    draft.param.hopsActivated = 0;
+                } else if (draft.param.hopsActivated === 0) {
+                    draft.param.hopsActivated = 1;
+                }
             }
             // else if (action.param === "nodePairFilter.ascending") {
             //     draft.highlightedNodePairs.sort(action.value ? ascFunc : descFunc);

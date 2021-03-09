@@ -68,7 +68,7 @@ export default {
 
     param: {
         hops: 2,
-        hopsHover: 1,
+        hopsActivated: 1,
         onlyActivateOne: false, // whether to activate one node or one node + its neighbors
 
         colorBy: "umap", // Could be "umap" (for emb 2d postion), "pred-labels", "true-labels", "correctness", or a name of the attribute

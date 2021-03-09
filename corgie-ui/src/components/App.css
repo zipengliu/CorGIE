@@ -126,6 +126,12 @@
     padding: 0 0.5rem;
     border-radius: 0.2rem;
 }
+.btn.btn-xxs,
+.btn-group-xxs .btn {
+    font-size: 0.8rem;
+    padding: 0 0.5rem;
+    border-radius: 0.1rem;
+}
 .form-control.form-control-xs {
     font-size: 0.875rem;
     padding: 0 0.5rem;
@@ -492,7 +498,7 @@ rect.highlight-strip {
 }
 
 #global-controls {
-    min-width: 240px;
+    min-width: 400px;
 }
 #global-controls .setting-item {
     display: flex;
@@ -504,22 +510,62 @@ rect.highlight-strip {
     position: fixed !important;
 }
 
-.node-color-legends {
+.node-rep-legends {
+    display: inline-block;
+    margin-left: 10px;
     font-size: 14px;
 }
-.node-color-legends .color-item {
+.node-rep-legends .legend-item {
     display: inline-block;
+    cursor: pointer;
 }
-.node-color-legends .color-item:not(:first-child) {
+.node-rep-legends .legend-item:not(:first-child) {
     margin-left: 10px;
 }
-.node-color-legends .color-item .color-block {
+.node-rep-legends .legend-item .visual-block {
     display: inline-block;
-    width: 10px;
-    height: 10px;
     padding: 0;
     margin-right: 3px;
 }
-.node-color-legends .color-item .color-label {
+.node-rep-legends.node-color .legend-item .visual-block {
+    width: 12px;
+    height: 12px;
+}
+.node-rep-legends.node-shape .legend-item .visual-block {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+}
+.node-rep-legends .legend-item .legend-label {
     display: inline-block;
+}
+
+/* .settings-block {
+    display: flex;
+    flex-direction: row;
+}
+.settings-block .settings-block-title {
+}
+.settings-block .settings-row{
+    display: flex;
+    flex-direction: row;
+}
+.settings-block .settings-row .settings-label{
+} */
+
+#global-controls .table {
+    text-align: left;
+    vertical-align: middle;
+    margin-bottom: 0;
+}
+#global-controls .table td,
+#global-controls .table th {
+    padding: .1rem;
+}
+#global-controls .dropdown {
+    display: inline-block;
+}
+
+#highlight-control {
+    min-width: 200px;
 }
