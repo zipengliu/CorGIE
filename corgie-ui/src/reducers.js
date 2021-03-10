@@ -508,9 +508,32 @@ function processPredictionResults(nodes, edges, predRes) {
             n.isWrong = n.pl !== n.tl;
         }
     }
-    if (predRes.posLinkRes && predRes.negLinkRes) {
+    if (predRes.trueAllowEdges && predRes.falseAllowEdges) {
         // link prediction results
-        // TODO
+        const h = [];
+        for (let i = 0; i < nodes.length; i++) {
+            h[i] = {};
+            nodes[i].isWrong = false;
+        }
+        for (let p of predRes.trueAllowEdges) {
+            h[p[0]][p[1]] = true;
+            h[p[1]][p[0]] = true;
+        }
+        for (let p of predRes.falseAllowEdges) {
+            h[p[0]][p[1]] = false;
+            h[p[1]][p[0]] = false;
+        }
+
+        for (let e of edges) {
+            if (!h[e.source][e.target]) {
+                // Mark the node as wrong prediction
+                nodes[e.source].isWrong = true;
+                nodes[e.target].isWrong = true;
+                e.isWrong = true;
+            } else {
+                e.isWrong = false;
+            }
+        }
     }
 }
 
@@ -664,6 +687,165 @@ function buildQT(coords, width, height) {
     return qt;
 }
 
+function filterPairsByFormCondition(state, formData) {
+    const { userInterests, connectivity, linkPrediction } = formData;
+    const n = state.graph.nodes.length;
+    const { highlightedNodes, selectedNodes, predRes } = state;
+    let temp, g0, g1, g, x, y;
+    let h1 = {},
+        h2 = {},
+        h3 = {};
+    for (let i = 0; i < n; i++) {
+        h1[i] = {};
+        h2[i] = {};
+        h3[i] = {};
+    }
+    let allConn = false,
+        allUser = false,
+        allPred = false;
+
+    // for debug
+    function countT(h) {
+        let cnt = 0;
+        for (let i = 0; i < n; i++) {
+            for (let id in h[i])
+                if (h[i].hasOwnProperty(id) && h[i][id]) {
+                    cnt++;
+                }
+        }
+        return cnt;
+    }
+
+    // filter by connectivity
+    if (connectivity === "edge") {
+        for (let e of state.graph.edges) {
+            x = Math.min(e.source, e.target);
+            y = Math.max(e.source, e.target);
+            h1[x][y] = true;
+        }
+    } else if (connectivity === "nonedge") {
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                h1[i][j] = true;
+            }
+        }
+        for (let e of state.graph.edges) {
+            h1[Math.min(e.source, e.target)][Math.max(e.source, e.target)] = false;
+        }
+    } else {
+        allConn = true;
+    }
+    // console.log("after connectivity: ", countT(h1));
+
+    if (userInterests !== "all") {
+        if (userInterests.indexOf("*") !== -1) {
+            // between focal groups
+            temp = userInterests.split("*");
+            g0 = parseInt(temp[0].slice(4));
+            g1 = parseInt(temp[1].slice(4));
+            console.assert(g0 !== g1 && g0 < selectedNodes.length && g1 < selectedNodes.length);
+            for (let id1 of selectedNodes[g0]) {
+                for (let id2 of selectedNodes[g1]) {
+                    x = Math.min(id1, id2);
+                    y = Math.max(id1, id2);
+                    if (allConn || h1[x][y]) {
+                        h2[x][y] = true;
+                    }
+                }
+            }
+        } else if (userInterests.indexOf("-") !== -1) {
+            // within a focal group
+            g0 = parseInt(userInterests.slice(4));
+            console.assert(g0 !== g1 && g0 < selectedNodes.length);
+            g = selectedNodes[g0];
+            for (let i = 0; i < g.length; i++) {
+                for (let j = i + 1; j < g.length; j++) {
+                    x = Math.min(g[i], g[j]);
+                    y = Math.max(g[i], g[j]);
+                    if (allConn || h1[x][y]) {
+                        h2[x][y] = true;
+                    }
+                }
+            }
+        } else {
+            // hihglight
+            g = highlightedNodes;
+            for (let i = 0; i < g.length; i++) {
+                for (let j = i + 1; j < g.length; j++) {
+                    x = Math.min(g[i], g[j]);
+                    y = Math.max(g[i], g[j]);
+                    if (allConn || h1[x][y]) {
+                        h2[x][y] = true;
+                    }
+                }
+            }
+        }
+    } else {
+        allUser = true;
+    }
+
+    // console.log("after user interests: ", countT(h2));
+
+    // filter by link prediction
+    if (linkPrediction === "pred-true") {
+        const { trueAllowEdges } = state.predRes;
+        for (let e of trueAllowEdges) {
+            x = Math.min(e[0], e[1]);
+            y = Math.max(e[0], e[1]);
+            if ((allConn || h1[x][y]) && (allUser || h2[x][y])) {
+                h3[x][y] = true;
+            }
+        }
+    } else if (linkPrediction === "pred-false") {
+        const { falseAllowEdges } = state.predRes;
+        for (let e of falseAllowEdges) {
+            x = Math.min(e[0], e[1]);
+            y = Math.max(e[0], e[1]);
+            if ((allConn || h1[x][y]) && (allUser || h2[x][y])) {
+                h3[x][y] = true;
+            }
+        }
+    } else {
+        allPred = true;
+    }
+    // console.log("after link prediction: ", countT(h3));
+
+    const pairs = [];
+    let h = null;
+    if (!allConn) h = h1;
+    if (!allUser) h = h2;
+    if (!allPred) h = h3;
+    if (!h) {
+        // All "all"
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                pairs.push([i, j]);
+            }
+        }
+    } else {
+        // convert h to pairs
+        for (let i = 0; i < n; i++) {
+            for (let id in h[i])
+                if (h[i].hasOwnProperty(id) && h[i][id]) {
+                    pairs.push([i, id]);
+                }
+        }
+    }
+    return pairs;
+}
+
+function getSpecialDistanceTitle(formData) {
+    const { userInterests, connectivity, linkPrediction } = formData;
+    const t = [userInterests, connectivity, linkPrediction].filter((x) => x !== "all");
+    let f;
+    if (t.length) {
+        f = t.join(",");
+    } else {
+        f = "all";
+    }
+    return `Filter: ${f}`;
+}
+
 const reducers = produce((draft, action) => {
     // const ascFunc = (x1, x2) => x1[0][0] - x2[0][0],
     //     descFunc = (x1, x2) => x2[0][0] - x1[0][0];
@@ -686,9 +868,10 @@ const reducers = produce((draft, action) => {
                 }
             }
 
+            draft.predRes = predRes;
             processPredictionResults(graph.nodes, graph.edges, predRes);
             draft.numNodeClasses = predRes ? predRes.numNodeClasses : null;
-            draft.hasLinkPrections = predRes && predRes.posLinkRes && predRes.negLinkRes;
+            draft.hasLinkPredictions = predRes && predRes.isLinkPrediction;
 
             draft.param.hops = hops;
             draft.datasetId = action.data.datasetId;
@@ -784,11 +967,28 @@ const reducers = produce((draft, action) => {
             draft.initialLayout.running = false;
             return;
 
+        case ACTION_TYPES.COMPUTE_DISTANCES_PENDING:
+            draft.distances.displaySpecial[0] = {
+                title: getSpecialDistanceTitle(draft.scatterplotForm),
+                isComputing: true,
+            };
+            draft.scatterplotForm.show = false;
+            return;
+
         case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
             console.log("Data recieved.  Storing data...", new Date());
-            if (action.idx < draft.distances.display.length) {
-                Object.assign(draft.distances.display[action.idx], action.distData);
-                draft.distances.display[action.idx].isComputing = false;
+            if (action.isSpecial) {
+                // if (action.idx < draft.distances.displaySpecial.length) {
+                    // Object.assign(draft.distances.displaySpecial[action.idx], action.distData);
+                    // Only allow one special scatterplot
+                    Object.assign(draft.distances.displaySpecial[0], action.distData);
+                    draft.distances.displaySpecial[0].isComputing = false;
+                // }
+            } else {
+                if (action.idx < draft.distances.display.length) {
+                    Object.assign(draft.distances.display[action.idx], action.distData);
+                    draft.distances.display[action.idx].isComputing = false;
+                }
             }
             return;
 
@@ -1141,7 +1341,7 @@ const reducers = produce((draft, action) => {
                 }
             }
 
-            if (['hopsActivated', 'highlightNodeType', 'highlightNodeLabel'].indexOf(action.param) !== -1) {
+            if (["hopsActivated", "highlightNodeType", "highlightNodeLabel"].indexOf(action.param) !== -1) {
                 clearHighlights(draft);
             }
 
@@ -1240,6 +1440,18 @@ const reducers = produce((draft, action) => {
             }
             return;
 
+        case ACTION_TYPES.CHANGE_SCATTERPLOT_FORM:
+            const formData = draft.scatterplotForm;
+            formData[action.field] = action.value;
+
+            if (action.field === "show" && action.value) {
+                // avoid invalid form data
+                formData.userInterests = "all";
+            }
+
+            // compute pairs that fulfill the current condition
+            formData.nodePairs = filterPairsByFormCondition(draft, formData);
+            return;
         default:
             return;
     }

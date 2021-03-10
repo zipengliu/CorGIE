@@ -275,6 +275,29 @@
     flex-direction: row;
 }
 
+#create-scatterplot-modal .modal-content {
+    border: 1px solid grey;
+    border-radius: 5px;
+}
+#create-scatterplot-modal .modal-header {
+    background-color: #343a40;
+    color: white;
+    padding: 0.8rem 1.2rem;
+}
+#create-scatterplot-modal .modal-header .modal-title {
+    font-size: 1.2rem;
+    line-height: 1.2;
+}
+#create-scatterplot-modal .modal-header .close {
+    color: white;
+}
+#create-scatterplot-modal .modal-body {
+    padding: 1rem 1.2rem;
+}
+#create-scatterplot-modal .form-row {
+    margin-bottom: 5px;
+}
+
 .node-pair-list {
     /* border: 1px solid grey; */
     /* max-height: 400px; */

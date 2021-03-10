@@ -53,15 +53,6 @@ function computeEdgeDict(numNodes, edges) {
     return d;
 }
 
-// The bitset class functions are not copied from the main thread,
-// so we need to re-construct the bitsets in-place
-function reconstructBitsets(neighMap) {
-    for (let id in neighMap)
-        if (neighMap.hasOwnProperty(id)) {
-            neighMap[id] = bs(neighMap[id]);
-        }
-}
-
 function getDistance2D(u, v) {
     return Math.sqrt(Math.pow(u.x - v.x, 2) + Math.pow(u.y - v.y, 2));
 }
@@ -112,6 +103,18 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, useGlobalMask, node
             for (let i = 0; i < nodeIdxArr.length; i++) {
                 mapping[nodeIdxArr[i]] = i;
             }
+            const links = [];
+            for (let id1 in mapping)
+                if (mapping.hasOwnProperty(id1)) {
+                    for (let id2 in mapping)
+                        if (id1 < id2 && mapping.hasOwnProperty(id2)) {
+                            links.push({
+                                source: mapping[id1],
+                                target: mapping[id2],
+                                dist: getNeighborDistance(masks[id1], masks[id2], state.distMetric),
+                            });
+                        }
+                }
             const withinEdges = [];
             // very small number of nodes so we can afford loops
             for (let i = 0; i < nodeIdxArr.length; i++) {
@@ -124,7 +127,11 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, useGlobalMask, node
                 }
             }
             let simulation = forceSimulation(coords)
-                .force("link", forceLink(withinEdges))
+                .force("edge", forceLink(withinEdges))
+                .force(
+                    "topolink",
+                    forceLink(links).distance((d) => d.dist * 20)
+                )
                 .force("charge", forceManyBody().strength(-20))
                 .force("collide", forceCollide().radius(nodeSize + 1))
                 // .force("center", forceCenter(50, 50))   // imaging a 100x100 bounding box
@@ -659,7 +666,7 @@ function computeFocalLayoutWithD3(
     isNodeSelected,
     isNodeSelectedNeighbor,
     useGlobalMask,
-    distMetric,
+    distMetric
 ) {
     const masks = useGlobalMask ? state.neighborMasks : state.neighborMasks1hop;
     const getHopGroup = (i) =>
@@ -681,7 +688,7 @@ function computeFocalLayoutWithD3(
     }
     console.log({ groupCounts, groupPos });
 
-    // Construct virtual links for group of neighbor nodes 
+    // Construct virtual links for group of neighbor nodes
     const groupLinks = [];
     for (let neighId1 in isNodeSelectedNeighbor)
         if (isNodeSelectedNeighbor.hasOwnProperty(neighId1)) {

@@ -33,6 +33,7 @@ const ACTION_TYPES = {
     FETCH_DATA_SUCCESS: "FETCH_DATA_SUCCESS",
     COMPUTE_INIT_LAYOUT_DONE: "COMPUTE_INIT_LAYOUT_DONE",
     FETCH_DATA_ERROR: "FETCH_DATA_ERROR",
+    COMPUTE_DISTANCES_PENDING: "COMPUTE_DISTANCES_PENDING",
     COMPUTE_DISTANCES_DONE: "COMPUTE_DISTANCES_DONE",
     HIGHLIGHT_NODES: "HIGHLIGHT_NODES",
     HIGHLIGHT_NODE_PAIRS: "HIGHLIGHT_NODE_PAIRS",
@@ -48,6 +49,8 @@ const ACTION_TYPES = {
     CHANGE_EDGE_TYPE_STATE: "CHANGE_EDGE_TYPE_STATE",
     TOGGLE_HIGHLIGHT_NODES_ATTR: "TOGGLE_HIGHLIGHT_NODES_ATTR",
     SEARCH_NODES: "SEARCH_NODES",
+    CHANGE_SCATTERPLOT_FORM: "CHANGE_SCATTERPLOT_FORM",
+    ADD_DISTANCE_SCATTERPLOT: "ADD_DISTANCE_SCATTERPLOT",
 };
 export default ACTION_TYPES;
 
@@ -166,8 +169,8 @@ function fetchDataError(error) {
     return { type: ACTION_TYPES.FETCH_DATA_ERROR, error: error.toString() };
 }
 
-function computeDistancesDone(distData, idx) {
-    return { type: ACTION_TYPES.COMPUTE_DISTANCES_DONE, distData, idx };
+function computeDistancesDone(distData, idx, isSpecial=false) {
+    return { type: ACTION_TYPES.COMPUTE_DISTANCES_DONE, distData, idx, isSpecial };
 }
 
 export function highlightNodes(nodeIndices, brushedArea = null, fromView = null, which = null) {
@@ -358,4 +361,25 @@ export function changeEdgeTypeState(idx) {
 
 export function searchNodes(label, nodeIdx) {
     return { type: ACTION_TYPES.SEARCH_NODES, label, nodeIdx };
+}
+
+export function addDistanceScatterplot() {
+    return async function (dispatch, getState) {
+        const state = getState();
+        const form = state.scatterplotForm;
+        const id = state.distances.displaySpecial.length;
+        dispatch(computeDistancesPending());
+
+        // call distance worker to compute distance
+        const d = await distanceWorker.computeDistances("special", null, null, form.nodePairs);
+        dispatch(computeDistancesDone(d, id, true));
+    };
+}
+
+function computeDistancesPending() {
+    return { type: ACTION_TYPES.COMPUTE_DISTANCES_PENDING};
+}
+
+export function changeScatterplotForm(field, value) {
+    return { type: ACTION_TYPES.CHANGE_SCATTERPLOT_FORM, field, value };
 }

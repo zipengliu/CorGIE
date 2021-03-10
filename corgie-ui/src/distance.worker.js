@@ -34,7 +34,7 @@ function initializeState(emb, numNodes, edges, neighborMasks, distMetric, numBin
     state.distMatTopo = initDistMat(numNodes);
 }
 
-function computeDistances(mode, targetNodes = null, maxNumPairs = 0) {
+function computeDistances(mode, targetNodes = null, maxNumPairs = 0, targetPairs = null) {
     console.log("Computing distances ...", new Date());
 
     const n = state.numNodes;
@@ -95,6 +95,13 @@ function computeDistances(mode, targetNodes = null, maxNumPairs = 0) {
                 }
             }
         };
+    } else if (mode === "special") {
+        numPairs = targetPairs.length;
+        pairGen = function* () {
+            for (let p of targetPairs) {
+                yield p;
+            }
+        };
     }
 
     const srcArrayBuffer = new ArrayBuffer(numPairs * 2),
@@ -139,7 +146,7 @@ function computeDistances(mode, targetNodes = null, maxNumPairs = 0) {
         computeDist(p[0], p[1], k);
         k++;
     }
-    console.log('Binning distances...', new Date());
+    console.log("Binning distances...", new Date());
 
     const binGen1d = d3bin().domain([0, 1]).thresholds(state.numBins);
     const binsLatent = binGen1d(distLatent),

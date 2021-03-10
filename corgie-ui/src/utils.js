@@ -255,6 +255,8 @@ export function computeNeighborMasks(numNodes, edgeDict, hops) {
     let last;
     for (let i = 0; i < numNodes; i++) {
         masks.push(bs(0));
+        // include self
+        masks[i].set(i, 1);
     }
 
     // first hop

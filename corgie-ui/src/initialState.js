@@ -7,7 +7,7 @@ export default {
     // homePath: '/~zipeng/private/cofegrem-prototype',
 
     numNodeClasses: false,
-    hasLinkPrections: false,
+    hasLinkPredictions: false,
 
     centralNodeType: 0,
     nodeColors: [],
@@ -42,6 +42,7 @@ export default {
 
     distances: {
         maxSample: 1000000,
+        displaySpecial: [],
         display: [
             { isComputing: true, title: "all (down-sampled)" },
             { isComputing: true, title: "connected by edges" },
@@ -55,16 +56,14 @@ export default {
         running: false,
     },
 
-    // edgeAttributes: {
-    //     type: {
-    //         type: "categorical",
-    //         values: ["train", "valid", "test"],
-    //         show: [true, true, true],
-    //         counts: [0, 0, 0],
-    //     },
-    // },
-    // showEdges: [],
-    // selectedEdge: null,
+    // Form data for the create scatterplot modal
+    scatterplotForm: {
+        show: false,
+        connectivity: "edge", // Possible values: all, edge, nonedge
+        userInterests: "all", // Possible values: all, highlight, foc-i, foc-i*foc-j
+        linkPrediction: "all", // possible values: all, pred-true, pred-false 
+        nodePairs: [],
+    },
 
     param: {
         hops: 2,
