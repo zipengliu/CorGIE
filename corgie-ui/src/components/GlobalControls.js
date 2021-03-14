@@ -51,11 +51,12 @@ export class GlobalControls extends Component {
     }
 
     render() {
-        const { graph, param, attrMeta, changeParam, hoverNode, highlightNodes, numNodeClasses } = this.props;
+        const { graph, param, attrMeta, changeParam, hoverNode, highlightNodes } = this.props;
+        const { numNodeClasses, hasLinkPredictions } = this.props;
         const { colorByNaming, nodeLabelNaming } = this;
         const { nodeTypes } = graph;
         const { colorBy, colorScale, nodeSize, hops, hopsActivated } = param;
-        const { onlyActivateOne, highlightNodeType, highlightNodeLabel } = param;
+        const { highlightNodeType, highlightNodeLabel } = param;
         let e, numberFormat, colorMin, colorMax;
         const useAttrColors = Number.isInteger(colorBy);
         if (useAttrColors) {
@@ -111,6 +112,18 @@ export class GlobalControls extends Component {
                                                                 </Dropdown.Item>
                                                             )
                                                         )}
+                                                    </div>
+                                                )}
+
+                                                {hasLinkPredictions && (
+                                                    <div>
+                                                        <Dropdown.Divider />
+                                                        <Dropdown.Item
+                                                            eventKey={"correctness"}
+                                                            active={colorBy === "correctness"}
+                                                        >
+                                                            {colorByNaming["correctness"]}
+                                                        </Dropdown.Item>
                                                     </div>
                                                 )}
 
@@ -451,6 +464,10 @@ export class GlobalControls extends Component {
                         </Form>
                     </div> */}
                 </div>
+
+                {colorBy === "correctness" && hasLinkPredictions && (
+                    <div className="view-footer">Note: nodes with a wrong predicted link are deemed wrong.</div>
+                )}
             </div>
         );
     }
@@ -461,6 +478,7 @@ const mapStateToProps = (state) => ({
     param: state.param,
     attrMeta: state.attrMeta,
     numNodeClasses: state.numNodeClasses,
+    hasLinkPredictions: state.hasLinkPredictions,
 });
 
 const mapDispatchToProps = (dispatch) =>

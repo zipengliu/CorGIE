@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Spinner, ButtonGroup, Button, Form } from "react-bootstrap";
 import GraphLayout from "./GraphLayout";
-import { changeParam } from "../actions";
+import { changeParam, changeFocalParam } from "../actions";
 
 export const ComputingSpinner = () => (
     <div style={{ margin: "10px" }}>
@@ -20,6 +20,7 @@ function GraphView({
     useEdgeBundling,
     useGlobalMask,
     changeParam,
+    changeFocalParam,
 }) {
     return (
         <div className="view" id="graph-view">
@@ -33,7 +34,7 @@ function GraphView({
                             type="radio"
                             id="use-edge-bundling-1"
                             checked={useEdgeBundling}
-                            onChange={changeParam.bind(null, "focalGraph.useEdgeBundling", null, true, null)}
+                            onChange={changeFocalParam.bind(null, "focalGraph.useEdgeBundling", true)}
                             label="edge bundling (curved edges)"
                         />
                         <Form.Check
@@ -41,7 +42,7 @@ function GraphView({
                             type="radio"
                             id="use-edge-bundling-2"
                             checked={!useEdgeBundling}
-                            onChange={changeParam.bind(null, "focalGraph.useEdgeBundling", null, true, null)}
+                            onChange={changeFocalParam.bind(null, "focalGraph.useEdgeBundling", false)}
                             label="straight edges"
                         />
                     </Form>
@@ -53,13 +54,7 @@ function GraphView({
                                 type="radio"
                                 id="use-global-mask-1"
                                 checked={useGlobalMask}
-                                onChange={changeParam.bind(
-                                    null,
-                                    "focalGraph.useGlobalMask",
-                                    null,
-                                    true,
-                                    null
-                                )}
+                                onChange={changeFocalParam.bind(null, "focalGraph.useGlobalMask", true)}
                                 label={`use ${hops} hops to compute distance (as in GNN trainning)`}
                             />
                             <Form.Check
@@ -67,13 +62,7 @@ function GraphView({
                                 type="radio"
                                 id="use-global-mask-2"
                                 checked={!useGlobalMask}
-                                onChange={changeParam.bind(
-                                    null,
-                                    "focalGraph.useGlobalMask",
-                                    null,
-                                    true,
-                                    null
-                                )}
+                                onChange={changeFocalParam.bind(null, "focalGraph.useGlobalMask", false)}
                                 label="use 1 hop only"
                             />
                         </Form>
@@ -97,6 +86,12 @@ function GraphView({
                                     <ComputingSpinner />
                                 ) : (
                                     <GraphLayout layoutData={focalLayout} />
+                                )}
+                                {!!focalLayout.runningMsg && (
+                                    <div style={{ margin: "10px" }}>
+                                        <Spinner animation="border" role="status" size="sm" />
+                                        <span style={{ marginLeft: "10px" }}>{focalLayout.runningMsg}</span>
+                                    </div>
                                 )}
                             </div>
                             <div className="container-footer">
@@ -133,6 +128,6 @@ const mapStateToProps = (state) => ({
     focalLayout: state.focalLayout,
 });
 
-const mapDispatchToProps = (dispatch) => bindActionCreators({ changeParam }, dispatch);
+const mapDispatchToProps = (dispatch) => bindActionCreators({ changeParam, changeFocalParam }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(GraphView);

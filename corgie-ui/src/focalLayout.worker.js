@@ -3,7 +3,6 @@ import {
     extent,
     forceSimulation,
     forceManyBody,
-    forceCollide,
     forceLink,
     forceX,
     forceY,
@@ -11,11 +10,12 @@ import {
     scaleLinear,
 } from "d3";
 import { Layout as cola } from "webcola";
-import { UMAP } from "umap-js";
 import bs from "bitset";
-import { sampleSize } from "lodash";
-import { getNeighborDistance } from "./utils";
+import { sampleSize, flatten } from "lodash";
+import { getNeighborDistance, computeEdgeDict } from "./utils";
 import forceBundling from "./forceBundling";
+import kernelBundling from "./kernelBundling";
+import mingleBundling from "./mingleBundling";
 
 const maxNumNodes = 10000;
 let state = {
@@ -39,18 +39,6 @@ function initializeState(numNodes, edges, neighborMasks, neighborMasks1hop, hops
     state.hops = hops;
     state.distMetric = distMetric;
     state.spec = spec;
-}
-
-function computeEdgeDict(numNodes, edges) {
-    const d = new Array(numNodes);
-    for (let i = 0; i < numNodes; i++) {
-        d[i] = {};
-    }
-    for (let e of edges) {
-        d[e.source][e.target] = true;
-        d[e.target][e.source] = true;
-    }
-    return d;
 }
 
 function getDistance2D(u, v) {
@@ -93,82 +81,29 @@ function evaluateLayout(coords, nodesByHop) {
     return energy;
 }
 
-function computeFocalLayoutWithUMAP(selectedNodes, neighArr, useGlobalMask, nodeSize, useEdgeBundling) {
-    const runUMAP = (nodeIdxArr, masks) => {
-        if (nodeIdxArr.length <= 15) {
-            // Not enough data to compute UMAP, so we use D3 with edges within this group
-            // return nodeIdxArr.map((_) => [Math.random(), Math.random()]);
-            const coords = nodeIdxArr.map((_, i) => ({ index: i }));
-            const mapping = {};
-            for (let i = 0; i < nodeIdxArr.length; i++) {
-                mapping[nodeIdxArr[i]] = i;
-            }
-            const links = [];
-            for (let id1 in mapping)
-                if (mapping.hasOwnProperty(id1)) {
-                    for (let id2 in mapping)
-                        if (id1 < id2 && mapping.hasOwnProperty(id2)) {
-                            links.push({
-                                source: mapping[id1],
-                                target: mapping[id2],
-                                dist: getNeighborDistance(masks[id1], masks[id2], state.distMetric),
-                            });
-                        }
-                }
-            const withinEdges = [];
-            // very small number of nodes so we can afford loops
-            for (let i = 0; i < nodeIdxArr.length; i++) {
-                const nidi = nodeIdxArr[i];
-                for (let j = i + 1; j < nodeIdxArr.length; j++) {
-                    const nidj = nodeIdxArr[j];
-                    if (edgeDict[nidi].hasOwnProperty(nidj.toString())) {
-                        withinEdges.push({ source: i, target: j });
-                    }
-                }
-            }
-            let simulation = forceSimulation(coords)
-                .force("edge", forceLink(withinEdges))
-                .force(
-                    "topolink",
-                    forceLink(links).distance((d) => d.dist * 20)
-                )
-                .force("charge", forceManyBody().strength(-20))
-                .force("collide", forceCollide().radius(nodeSize + 1))
-                // .force("center", forceCenter(50, 50))   // imaging a 100x100 bounding box
-                .stop();
-            simulation.tick(300);
-            return coords.map((c) => [c.x, c.y]);
-        } else {
-            console.log("Calling UMAP... #nodes =", nodeIdxArr.length);
-            // TODO: get a distmat?
-            const distFunc = (x, y) => getNeighborDistance(masks[x], masks[y], state.distMetric); // Global signature
-            const sim = new UMAP({ distanceFn: distFunc });
-            return sim.fit(nodeIdxArr);
-        }
-    };
-
+function computeFocalLayoutWithUMAP(selectedNodes, neighArr, embeddings, useEdgeBundling) {
     const startTime = new Date();
-    console.log("Computing local layout with UMAP...");
+    console.log("Computing k-hop focal layout...");
 
     const n = state.numNodes,
         numFoc = selectedNodes.length;
-    const { hops, edgeDict, edges } = state;
+    const { hops, edges } = state;
     const { padding, gapBetweenHop } = state.spec;
 
-    const nodesByHop = [[]];
+    const nodesByHop = [flatten(selectedNodes), ...neighArr];
 
     // Compute embeddings for each hop
-    let embeddings = [[]];
-    for (let s of selectedNodes) {
-        embeddings[0].push(runUMAP(s, state.neighborMasks));
-        nodesByHop[0] = nodesByHop[0].concat(s);
-    }
-    for (let i = 1; i <= hops; i++) {
-        embeddings.push(
-            runUMAP(neighArr[i - 1], useGlobalMask ? state.neighborMasks : state.neighborMasks1hop)
-        );
-        nodesByHop.push(neighArr[i - 1]);
-    }
+    // let embeddings = [[]];
+    // for (let s of selectedNodes) {
+    //     embeddings[0].push(runUMAP(s, state.neighborMasks));
+    //     nodesByHop[0] = nodesByHop[0].concat(s);
+    // }
+    // for (let i = 1; i <= hops; i++) {
+    //     embeddings.push(
+    //         runUMAP(neighArr[i - 1], useGlobalMask ? state.neighborMasks : state.neighborMasks1hop)
+    //     );
+    //     nodesByHop.push(neighArr[i - 1]);
+    // }
     // Use random for the others as they are not important at the moment
     // embeddings.push(others.map(() => [Math.random(), Math.random()]));
     // console.log({ embeddings });
@@ -428,52 +363,98 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, useGlobalMask, node
     //     }
     //     hdup[e.source][e.target] = 0;
     // }
-    const edgeBundlingTime = new Date();
     if (useEdgeBundling) {
-        console.log("Edge bundling....");
-        const fbdl = forceBundling()
-            .nodes(bestCoords)
-            .edges(remainingEdges)
-            .subdivision_rate(1.05)
-            .iterations(10)
-            .iterations_rate(0.5)
-            .cycles(2);
-        // .cycles(6)
-        // .step_size(0.1)
-        // .compatibility_threshold(0.6);
-        const bundleRes = fbdl();
-        // remapp the edge bundle results using the edge id
-        remappedBundleRes = {};
-        for (let i = 0; i < remainingEdges.length; i++) {
-            let flattenCoords = [];
-            for (let c of bundleRes[i]) {
-                flattenCoords.push(c.x);
-                flattenCoords.push(c.y);
-            }
-            remappedBundleRes[remainingEdges[i].i] = flattenCoords;
-        }
+        remappedBundleRes = performEdgeBundling(remainingEdges, bestCoords);
     }
 
     console.log({ numTrans, bestEnergy, bestTrans });
 
     const endTime = new Date();
     const secTaken = (endTime.getTime() - startTime.getTime()) / 1000;
-    const optTaken = (edgeBundlingTime.getTime() - optTime.getTime()) / 1000;
-    const edgeBundleTaken = (endTime.getTime() - edgeBundlingTime.getTime()) / 1000;
-    console.log(
-        `UMAP layout finished! Total time: ${secTaken}s, affine trans. time: ${optTaken}s, edge bundling time: ${edgeBundleTaken}s.`
-    );
+    console.log(`Total time for coordinate optimization: ${secTaken}s`);
 
     return {
         name: "grouped UMAP",
         coords: bestCoords,
         edgeBundlePoints: remappedBundleRes,
+        remainingEdges,
         groups,
         width: canvasWidth,
         height: canvasHeight,
         numNodes: totalNum,
         numEdges: remainingEdges.length,
     };
+}
+
+function performEdgeBundling(edges, coords) {
+    console.log("Edge bundling....");
+    const startTime = new Date();
+
+    let remappedBundleRes = {};
+    // Force-based edge bundling
+    // const fbdl = forceBundling()
+    //     .nodes(coords)
+    //     .edges(edges)
+    //     .subdivision_rate(1.05)
+    //     .iterations(10)
+    //     .iterations_rate(0.5)
+    //     .cycles(2);
+    // .cycles(6)
+    // .step_size(0.1)
+    // .compatibility_threshold(0.6);
+
+    // Kernel density estimation edge bundling
+    // const fbdl = kernelBundling().nodes(bestCoords).edges(remainingEdges);
+    // const bundleRes = fbdl();
+
+    // remapp the edge bundle results using the edge id
+    // remappedBundleRes = {};
+    // for (let i = 0; i < remainingEdges.length; i++) {
+    //     let flattenCoords = [];
+    //     for (let c of bundleRes[i]) {
+    //         flattenCoords.push(c.x);
+    //         flattenCoords.push(c.y);
+    //     }
+    //     remappedBundleRes[remainingEdges[i].i] = flattenCoords;
+    // }
+
+    // MINGLE bundling
+    const bundle = new mingleBundling({
+        curviness: 1,
+        angleStrength: 1,
+    });
+    const edgeData = edges.map((e) => ({
+        id: e.i,
+        name: e.i,
+        data: {
+            coords: [coords[e.source].x, coords[e.source].y, coords[e.target].x, coords[e.target].y],
+        },
+    }));
+    bundle.setNodes(edgeData);
+    bundle.buildNearestNeighborGraph(10);
+    bundle.MINGLE();
+    remappedBundleRes = {};
+
+    bundle.graph.each(function (node) {
+        const edges = node.unbundleEdges(0.5);
+        for (let e of edges) {
+            // if (Math.random() > 0.9) {
+            //     console.log(e);
+            // }
+            const originalEdgeId = e[0].node.id;
+            const flattenCoords = [];
+            for (let point of e) {
+                flattenCoords.push(point.unbundledPos[0]);
+                flattenCoords.push(point.unbundledPos[1]);
+            }
+            remappedBundleRes[originalEdgeId] = flattenCoords;
+        }
+    });
+    // console.log(remappedBundleRes);
+    const endTime = new Date();
+    console.log("Edge bundling takes ", (endTime.getTime() - startTime.getTime()) / 1000, "s");
+
+    return remappedBundleRes;
 }
 
 function computeFocalLayoutWithCola(selectedNodes, neighArr, useGlobalMask, nodeSize) {
@@ -793,9 +774,10 @@ function computeSpaceFillingCurveLayout(
 }
 
 Comlink.expose({
-    initializeState: initializeState,
-    computeFocalLayoutWithCola: computeFocalLayoutWithCola,
-    computeFocalLayoutWithD3: computeFocalLayoutWithD3,
-    computeFocalLayoutWithUMAP: computeFocalLayoutWithUMAP,
-    computeSpaceFillingCurveLayout: computeSpaceFillingCurveLayout,
+    initializeState,
+    computeFocalLayoutWithCola,
+    computeFocalLayoutWithD3,
+    computeFocalLayoutWithUMAP,
+    computeSpaceFillingCurveLayout,
+    performEdgeBundling,
 });

@@ -339,3 +339,15 @@ export function isNodeBrushable(nodeData, highlightNodeType, highlightNodeLabel)
     }
     return true;
 }
+
+export function computeEdgeDict(numNodes, edges) {
+    const d = new Array(numNodes);
+    for (let i = 0; i < numNodes; i++) {
+        d[i] = {};
+    }
+    for (let e of edges) {
+        d[e.source][e.target] = true;
+        d[e.target][e.source] = true;
+    }
+    return d;
+}

@@ -173,6 +173,20 @@
     max-height: 200px;
     padding: 10px;
 }
+#node-label-tooltip {
+    position: fixed;
+    left: 50%;
+    top: 20px;
+    z-index: 9999;
+    transform: translate(-50%, 0);
+    background-color: grey;
+    font-size: 1.2rem;
+    color: white;
+    /* width: 99vw; */
+    /* max-height: 200px; */
+    padding: 0.8rem;
+    border-radius: 5px;
+}
 
 /* Embedding view */
 

@@ -1,7 +1,6 @@
 import produce, { freeze } from "immer";
 import initialState from "./initialState";
 import ACTION_TYPES from "./actions";
-// import { computeForceLayoutWithD3, computeDummyLayout, computeForceLayoutWithCola } from "./layouts";
 import bs from "bitset";
 import {
     bin as d3bin,
@@ -332,24 +331,6 @@ function countSelectedNeighborsByHop(neighborMasks, selectedNodes, neighArr, nei
 //     }
 //     console.log({ extent: extent(d) });
 //     return d;
-// }
-
-// function callLayoutFunc(nodes, edges, whichLayout, spec) {
-//     let layoutRes;
-//     // No point of computing any global layout for a large graph
-//     if (nodes.length > 1000) {
-//         layoutRes = computeDummyLayout(nodes);
-//     } else {
-//         if (whichLayout === "force-directed-d3") {
-//             // Make a copy of the edges to prevent them from changes by the force simulation
-//             layoutRes = computeForceLayoutWithD3(nodes, edges);
-//         } else if (whichLayout === "force-directed-cola") {
-//             layoutRes = computeForceLayoutWithCola(nodes, edges, spec);
-//         } else {
-//             layoutRes = computeDummyLayout(nodes);
-//         }
-//     }
-//     return layoutRes;
 // }
 
 // Note that attrs will be changed by calling this function
@@ -860,7 +841,7 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
-            const { graph, emb, emb2d, attrs, features, hops, predRes } = action.data;
+            const { graph, emb, emb2d, attrs, features, hops, predRes, initialLayout } = action.data;
             // the scalar values in emb are in string format, so convert them to float first
             for (let e of emb) {
                 for (let i = 0; i < e.length; i++) {
@@ -886,6 +867,15 @@ const reducers = produce((draft, action) => {
             };
             draft.initialLayout.numNodes = graph.nodes.length;
             draft.initialLayout.numEdges = graph.edges.length;
+            if (action.data.initialLayout) {
+                Object.assign(draft.initialLayout, initialLayout);
+                draft.initialLayout.running = false;
+                draft.initialLayout.qt = buildQT(
+                    initialLayout.coords,
+                    initialLayout.width,
+                    initialLayout.height
+                );
+            }
 
             // compute feature aggregation
             if (features && features[0][0] % 1 == 0) {
@@ -979,10 +969,10 @@ const reducers = produce((draft, action) => {
             console.log("Data recieved.  Storing data...", new Date());
             if (action.isSpecial) {
                 // if (action.idx < draft.distances.displaySpecial.length) {
-                    // Object.assign(draft.distances.displaySpecial[action.idx], action.distData);
-                    // Only allow one special scatterplot
-                    Object.assign(draft.distances.displaySpecial[0], action.distData);
-                    draft.distances.displaySpecial[0].isComputing = false;
+                // Object.assign(draft.distances.displaySpecial[action.idx], action.distData);
+                // Only allow one special scatterplot
+                Object.assign(draft.distances.displaySpecial[0], action.distData);
+                draft.distances.displaySpecial[0].isComputing = false;
                 // }
             } else {
                 if (action.idx < draft.distances.display.length) {
@@ -1093,16 +1083,23 @@ const reducers = produce((draft, action) => {
             }
             return;
         case ACTION_TYPES.HIGHLIGHT_NODE_PAIRS:
-            const { brushedArea, which, brushedPairs } = action;
+            const { brushedArea, which, brushedPairs, showTopkUnseen } = action;
             draft.param.nodePairFilter.brushedArea = brushedArea;
             draft.param.nodePairFilter.which = which;
             if (which === null) {
                 draft.highlightedNodePairs = [];
             } else {
                 draft.highlightedNodePairs = brushedPairs;
-                // .sort(
-                //     draft.param.nodePairFilter.ascending ? ascFunc : descFunc
-                // );
+            }
+            if (showTopkUnseen) {
+                const unseenDict = draft.predRes.trueUnseenEdgesSorted;
+                for (let nid of draft.highlightedNodes) {
+                    if (unseenDict.hasOwnProperty(nid)) {
+                        for (let i = 0; i < Math.min(unseenDict[nid].length, draft.param.unseenTopK); i++) {
+                            draft.highlightedNodePairs.push([nid, unseenDict[nid][i]]);
+                        }
+                    }
+                }
             }
             return;
         case ACTION_TYPES.HOVER_NODE:
@@ -1228,12 +1225,10 @@ const reducers = produce((draft, action) => {
                         });
                     }
                 }
-                Object.assign(draft.focalLayout, {
+                draft.focalLayout = {
                     running: true,
                     layoutId: action.layoutId,
-                    numNodes: null,
-                    numEdges: null,
-                });
+                };
                 draft.selBoundingBox = newSel.map((s) => computeBoundingBox(draft.latent.coords, s));
 
                 // Compute the features for the focal nodes
@@ -1361,6 +1356,25 @@ const reducers = produce((draft, action) => {
             // else if (action.param === "nodePairFilter.ascending") {
             //     draft.highlightedNodePairs.sort(action.value ? ascFunc : descFunc);
             // }
+            return;
+        case ACTION_TYPES.CHANGE_FOCAL_PARAM_PENDING:
+            if (action.runningMsg) {
+                draft.focalLayout.runningMsg = action.runningMsg;
+            } else {
+                draft.focalLayout.running = true;
+            }
+            return;
+        case ACTION_TYPES.CHANGE_FOCAL_PARAM_DONE:
+            if (draft.focalLayout.layoutId === action.layoutId) {
+                Object.assign(draft.focalLayout, { ...action.layoutRes, running: false, runningMsg: null });
+                if (action.layoutRes.coords) {
+                    draft.focalLayout.qt = buildQT(
+                        action.layoutRes.coords,
+                        action.layoutRes.width,
+                        action.layoutRes.height
+                    );
+                }
+            }
             return;
         case ACTION_TYPES.CHANGE_HOPS:
             if (draft.param.hops !== action.hops) {

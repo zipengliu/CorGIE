@@ -118,6 +118,7 @@ export default {
             brushedArea: null,
             useLinearScale: true,
         },
+        unseenTopK: 5,
 
         topoVsLatent: {
             topoDistFunc: null, // We are going to have different metrics to measure topo difference

@@ -202,7 +202,6 @@ function BaseLayerUnconnected({
     hoverNode,
     highlightNodes,
     nodeSize,
-    onlyActivateOne,
 }) {
     console.log("GraphLayout BaseLayer render()");
     const debouncedHover = useCallback(debounce((x) => hoverNode(x), 300));
@@ -229,7 +228,7 @@ function BaseLayerUnconnected({
                                 stroke="#aaa"
                                 strokeWidth={1}
                                 hitStrokeWidth={2}
-                                opacity={edgeBundlePoints ? 0.1 : 0.3}
+                                opacity={edgeBundlePoints ? 0.3 : 0.3}
                                 tension={edgeBundlePoints ? 0.5 : 0}
                                 onMouseOver={debouncedHover.bind(null, [e.source, e.target])}
                                 onMouseOut={debouncedHover.bind(null, null)}

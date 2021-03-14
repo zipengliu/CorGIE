@@ -227,7 +227,10 @@ export class NodePairView extends Component {
         const {
             nodes,
             hops,
+            unseenTopK,
             highlightedNodePairs,
+            highlightedNodes,
+            hasLinkPredictions,
             distances,
             nodePairFilter,
             spec,
@@ -261,6 +264,17 @@ export class NodePairView extends Component {
                 <div className="view-body">
                     <div style={{ paddingRight: "5px", borderRight: "1px dotted grey" }}>
                         <h6>Highlighted</h6>
+                        {highlightedNodes.length > 0 && hasLinkPredictions && (
+                            <div>
+                                <Button
+                                    variant="outline-primary"
+                                    size="xs"
+                                    onClick={highlightNodePairs.bind(null, null, null, null, true)}
+                                >
+                                    List top {unseenTopK} predicted unseen edges to highlighted nodes
+                                </Button>
+                            </div>
+                        )}
                         <div>
                             <Badge variant="primary">{highlightedNodePairs.length}</Badge> node pairs
                             highlighted. {highlightedNodePairs.length > 0 && "Click to focus."}
@@ -421,6 +435,7 @@ const mapStateToProps = (state) => {
         nodePairFilter: state.param.nodePairFilter,
         hops: state.param.hops,
         formData: state.scatterplotForm,
+        unseenTopK: state.param.unseenTopK,
     };
 };
 

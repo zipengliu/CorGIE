@@ -7,8 +7,10 @@ import { computeNeighborMasks, filterEdgeAndComputeDict } from "./utils";
 import FocalLayoutWorker from "./focalLayout.worker";
 import InitialLayoutWorker from "./initialLayout.worker";
 import DistanceWorker from "./distance.worker";
+import { range as lodashRange } from "lodash";
 // Note that this is a dirty and quick way to retrieve info about dataset
 import datasetsInfo from "./datasets";
+import UmapWorker from "./umap.worker";
 
 function findHopsInDatasetInfo(id) {
     const defaultHops = 2;
@@ -26,7 +28,10 @@ function findHopsInDatasetInfo(id) {
 const distanceWorker = Comlink.wrap(new DistanceWorker());
 const focalLayoutWorkerBeforeWrap = new FocalLayoutWorker();
 const focalLayoutWorker = Comlink.wrap(focalLayoutWorkerBeforeWrap);
-const initalLayoutWorker = Comlink.wrap(new InitialLayoutWorker());
+const initialLayoutWebWorker = new InitialLayoutWorker();
+const initalLayoutWorker = Comlink.wrap(initialLayoutWebWorker);
+const NUM_UMAP_WORKERS = 4;
+const umapWorkerPool = lodashRange(NUM_UMAP_WORKERS).map(() => Comlink.wrap(new UmapWorker()));
 
 const ACTION_TYPES = {
     FETCH_DATA_PENDING: "FETCH_DATA_PENDING",
@@ -44,6 +49,8 @@ const ACTION_TYPES = {
     SELECT_NODES_DONE: "SELECT_NODES_DONE",
     SELECT_NODE_PAIR: "SELECT_NODE_PAIR",
     CHANGE_PARAM: "CHANGE_PARAM",
+    CHANGE_FOCAL_PARAM_PENDING: "CHANGE_FOCAL_PARAM_PENDING",
+    CHANGE_FOCAL_PARAM_DONE: "CHANGE_FOCAL_PARAM_DONE",
     CHANGE_HOPS: "CHANGE_HOPS",
     LAYOUT_TICK: "LAYOUT_TICK",
     CHANGE_EDGE_TYPE_STATE: "CHANGE_EDGE_TYPE_STATE",
@@ -71,7 +78,7 @@ export function fetchGraphData(homePath, datasetId) {
             //          node classification: a json dict with two arrays "predLabels", "trueLabels"
             //          link prediction: a json dict with two arrays "posLinkRes", "negLinkRes"
             //              Each item in the array is four numbers: src, tgt, prediction (1/0), truth (1/0)
-            let [graph, emb, emb2d, attrs, features, predRes] = [
+            let [graph, emb, emb2d, attrs, features, predRes, initialLayout] = [
                 await fetch(`${where}/graph.json`).then((r) => r.json()),
                 await fetch(`${where}/node-embeddings.csv`)
                     .then((r) => r.text())
@@ -101,6 +108,13 @@ export function fetchGraphData(homePath, datasetId) {
                 await fetch(`${where}/prediction-results.json`)
                     .then((r) => r.json())
                     .catch(() => null),
+                await fetch(`${where}/initial-layout.json`)
+                    .then((r) => r.json())
+                    .then((d) => {
+                        d.coords = d.coords.map((c) => ({ x: parseFloat(c.x), y: parseFloat(c.y) }));
+                        return d;
+                    })
+                    .catch(() => null),
             ];
 
             const state = getState();
@@ -122,14 +136,38 @@ export function fetchGraphData(homePath, datasetId) {
                 neighborDistanceMetric,
                 state.spec.graph
             );
+            for (let w of umapWorkerPool) {
+                w.initializeState(
+                    graph.neighborMasks.map((x) => x.toString()),
+                    graph.neighborMasksByHop[0].map((x) => x.toString()),
+                    neighborDistanceMetric
+                );
+            }
 
-            dispatch(fetchDataSuccess({ datasetId, graph, emb, emb2d, attrs, features, hops, predRes }));
+            dispatch(
+                fetchDataSuccess({
+                    datasetId,
+                    graph,
+                    emb,
+                    emb2d,
+                    attrs,
+                    features,
+                    hops,
+                    predRes,
+                    initialLayout,
+                })
+            );
 
-            initalLayoutWorker
-                .computeForceLayoutWithD3(graph.nodes.length, graph.edges, state.spec.graph.padding)
-                .then((layoutRes) => {
-                    dispatch(computeInitLayoutDone(layoutRes));
-                });
+            if (!initialLayout) {
+                initalLayoutWorker
+                    .computeForceLayoutWithD3(graph.nodes.length, graph.edges, state.spec.graph.padding)
+                    .then((layoutRes) => {
+                        dispatch(computeInitLayoutDone(layoutRes));
+                        initialLayoutWebWorker.terminate();
+                    });
+            } else {
+                initialLayoutWebWorker.terminate();
+            }
 
             await distanceWorker.initializeState(
                 emb,
@@ -169,7 +207,7 @@ function fetchDataError(error) {
     return { type: ACTION_TYPES.FETCH_DATA_ERROR, error: error.toString() };
 }
 
-function computeDistancesDone(distData, idx, isSpecial=false) {
+function computeDistancesDone(distData, idx, isSpecial = false) {
     return { type: ACTION_TYPES.COMPUTE_DISTANCES_DONE, distData, idx, isSpecial };
 }
 
@@ -177,8 +215,8 @@ export function highlightNodes(nodeIndices, brushedArea = null, fromView = null,
     return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIndices, brushedArea, fromView, which };
 }
 
-export function highlightNodePairs(which, brushedArea, brushedPairs) {
-    return { type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS, brushedArea, which, brushedPairs };
+export function highlightNodePairs(which, brushedArea, brushedPairs, showTopkUnseen = false) {
+    return { type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS, brushedArea, which, brushedPairs, showTopkUnseen };
 }
 
 export function hoverNode(nodeIdx, fromFeature = null) {
@@ -298,7 +336,7 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param) {
         // focalLayoutWorkerBeforeWrap.terminate();
         switch (param.focalGraph.layout) {
             case "umap":
-                return await focalLayoutWorker.computeFocalLayoutWithUMAP(
+                return await computeKHopLayout(
                     selectedNodes,
                     neighRes.neighArr,
                     param.focalGraph.useGlobalMask,
@@ -347,6 +385,48 @@ export function changeParam(param, value, inverse = false, arrayIdx = null) {
     return { type: ACTION_TYPES.CHANGE_PARAM, param, value, inverse, arrayIdx };
 }
 
+export function changeFocalParam(param, value) {
+    return async function (dispatch, getState) {
+        const state = getState();
+        const { focalLayout } = state;
+        // Toggle the form checkbox first
+        dispatch(changeParam(param, value));
+
+        if (param === "focalGraph.useGlobalMask") {
+            // recompute layout
+            dispatch(changeFocalParamPending());
+            const layoutRes = await callFocalLayoutFunc(
+                state.graph,
+                state.selectedNodes,
+                {
+                    neighArr: state.neighArr,
+                    isNodeSelected: state.isNodeSelected,
+                    isNodeSelectedNeighbor: state.isNodeSelectedNeighbor,
+                },
+                state.param
+            );
+            dispatch(changeFocalParamDone(focalLayout.layoutId, layoutRes));
+        } else if (param === "focalGraph.useEdgeBundling") {
+            // Check if we actually need to compute edge bundling results
+            if (value && !focalLayout.edgeBundlePoints) {
+                dispatch(changeFocalParamPending('Performing edge bundling...'));
+                const edgeBundlePoints = await focalLayoutWorker.performEdgeBundling(
+                    focalLayout.remainingEdges,
+                    focalLayout.coords
+                );
+                dispatch(changeFocalParamDone(focalLayout.layoutId, { edgeBundlePoints }));
+            }
+        }
+    };
+}
+
+function changeFocalParamPending(runningMsg = null) {
+    return { type: ACTION_TYPES.CHANGE_FOCAL_PARAM_PENDING, runningMsg};
+}
+function changeFocalParamDone(layoutId, layoutRes) {
+    return { type: ACTION_TYPES.CHANGE_FOCAL_PARAM_DONE, layoutId, layoutRes };
+}
+
 export function changeHops(hops) {
     return { type: ACTION_TYPES.CHANGE_HOPS, hops };
 }
@@ -377,9 +457,49 @@ export function addDistanceScatterplot() {
 }
 
 function computeDistancesPending() {
-    return { type: ACTION_TYPES.COMPUTE_DISTANCES_PENDING};
+    return { type: ACTION_TYPES.COMPUTE_DISTANCES_PENDING };
 }
 
 export function changeScatterplotForm(field, value) {
     return { type: ACTION_TYPES.CHANGE_SCATTERPLOT_FORM, field, value };
+}
+
+async function computeKHopLayout(focalNodes, neighArr, useGlobalMask, nodeSize, useEdgeBundling) {
+    const startTime = new Date();
+    // Compute the UMAP embeddings of each box
+    const taskQ = [...focalNodes, ...neighArr];
+    console.log({ taskQ });
+
+    const sum = new Array(NUM_UMAP_WORKERS).fill(0);
+    const allComp = [];
+    for (let i = 0; i < taskQ.length; i++) {
+        // find the smallest sum for work load balancing
+        var idx = sum.reduce((cur, x, i, arr) => (x < arr[cur] ? i : cur), 0);
+        // assign task i to worker idx
+        sum[idx] += taskQ[i].length;
+        allComp.push(umapWorkerPool[idx].runUMAP(taskQ[i], useGlobalMask, nodeSize));
+    }
+
+    return Promise.all(allComp)
+        .then((embs) => {
+            const embeddings = [[focalNodes.map(() => null)], neighArr.map(() => null)];
+            for (let i = 0; i < taskQ.length; i++) {
+                if (i < focalNodes.length) {
+                    embeddings[0][i] = embs[i];
+                } else {
+                    embeddings[i - focalNodes.length + 1] = embs[i];
+                }
+            }
+            const endTime = new Date();
+            console.log("UMAP total time: ", (endTime.getTime() - startTime.getTime()) / 1000, "s");
+            return embeddings;
+        })
+        .then((embeddings) => {
+            return focalLayoutWorker.computeFocalLayoutWithUMAP(
+                focalNodes,
+                neighArr,
+                embeddings,
+                useEdgeBundling
+            );
+        });
 }
