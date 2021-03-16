@@ -21,6 +21,7 @@ function GraphView({
     useGlobalMask,
     changeParam,
     changeFocalParam,
+    focalAlg,
 }) {
     return (
         <div className="view" id="graph-view">
@@ -95,8 +96,13 @@ function GraphView({
                                 )}
                             </div>
                             <div className="container-footer">
-                                Nodes of each group are layout using UMAP independently with the topological
-                                distance metric (Jaccard Index). Nodes outside {hops} hops are not shown.
+                                {focalAlg === "umap" && (
+                                    <div>
+                                        Nodes of each group are layout using UMAP independently with the
+                                        topological distance metric (Jaccard Index). Nodes outside {hops} hops
+                                        are not shown.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -122,6 +128,7 @@ function GraphView({
 const mapStateToProps = (state) => ({
     hasFocalNodes: state.selectedNodes.length > 0,
     hops: state.param.hops,
+    focalAlg: state.param.focalGraph.layout,
     useEdgeBundling: state.param.focalGraph.useEdgeBundling,
     useGlobalMask: state.param.focalGraph.useGlobalMask,
     initialLayout: state.initialLayout,

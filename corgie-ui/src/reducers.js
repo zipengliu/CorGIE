@@ -1366,7 +1366,7 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.CHANGE_FOCAL_PARAM_DONE:
             if (draft.focalLayout.layoutId === action.layoutId) {
-                Object.assign(draft.focalLayout, { ...action.layoutRes, running: false, runningMsg: null });
+                Object.assign(draft.focalLayout, {...action.layoutRes, running: false, runningMsg: null});
                 if (action.layoutRes.coords) {
                     draft.focalLayout.qt = buildQT(
                         action.layoutRes.coords,

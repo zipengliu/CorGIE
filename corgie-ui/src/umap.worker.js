@@ -1,7 +1,7 @@
 import * as Comlink from "comlink";
 import { UMAP } from "umap-js";
 import bs from "bitset";
-import { forceSimulation, forceManyBody, forceCollide, forceLink } from "d3";
+import { scaleLinear, forceSimulation, forceManyBody, forceCollide, forceLink } from "d3";
 import { getNeighborDistance } from "./utils";
 
 const state = {
@@ -16,16 +16,28 @@ function initializeState(neighborMasks, neighborMasks1hop, distMetric) {
     state.distMetric = distMetric;
 }
 
-const runUMAP = (nodeIdxArr, useGlobalMask, nodeSize) => {
-    console.log("Calling UMAP... #nodes =", nodeIdxArr.length);
-    const masks = useGlobalMask ? state.neighborMasks : state.neighborMasks1hop;
+const minNNeigh = 10,
+    maxNNeigh = 20;
+const nNeighScale = scaleLinear()
+    .domain([minNNeigh, 1000])
+    .range([minNNeigh, maxNNeigh])
+    .clamp(true);
+const minDistScale = scaleLinear()
+    .domain([minNNeigh, 1000])
+    .range([1, 0.05])
+    .clamp(true);
 
-    if (nodeIdxArr.length <= 15) {
+const runUMAP = (nodeIdxArr, useGlobalMask, nodeSize) => {
+    const masks = useGlobalMask ? state.neighborMasks : state.neighborMasks1hop;
+    const n = nodeIdxArr.length;
+
+    if (n <= minNNeigh) {
         // Not enough data to compute UMAP, so we use D3 with edges within this group
         // return nodeIdxArr.map((_) => [Math.random(), Math.random()]);
+        console.log("Calling D3... #nodes =", n);
         const coords = nodeIdxArr.map((_, i) => ({ index: i }));
         const mapping = {};
-        for (let i = 0; i < nodeIdxArr.length; i++) {
+        for (let i = 0; i < n; i++) {
             mapping[nodeIdxArr[i]] = i;
         }
         const links = [];
@@ -55,9 +67,9 @@ const runUMAP = (nodeIdxArr, useGlobalMask, nodeSize) => {
             // .force("edge", forceLink(withinEdges))
             .force(
                 "topolink",
-                forceLink(links).distance((d) => d.dist * 20)
+                forceLink(links).distance((d) => (1 + d.dist) * 20)
             )
-            .force("charge", forceManyBody().strength(-20))
+            .force("charge", forceManyBody().strength(-30))
             .force("collide", forceCollide().radius(nodeSize + 1))
             // .force("center", forceCenter(50, 50))   // imaging a 100x100 bounding box
             .stop();
@@ -65,7 +77,13 @@ const runUMAP = (nodeIdxArr, useGlobalMask, nodeSize) => {
         return coords.map((c) => [c.x, c.y]);
     } else {
         const distFunc = (x, y) => getNeighborDistance(masks[x], masks[y], state.distMetric); // Global signature
-        const sim = new UMAP({ distanceFn: distFunc });
+        const umapParams = {
+            distanceFn: distFunc,
+            nNeighbors: Math.round(nNeighScale(n)),
+            minDist: minDistScale(n),
+        };
+        const sim = new UMAP(umapParams);
+        console.log("Calling UMAP... #nodes =", n, " params = ", umapParams);
         return sim.fit(nodeIdxArr);
     }
 };

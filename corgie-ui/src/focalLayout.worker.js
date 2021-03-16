@@ -11,7 +11,7 @@ import {
 } from "d3";
 import { Layout as cola } from "webcola";
 import bs from "bitset";
-import { sampleSize, flatten } from "lodash";
+import { sampleSize, flatten, range as lodashRange } from "lodash";
 import { getNeighborDistance, computeEdgeDict } from "./utils";
 import forceBundling from "./forceBundling";
 import kernelBundling from "./kernelBundling";
@@ -79,6 +79,114 @@ function evaluateLayout(coords, nodesByHop) {
         energy += computeEnergyBetweenHop(coords, nodesByHop[i], nodesByHop[i + 1]);
     }
     return energy;
+}
+
+function computeGroupPositions(selectedNodes, nodesByHop) {
+    const numFoc = selectedNodes.length;
+    const { hops } = state;
+    const { padding, gapBetweenHop } = state.spec;
+
+    // Get the number of nodes for each hop
+    const nums = nodesByHop.map((n) => n.length);
+    const numNodes = nums.reduce((prev, cur) => prev + cur, 0);
+
+    // Allocate space for each hop
+    let canvasHeight = state.getCanvasSize(numNodes);
+    const canvasWidth = canvasHeight * 1.5;
+    // Resize the embeddings for the four different groups of nodes: selected, 1-hop, 2-hop, 3-hop,...
+    const weights = [10, 10];
+    console.assert(hops <= 5);
+    for (let i = 2; i <= hops; i++) {
+        weights.push(weights[weights.length - 1] - 2);
+    }
+    const weightedSum = nums.reduce((prev, cur, i) => prev + Math.log2(cur + 1) * weights[i], 0);
+    const usableWidth = canvasWidth - hops * gapBetweenHop;
+    const groupWidths = nums.map((ni, i) => ((weights[i] * Math.log2(ni + 1)) / weightedSum) * usableWidth);
+    const groupHeights = [
+        selectedNodes.map((s) =>
+            Math.min(
+                groupWidths[0],
+                ((canvasHeight - (numFoc - 1) * gapBetweenHop - numFoc * 2 * padding) / nums[0]) * s.length +
+                    2 * padding
+            )
+        ),
+    ];
+    let maxNeighHeight = 0;
+    for (let i = 1; i <= hops; i++) {
+        const h = Math.min(canvasHeight, groupWidths[i]);
+        groupHeights.push(h);
+        maxNeighHeight = Math.max(maxNeighHeight, h);
+    }
+    // Re-visit the canvasHeight since the heights might not used up.
+    const focalHeightSum = groupHeights[0].reduce((prev, cur) => prev + cur, 0);
+    let possibleFocalHeight = focalHeightSum + gapBetweenHop * (numFoc - 1);
+    canvasHeight = Math.min(canvasHeight, Math.max(possibleFocalHeight, maxNeighHeight));
+    console.log({ canvasWidth, canvasHeight, groupWidths, groupHeights });
+
+    let groups = [];
+    let xOffset = 0,
+        yOffset = 0,
+        actualGapFocal = 0;
+    // position the focal groups
+    if (numFoc > 1) {
+        // The vertical gap between focal groups is not gapBetweenHop
+        actualGapFocal = (canvasHeight - focalHeightSum) / (numFoc - 1);
+    } else {
+        yOffset = (canvasHeight - groupHeights[0][0]) / 2;
+    }
+    for (let j = 0; j < numFoc; j++) {
+        const w = Math.min(groupHeights[0][j], groupWidths[0]);
+        const bbox = {
+            x: xOffset + (groupWidths[0] - w) / 2,
+            y: yOffset,
+            width: w,
+            height: groupHeights[0][j],
+        };
+        groups.push({ bounds: bbox, name: `foc-${j}`, num: selectedNodes[j].length });
+        yOffset += bbox.height + actualGapFocal;
+    }
+    xOffset += groupWidths[0] + gapBetweenHop;
+    for (let i = 1; i <= hops; i++) {
+        const bbox = {
+            x: xOffset,
+            y: (canvasHeight - groupHeights[i]) / 2,
+            width: groupWidths[i],
+            height: groupHeights[i],
+        };
+        groups.push({ bounds: bbox, name: `hop-${i}`, num: nodesByHop[i].length });
+        xOffset += groupWidths[i] + gapBetweenHop;
+    }
+    return { groups, numNodes, canvasWidth, canvasHeight };
+}
+
+function getSubGraphMapping(selectedNodes, neighArr) {
+    // Remap the node id since we don't want the outside nodes in the focal layout
+    // mapping from original ID to new ID;
+    const nodeMapping = {},
+        reverseMapping = {};
+    let k = 0;
+    for (let s of selectedNodes) {
+        for (let nid of s) {
+            nodeMapping[nid] = k;
+            reverseMapping[k] = nid;
+            k++;
+        }
+    }
+    for (let h = 0; h < neighArr.length; h++) {
+        for (let nid of neighArr[h]) {
+            nodeMapping[nid] = k;
+            reverseMapping[k] = nid;
+            k++;
+        }
+    }
+    const remappedEdges = state.edges
+        .filter((e) => nodeMapping.hasOwnProperty(e.source) && nodeMapping.hasOwnProperty(e.target))
+        .map((e) => ({
+            source: nodeMapping[e.source],
+            target: nodeMapping[e.target],
+            i: e.eid,
+        }));
+    return { nodeMapping, reverseMapping, remappedEdges };
 }
 
 function computeFocalLayoutWithUMAP(selectedNodes, neighArr, embeddings, useEdgeBundling) {
@@ -199,81 +307,17 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, embeddings, useEdge
         // console.log({ degree, nodes, newCoords });
     }
 
-    // Get the number of nodes for each hop
-    const nums = nodesByHop.map((n) => n.length);
-    const totalNum = nums.reduce((prev, cur) => prev + cur, 0);
-
-    // Allocate space for each hop
-    let canvasHeight = state.getCanvasSize(totalNum);
-    const canvasWidth = canvasHeight * 1.5;
-    // Resize the embeddings for the four different groups of nodes: selected, 1-hop, 2-hop, 3-hop,...
-    const weights = [10, 10];
-    console.assert(hops <= 5);
-    for (let i = 2; i <= hops; i++) {
-        weights.push(weights[weights.length - 1] - 2);
-    }
-    const weightedSum = nums.reduce((prev, cur, i) => prev + Math.log2(cur + 1) * weights[i], 0);
-    const usableWidth = canvasWidth - hops * gapBetweenHop;
-    const groupWidths = nums.map((ni, i) => ((weights[i] * Math.log2(ni + 1)) / weightedSum) * usableWidth);
-    const groupHeights = [
-        selectedNodes.map((s) =>
-            Math.min(
-                groupWidths[0],
-                ((canvasHeight - (numFoc - 1) * gapBetweenHop - numFoc * 2 * padding) / nums[0]) * s.length +
-                    2 * padding
-            )
-        ),
-    ];
-    let maxNeighHeight = 0;
-    for (let i = 1; i <= hops; i++) {
-        const h = Math.min(canvasHeight, groupWidths[i]);
-        groupHeights.push(h);
-        maxNeighHeight = Math.max(maxNeighHeight, h);
-    }
-    // Re-visit the canvasHeight since the heights might not used up.
-    const focalHeightSum = groupHeights[0].reduce((prev, cur) => prev + cur, 0);
-    let possibleFocalHeight = focalHeightSum + gapBetweenHop * (numFoc - 1);
-    canvasHeight = Math.min(canvasHeight, Math.max(possibleFocalHeight, maxNeighHeight));
-    console.log({ canvasWidth, canvasHeight, nums, weights, weightedSum, groupWidths, groupHeights });
-
+    const { groups, numNodes, canvasWidth, canvasHeight } = computeGroupPositions(selectedNodes, nodesByHop);
     const coords = new Array(n);
-    let groups = [];
-    let xOffset = 0,
-        yOffset = 0,
-        actualGapFocal = 0;
-    // position the focal groups
-    if (numFoc > 1) {
-        // The vertical gap between focal groups is not gapBetweenHop
-        actualGapFocal = (canvasHeight - focalHeightSum) / (numFoc - 1);
-    } else {
-        yOffset = (canvasHeight - groupHeights[0][0]) / 2;
-    }
     for (let j = 0; j < numFoc; j++) {
-        const w = Math.min(groupHeights[0][j], groupWidths[0]);
-        const bbox = {
-            x: xOffset + (groupWidths[0] - w) / 2,
-            y: yOffset,
-            width: w,
-            height: groupHeights[0][j],
-        };
-        groups.push({ bounds: bbox, name: `foc-${j}`, num: selectedNodes[j].length });
+        const bbox = groups[j].bounds;
         rescale(selectedNodes[j], embeddings[0][j], bbox.width, bbox.height, bbox.x, bbox.y, padding);
-        yOffset += bbox.height + actualGapFocal;
     }
-    xOffset += groupWidths[0] + gapBetweenHop;
     for (let i = 1; i <= hops; i++) {
-        const bbox = {
-            x: xOffset,
-            y: (canvasHeight - groupHeights[i]) / 2,
-            width: groupWidths[i],
-            height: groupHeights[i],
-        };
-        groups.push({ bounds: bbox, name: `hop-${i}`, num: neighArr[i - 1].length });
+        const bbox = groups[i + numFoc - 1].bounds;
         rescale(neighArr[i - 1], embeddings[i], bbox.width, bbox.height, bbox.x, bbox.y, padding);
-        xOffset += groupWidths[i] + gapBetweenHop;
     }
 
-    const optTime = new Date();
     // Find the best rotation
     const rotDegrees = [0, 90, 180, 270];
     let bestCoords = coords,
@@ -381,7 +425,7 @@ function computeFocalLayoutWithUMAP(selectedNodes, neighArr, embeddings, useEdge
         groups,
         width: canvasWidth,
         height: canvasHeight,
-        numNodes: totalNum,
+        numNodes,
         numEdges: remainingEdges.length,
     };
 }
@@ -419,6 +463,7 @@ function performEdgeBundling(edges, coords) {
     // }
 
     // MINGLE bundling
+    const delta = 0.8;
     const bundle = new mingleBundling({
         curviness: 1,
         angleStrength: 1,
@@ -436,7 +481,7 @@ function performEdgeBundling(edges, coords) {
     remappedBundleRes = {};
 
     bundle.graph.each(function (node) {
-        const edges = node.unbundleEdges(0.5);
+        const edges = node.unbundleEdges(delta);
         for (let e of edges) {
             // if (Math.random() > 0.9) {
             //     console.log(e);
@@ -458,37 +503,14 @@ function performEdgeBundling(edges, coords) {
 }
 
 function computeFocalLayoutWithCola(selectedNodes, neighArr, useGlobalMask, nodeSize) {
+    const startTime = new Date();
     console.log("Computing local layout with WebCola...", new Date());
 
-    const { numNodes, spec, distMetric, edges, hops } = state;
+    const { spec, distMetric, hops } = state;
     const { padding, gapBetweenHop } = spec;
     const numFoc = selectedNodes.length;
 
-    // Remap the node id since we don't want the outside nodes in the focal layout
-    // mapping from original ID to new ID;
-    const nodeMapping = {},
-        reverseMapping = {};
-    let k = 0;
-    for (let s of selectedNodes) {
-        for (let nid of s) {
-            nodeMapping[nid] = k;
-            reverseMapping[k] = nid;
-            k++;
-        }
-    }
-    for (let h = 0; h < hops; h++) {
-        for (let nid of neighArr[h]) {
-            nodeMapping[nid] = k;
-            reverseMapping[k] = nid;
-            k++;
-        }
-    }
-    const remappedEdges = edges
-        .filter((e) => nodeMapping.hasOwnProperty(e.source) && nodeMapping.hasOwnProperty(e.target))
-        .map((e) => ({
-            source: nodeMapping[e.source],
-            target: nodeMapping[e.target],
-        }));
+    const { nodeMapping, reverseMapping, remappedEdges } = getSubGraphMapping(selectedNodes, neighArr);
 
     // Construct group info for webcola
     const coords = [],
@@ -509,7 +531,7 @@ function computeFocalLayoutWithCola(selectedNodes, neighArr, useGlobalMask, node
         groups.push({
             id: h + numFoc,
             leaves: neighArr[h].map((nid) => nodeMapping[nid]),
-            padding: 5,
+            padding: padding * 2,
             name: `hop-${h + 1}`,
         });
         for (let nid of neighArr[h]) {
@@ -518,27 +540,50 @@ function computeFocalLayoutWithCola(selectedNodes, neighArr, useGlobalMask, node
                 width: diameter,
                 height: diameter,
                 group: h + numFoc,
-                padding,
+                padding: 5,
             });
         }
     }
     // console.log("cola coords: ", coords);
     // console.log("cola groups: ", groups);
 
+    const numNodes = Object.keys(nodeMapping).length;
     const canvasSize = state.getCanvasSize(numNodes);
 
     const constraints = [];
+    for (let j = 0; j < numFoc - 1; j++) {
+        for (let n1 of groups[j].leaves) {
+            for (let n2 of groups[j + 1].leaves) {
+                constraints.push({
+                    axis: "y",
+                    left: n1,
+                    right: n2,
+                    gap: gapBetweenHop + padding * 4,
+                });
+            }
+        }
+    }
     for (let j = 0; j < numFoc; j++) {
         for (let focNode of groups[j].leaves) {
             for (let hop1Node of groups[numFoc].leaves) {
-                constraints.push({ axis: "x", left: focNode, right: hop1Node, gap: gapBetweenHop });
+                constraints.push({
+                    axis: "x",
+                    left: focNode,
+                    right: hop1Node,
+                    gap: gapBetweenHop + padding * 2,
+                });
             }
         }
     }
     for (let h = 1; h <= hops - 1; h++) {
         for (let curHopNode of groups[numFoc + h - 1].leaves) {
             for (let nextHopNode of groups[numFoc + h].leaves) {
-                constraints.push({ axis: "x", left: curHopNode, right: nextHopNode, gap: gapBetweenHop });
+                constraints.push({
+                    axis: "x",
+                    left: curHopNode,
+                    right: nextHopNode,
+                    gap: gapBetweenHop + 2 * padding,
+                });
             }
         }
     }
@@ -590,14 +635,14 @@ function computeFocalLayoutWithCola(selectedNodes, neighArr, useGlobalMask, node
         .nodes(coords)
         .links(remappedEdges)
         .groups(groups)
-        .defaultNodeSize(3)
+        .defaultNodeSize(nodeSize * 2)
         .constraints(constraints)
         // .linkDistance(15)
         .linkDistance((e) => 100 * getDist(e.source, e.target))
         // .symmetricDiffLinkLengths(2, 1)
         // .jaccardLinkLengths(50, 1)
         .avoidOverlaps(true)
-        .convergenceThreshold(1e-2)
+        // .convergenceThreshold(1e-2)
         // .start(10);
         .start(10, 15, 20);
 
@@ -614,6 +659,19 @@ function computeFocalLayoutWithCola(selectedNodes, neighArr, useGlobalMask, node
 
     // simulation.constraints([]);
 
+    // Bound the y coords within canvas
+    for (let g of groups) {
+        const e = extent(coords.map((c) => c.y));
+        if ((e[0] > 0) & (e[1] < canvasSize)) {
+            continue;
+        }
+        const scaleY = scaleLinear()
+            .domain(e)
+            .range([padding + 2, canvasSize - padding - 2]);
+        for (let c of coords) {
+            c.y = scaleY(c.y);
+        }
+    }
     // Map node id back to the original id system
     const allCoords = new Array(numNodes);
     for (let originalId in nodeMapping) {
@@ -622,12 +680,43 @@ function computeFocalLayoutWithCola(selectedNodes, neighArr, useGlobalMask, node
             allCoords[originalId] = { x: c.x, y: c.y };
         }
     }
+    console.log({ allCoords, groups });
+
+    // if (!groups[0].bounds) {
+    for (let g of groups) {
+        let xMin = 1e9,
+            xMax = 0,
+            yMin = 1e9,
+            yMax = 0;
+        for (let c of g.leaves) {
+            xMin = Math.min(xMin, c.x);
+            xMax = Math.max(xMax, c.x);
+            yMin = Math.min(yMin, c.y);
+            yMax = Math.max(yMax, c.y);
+        }
+        g.bbox = {
+            x: xMin - padding,
+            y: yMin - padding,
+            width: xMax - xMin + 2 * padding,
+            height: yMax - yMin + 2 * padding,
+        };
+    }
+    // }
+
+    const endTime = new Date();
+    const secTaken = (endTime.getTime() - startTime.getTime()) / 1000;
+    console.log(`Total time: ${secTaken}s`);
     return {
         name: "WebCola",
         coords: allCoords,
         groups: groups.map((g) => ({
             id: g.id,
-            bounds: { x: g.bounds.x, y: g.bounds.y, width: g.bounds.width(), height: g.bounds.height() },
+            bounds: g.bbox || {
+                x: g.bounds.x,
+                y: g.bounds.y,
+                width: g.bounds.width(),
+                height: g.bounds.height(),
+            },
             name: g.name,
             num: g.leaves.length,
         })),
@@ -640,137 +729,160 @@ function computeFocalLayoutWithCola(selectedNodes, neighArr, useGlobalMask, node
     };
 }
 
-function computeFocalLayoutWithD3(
-    nodes,
-    edges,
-    hops,
-    isNodeSelected,
-    isNodeSelectedNeighbor,
-    useGlobalMask,
-    distMetric
-) {
+function computeFocalLayoutWithD3(selectedNodes, neighArr, useGlobalMask) {
     const masks = useGlobalMask ? state.neighborMasks : state.neighborMasks1hop;
-    const getHopGroup = (i) =>
-        isNodeSelected[i] ? 0 : isNodeSelectedNeighbor[i] ? isNodeSelectedNeighbor[i] : hops + 1;
-    let coords = nodes.map((n, i) => ({ index: i, group: getHopGroup(i) }));
-    const copiedEdges = edges.map((e) => ({ ...e }));
+    const { distMetric } = state;
+    const { nodeMapping, reverseMapping, remappedEdges } = getSubGraphMapping(selectedNodes, neighArr);
 
-    const canvasSize = Math.ceil(Math.sqrt(nodes.length * 1000));
-
-    const groupCounts = [0, 0, 0, 0];
-    for (let c of coords) {
-        groupCounts[c.group]++;
+    const nodesByHop = [flatten(selectedNodes), ...neighArr];
+    const { numNodes, groups, canvasWidth, canvasHeight } = computeGroupPositions(selectedNodes, nodesByHop);
+    console.log({ canvasWidth, canvasHeight, groups });
+    for (let g of groups) {
+        const bbox = g.bounds;
+        g.center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
     }
-    let curTot = 0,
-        groupPos = [];
-    for (let g of groupCounts) {
-        groupPos.push(((curTot + g / 2) / nodes.length) * canvasSize);
-        curTot += g;
+    let remappedCoords = lodashRange(numNodes).map((i) => ({ index: i }));
+    for (let i = 0; i < selectedNodes.length; i++) {
+        const nodes = selectedNodes[i];
+        for (let n of nodes) {
+            remappedCoords[nodeMapping[n]].group = i;
+        }
     }
-    console.log({ groupCounts, groupPos });
+    for (let i = 1; i < nodesByHop.length; i++) {
+        const nodes = nodesByHop[i];
+        for (let n of nodes) {
+            remappedCoords[nodeMapping[n]].group = i + selectedNodes.length - 1;
+        }
+    }
 
     // Construct virtual links for group of neighbor nodes
     const groupLinks = [];
-    for (let neighId1 in isNodeSelectedNeighbor)
-        if (isNodeSelectedNeighbor.hasOwnProperty(neighId1)) {
-            for (let neighId2 in isNodeSelectedNeighbor)
-                if (neighId1 !== neighId2 && isNodeSelectedNeighbor.hasOwnProperty(neighId2)) {
+    for (let id1 in nodeMapping)
+        if (nodeMapping.hasOwnProperty(id1)) {
+            for (let id2 in nodeMapping)
+                if (id1 !== id2 && nodeMapping.hasOwnProperty(id2)) {
                     groupLinks.push({
-                        source: parseInt(neighId1),
-                        target: parseInt(neighId2),
-                        dist: getNeighborDistance(masks[neighId1], masks[neighId2], distMetric) + 1,
+                        source: nodeMapping[id1],
+                        target: nodeMapping[id2],
+                        dist: getNeighborDistance(masks[id1], masks[id2], distMetric),
                     });
                 }
         }
-    console.log(groupLinks);
-    const n = Object.keys(isNodeSelectedNeighbor).length;
+    // console.log(groupLinks);
 
-    let simulation = forceSimulation(coords)
-        .force("link", forceLink(copiedEdges))
+    let simulation = forceSimulation(remappedCoords)
+        // .force("link", forceLink(remappedEdges))
         .force(
-            "neighGroup",
+            "neighborDistance",
             forceLink(groupLinks)
-                .distance((d) => d.dist * 20)
-                .strength(10 / n)
+                .distance((d) => d.dist * 200)
+                .strength(10 / numNodes)
         )
-        .force("charge", forceManyBody().strength(-40))
-        .force("centerX", forceX(canvasSize / 2).strength(0.2))
-        .force("centerY", forceY(canvasSize / 2).strength(0.1))
+        .force("charge", forceManyBody().strength(-1000))
+        // .force("centerX", forceX(canvasWidth / 2).strength(0.2))
+        // .force("centerY", forceY(canvasHeight / 2).strength(0.2))
         .force(
-            "hopGroup",
+            "groupX",
+            forceX()
+                .x((d) => groups[d.group].center.x)
+                .strength(1)
+        )
+        .force(
+            "groupY",
             forceY()
-                .y((d) => groupPos[d.group])
-                .strength(0.4)
+                .y((d) => groups[d.group].center.y)
+                .strength(1)
         )
         .stop();
-    // simulation.tick(300);
+
+    const bounded = true;
+    const numIterations = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay()));
+    const { padding } = state.spec;
+    if (bounded) {
+        for (let i = 0; i < numIterations; i++) {
+            // Constrain the nodes in a bounding box
+            for (let c of remappedCoords) {
+                const bbox = groups[c.group].bounds;
+                c.x = bbox.x + Math.max(padding, Math.min(bbox.width - padding, c.x - bbox.x));
+                c.y = bbox.y + Math.max(padding, Math.min(bbox.height - padding, c.y - bbox.y));
+            }
+            simulation.tick();
+        }
+    } else {
+        simulation.tick(numIterations);
+    }
+
+    const coords = new Array(state.numNodes);
+    for (let i = 0; i < remappedCoords.length; i++) {
+        coords[reverseMapping[i]] = remappedCoords[i];
+    }
 
     return {
-        coords: coords.map((d) => ({ x: d.x, y: d.y })),
-        // groups: groups.map((g) => ({ id: g.id, bounds: g.bounds })),
-        width: canvasSize,
-        height: canvasSize,
-        simulation,
-        simulationTickNumber: 0,
-        running: true,
+        name: "D3 force-directed",
+        coords,
+        groups: bounded ? groups : null,
+        width: canvasWidth,
+        height: canvasHeight,
+        // remainingEdges,
+        numNodes,
+        numEdges: remappedEdges.length,
     };
 }
 
-function computeSpaceFillingCurveLayout(
-    nodes,
-    isNodeSelected,
-    isNodeSelectedNeighbor,
-    neighArr,
-    useGlobalMask,
-    distMetric
-) {
+function computeSpaceFillingCurveLayout(selectedNodes, neighArr, useGlobalMask) {
     const masks = useGlobalMask ? state.neighborMasks : state.neighborMasks1hop;
-    const n = nodes.length;
-    const orderedNodes = [];
-    for (let nodeId in isNodeSelected)
-        if (isNodeSelected[nodeId]) {
-            orderedNodes.push(nodeId);
-        }
-    for (let a of neighArr) {
-        for (let neighId of a) {
-            orderedNodes.push(neighId);
-        }
+    const { nodeMapping, reverseMapping, remappedEdges } = getSubGraphMapping(selectedNodes, neighArr);
+    const { distMetric } = state;
+    const { padding, gapBetweenHop } = state.spec;
+
+    const nodesByHop = [flatten(selectedNodes), ...neighArr];
+    const orderedNodes = flatten(nodesByHop);
+    const numNodes = orderedNodes.length;
+    const isStartOfGroup = {};
+    let count = 0;
+    for (let i = 1; i < selectedNodes.length; i++) {
+        count += selectedNodes[i - 1].length;
+        isStartOfGroup[count] = true;
     }
-    for (let i = 0; i < n; i++)
-        if (!isNodeSelected[i] && !isNodeSelectedNeighbor[i]) {
-            orderedNodes.push(i);
-        }
-    console.log({ orderedNodes });
+    count = nodesByHop[0].length;
+    for (let i = 1; i < neighArr.length; i++) {
+        isStartOfGroup[count] = true;
+        count += nodesByHop[i].length;
+    }
 
     const alpha = 2;
     let curPos = 1;
-    const coords = new Array(n);
-    for (let i = 0; i < n; i++) {
-        let d = 1.2;
-        if (
-            i > 0 &&
-            isNodeSelectedNeighbor.hasOwnProperty(orderedNodes[i]) &&
-            isNodeSelectedNeighbor.hasOwnProperty(orderedNodes[i - 1])
-        ) {
-            d = getNeighborDistance(masks[orderedNodes[i]], masks[orderedNodes[i - 1]], distMetric);
-            d = Math.max(d, 0.1);
-        }
+    const remappedCoords = new Array(numNodes);
+    for (let i = 0; i < numNodes; i++) {
+        const d = Math.max(
+            0.1,
+            getNeighborDistance(masks[orderedNodes[i]], masks[orderedNodes[i - 1]], distMetric)
+        );
         curPos += d;
+        if (isStartOfGroup[i]) {
+            curPos += gapBetweenHop;
+        }
 
         const r = alpha * curPos;
-        coords[orderedNodes[i]] = [r * Math.cos(curPos), r * Math.sin(curPos)];
+        remappedCoords[i] = { x: r * Math.cos(curPos), y: r * Math.sin(curPos) };
     }
-    console.log(coords);
 
     // Move the coordinates such that (0,0) is on the top left for rendering
-    const xExtent = extent(coords.map((c) => c[0]));
-    const yExtent = extent(coords.map((c) => c[1]));
-    const width = xExtent[1] - xExtent[0];
-    const height = yExtent[1] - yExtent[0];
-    const transCoords = coords.map((c) => ({ x: c[0] - xExtent[0], y: c[1] - yExtent[0] }));
-    console.log({ transCoords });
+    const xExtent = extent(remappedCoords.map((c) => c.x));
+    const yExtent = extent(remappedCoords.map((c) => c.y));
+    console.log({xExtent, yExtent});
+    const width = xExtent[1] - xExtent[0] + 2 * padding;
+    const height = yExtent[1] - yExtent[0] + 2 * padding;
 
-    return { coords: transCoords, running: false, width, height };
+    const coords = new Array(state.numNodes);
+    for (let i = 0; i < remappedCoords.length; i++) {
+        coords[orderedNodes[i]] = {
+            x: remappedCoords[i].x - xExtent[0] + padding,
+            y: remappedCoords[i].y - yExtent[0] + padding,
+        };
+    }
+
+    return { name: "Space-filling curve", coords, width, height, numNodes, numEdges: remappedEdges.length };
 }
 
 Comlink.expose({

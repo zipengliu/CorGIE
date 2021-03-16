@@ -352,22 +352,15 @@ async function callFocalLayoutFunc(graph, selectedNodes, neighRes, param) {
                 );
             case "spiral":
                 return await focalLayoutWorker.computeSpaceFillingCurveLayout(
-                    graph.nodes,
-                    neighRes.isNodeSelected,
-                    neighRes.isNodeSelectedNeighbor,
+                    selectedNodes,
                     neighRes.neighArr,
-                    param.focalGraph.useGlobalMask,
-                    param.neighborDistanceMetric
+                    param.focalGraph.useGlobalMask
                 );
             default:
                 return await focalLayoutWorker.computeFocalLayoutWithD3(
-                    graph.nodes,
-                    graph.edges,
-                    param.hops,
-                    neighRes.isNodeSelected,
-                    neighRes.isNodeSelectedNeighbor,
-                    param.focalGraph.useGlobalMask,
-                    param.neighborDistanceMetric
+                    selectedNodes,
+                    neighRes.neighArr,
+                    param.focalGraph.useGlobalMask
                 );
         }
     }
@@ -409,7 +402,7 @@ export function changeFocalParam(param, value) {
         } else if (param === "focalGraph.useEdgeBundling") {
             // Check if we actually need to compute edge bundling results
             if (value && !focalLayout.edgeBundlePoints) {
-                dispatch(changeFocalParamPending('Performing edge bundling...'));
+                dispatch(changeFocalParamPending("Performing edge bundling..."));
                 const edgeBundlePoints = await focalLayoutWorker.performEdgeBundling(
                     focalLayout.remainingEdges,
                     focalLayout.coords
@@ -421,7 +414,7 @@ export function changeFocalParam(param, value) {
 }
 
 function changeFocalParamPending(runningMsg = null) {
-    return { type: ACTION_TYPES.CHANGE_FOCAL_PARAM_PENDING, runningMsg};
+    return { type: ACTION_TYPES.CHANGE_FOCAL_PARAM_PENDING, runningMsg };
 }
 function changeFocalParamDone(layoutId, layoutRes) {
     return { type: ACTION_TYPES.CHANGE_FOCAL_PARAM_DONE, layoutId, layoutRes };
