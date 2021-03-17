@@ -1,15 +1,12 @@
-import React, { Component, memo, useCallback } from "react";
+import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import debounce from "lodash.debounce";
-import { Form, Modal, Button, Badge, Col, Tabs, Tab } from "react-bootstrap";
-import { FixedSizeList } from "react-window";
+import { Form, Modal, Button, Col, Tabs, Tab } from "react-bootstrap";
 import { format } from "d3";
 import { getNeighborDistance, getCosineDistance, getEuclideanDistance } from "../utils";
 import {
     highlightNodePairs,
     hoverNode,
-    selectNodePair,
     changeParam,
     changeScatterplotForm,
     addDistanceScatterplot,
@@ -17,7 +14,7 @@ import {
 import { ComputingSpinner } from "./GraphView";
 import ScatterHistogram from "./ScatterHistogram";
 
-export class NodePairView extends Component {
+export class DistanceView extends Component {
     renderCreateModal() {
         const { highlightedNodes, hasLinkPredictions, selectedNodes, formData } = this.props;
         const { show, connectivity, userInterests, linkPrediction, nodePairs } = formData;
@@ -224,40 +221,11 @@ export class NodePairView extends Component {
     }
 
     render() {
-        const {
-            nodes,
-            hops,
-            unseenTopK,
-            highlightedNodePairs,
-            highlightedNodes,
-            hasLinkPredictions,
-            distances,
-            nodePairFilter,
-            spec,
-            highlightDistVals,
-            hasFeatures,
-        } = this.props;
+        const { hops, distances, nodePairFilter, spec, highlightDistVals, hasFeatures } = this.props;
         const { highlightNodePairs, changeParam } = this.props;
-        const labelOrId = nodes && nodes[0].label ? "label" : "id";
         const { display, displaySpecial } = distances;
         const { useLinearScale } = nodePairFilter;
         const numFormat = format(".2~s");
-
-        const NodePairItem = memo(({ index, style }) => {
-            const p = highlightedNodePairs[index];
-            const debouncedHover = useCallback(debounce((x) => this.props.hoverNode(x), 200));
-            return (
-                <div
-                    className="list-group-item"
-                    onMouseEnter={debouncedHover.bind(this, [p[0], p[1]])}
-                    onMouseLeave={debouncedHover.bind(this, null)}
-                    onClick={this.props.selectNodePair.bind(null, p[0], p[1])}
-                    style={style}
-                >
-                    {nodes[p[0]][labelOrId]} - {nodes[p[1]][labelOrId]}
-                </div>
-            );
-        });
 
         const getScatterHistList = (isTopoVsLatent) => (
             <div className="scatter-hist-list">
@@ -295,103 +263,53 @@ export class NodePairView extends Component {
         );
 
         return (
-            <div className="view" id="node-pair-view">
-                <h5 className="view-title text-center">Node Pairs</h5>
+            <div className="view" id="distance-view">
+                <h5 className="view-title text-center">Distances in latent, topology, and feature spaces</h5>
                 <div className="view-body">
-                    <div style={{ paddingRight: "5px", borderRight: "1px dotted grey" }}>
-                        <h6>Highlighted</h6>
-                        {highlightedNodes.length > 0 && hasLinkPredictions && (
-                            <div>
-                                <Button
-                                    variant="outline-primary"
-                                    size="xs"
-                                    onClick={highlightNodePairs.bind(null, null, null, null, null, true)}
-                                >
-                                    List top {unseenTopK} predicted unseen edges to highlighted nodes
-                                </Button>
-                            </div>
-                        )}
-                        <div>
-                            <Badge variant="primary">{highlightedNodePairs.length}</Badge> node pairs
-                            highlighted. {highlightedNodePairs.length > 0 && "Click to focus."}
-                        </div>
-                        {highlightedNodePairs.length > 0 && (
-                            <div>
-                                <div className="node-pair-list">
-                                    <FixedSizeList
-                                        className="list-group"
-                                        height={
-                                            highlightedNodePairs.length > 16
-                                                ? 400
-                                                : 25 * highlightedNodePairs.length
-                                        }
-                                        width="100%"
-                                        itemSize={25}
-                                        itemCount={highlightedNodePairs.length}
-                                    >
-                                        {NodePairItem}
-                                    </FixedSizeList>
-                                </div>
-                                <div>
-                                    <Button
-                                        variant="outline-danger"
-                                        size="xs"
-                                        onClick={highlightNodePairs.bind(null, null, null, null)}
-                                    >
-                                        clear highlights
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div style={{ paddingLeft: "5px" }}>
-                        <h6>Compare distances of node pairs in latent, topology, and feature space</h6>
-                        <div>
-                            <Button
-                                size="xs"
-                                variant="outline-primary"
-                                onClick={this.props.changeScatterplotForm.bind(null, "show", true)}
-                            >
-                                Create distance distribution with self-specified conditions
-                            </Button>
-                        </div>
-                        <div style={{marginBottom: '5px'}}>
-                            <Form inline>
-                                <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
-                                <Form.Check
-                                    inline
-                                    label="linear"
-                                    type="radio"
-                                    id="scale-linear-ctrl"
-                                    checked={useLinearScale}
-                                    onChange={() => {
-                                        changeParam("nodePairFilter.useLinearScale", null, true);
-                                    }}
-                                />
-                                <Form.Check
-                                    inline
-                                    label="log10"
-                                    type="radio"
-                                    id="scale-log-ctrl"
-                                    checked={!useLinearScale}
-                                    onChange={() => {
-                                        changeParam("nodePairFilter.useLinearScale", null, true);
-                                    }}
-                                />
-                            </Form>
-                        </div>
-                        <Tabs defaultActiveKey="topo-vs-latent">
-                            <Tab eventKey="topo-vs-latent" title="topo vs. latent">
-                                {getScatterHistList(true)}
+                    <Tabs defaultActiveKey="topo-vs-latent">
+                        <Tab eventKey="topo-vs-latent" title="topo vs. latent">
+                            {getScatterHistList(true)}
+                        </Tab>
+                        {hasFeatures && (
+                            <Tab eventKey="feature-vs-latent" title="feature vs. latent">
+                                {getScatterHistList(false)}
                             </Tab>
-                            {hasFeatures && (
-                                <Tab eventKey="feature-vs-latent" title="feature vs. latent">
-                                    {getScatterHistList(false)}
-                                </Tab>
-                            )}
-                        </Tabs>
+                        )}
+                    </Tabs>
+                    <div style={{ marginTop: "10px" }}>
+                        <Button
+                            size="xs"
+                            variant="outline-primary"
+                            onClick={this.props.changeScatterplotForm.bind(null, "show", true)}
+                        >
+                            Create distance distribution with self-specified conditions
+                        </Button>
                     </div>
+                    {/* <div> */}
+                    <Form inline>
+                        <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
+                        <Form.Check
+                            inline
+                            label="linear"
+                            type="radio"
+                            id="scale-linear-ctrl"
+                            checked={useLinearScale}
+                            onChange={() => {
+                                changeParam("nodePairFilter.useLinearScale", null, true);
+                            }}
+                        />
+                        <Form.Check
+                            inline
+                            label="log10"
+                            type="radio"
+                            id="scale-log-ctrl"
+                            checked={!useLinearScale}
+                            onChange={() => {
+                                changeParam("nodePairFilter.useLinearScale", null, true);
+                            }}
+                        />
+                    </Form>
+                    {/* </div> */}
                 </div>
 
                 <div className="view-footer">
@@ -445,11 +363,8 @@ const mapStateToProps = (state) => {
         }
     }
     return {
-        nodes: state.graph.nodes,
         nodeTypes: state.graph.nodeTypes,
         selectedNodes,
-        hasLinkPredictions: state.hasLinkPredictions,
-        highlightedNodePairs: state.highlightedNodePairs,
         highlightedNodes: state.highlightedNodes,
         highlightDistVals,
         distances: state.distances,
@@ -457,7 +372,6 @@ const mapStateToProps = (state) => {
         nodePairFilter: state.param.nodePairFilter,
         hops: state.param.hops,
         formData: state.scatterplotForm,
-        unseenTopK: state.param.unseenTopK,
         hasFeatures: !!f,
     };
 };
@@ -467,7 +381,6 @@ const mapDispatchToProps = (dispatch) =>
         {
             highlightNodePairs,
             hoverNode,
-            selectNodePair,
             changeParam,
             changeScatterplotForm,
             addDistanceScatterplot,
@@ -475,4 +388,4 @@ const mapDispatchToProps = (dispatch) =>
         dispatch
     );
 
-export default connect(mapStateToProps, mapDispatchToProps)(NodePairView);
+export default connect(mapStateToProps, mapDispatchToProps)(DistanceView);

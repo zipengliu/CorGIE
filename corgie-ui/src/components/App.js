@@ -12,8 +12,8 @@ import DetailView from "./DetailView";
 import NodeAttrView from "./NodeAttrView";
 import HighlightControl from "./HighlightControl";
 import FocusControl from "./FocusControl";
-import GlobalControls from "./GlobalControls";
-import NodePairView from "./NodePairView";
+import SettingsView from "./SettingsView";
+import DistanceView from "./DistanceView";
 import "./App.css";
 
 class App extends Component {
@@ -63,20 +63,18 @@ class App extends Component {
 
                 <div className="App" ref={this.appRef}>
                     <div ref={this.leftColRef} style={{ flexShrink: 2 }}>
-                        <div>
-                            <GlobalControls />
-                        </div>
                         <div style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}>
                             <div>
                                 <FocusControl />
                                 <HighlightControl />
                             </div>
                             <div>
+                                <SettingsView />
                                 <EmbeddingsView />
                             </div>
                         </div>
                         <div>
-                            <NodePairView />
+                            <DistanceView />
                         </div>
                     </div>
                     <div style={{ maxWidth: rightWidth ? rightWidth + "px" : "auto" }}>

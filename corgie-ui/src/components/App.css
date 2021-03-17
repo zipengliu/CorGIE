@@ -279,14 +279,9 @@
     margin-bottom: 10px;
 }
 
-#node-pair-view {
-    max-width: 800px;
-    font-size: 0.875rem;
-}
-
-#node-pair-view .view-body {
-    display: flex;
-    flex-direction: row;
+#distance-view {
+    /* max-width: 800px; */
+    /* font-size: 0.875rem; */
 }
 
 #create-scatterplot-modal .modal-content {
@@ -533,21 +528,24 @@ rect.highlight-strip {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: space-around;
+    /* justify-content: start; */
 }
 .scatter-hist-list .stuff-container {
     margin: 5px 5px 0 0;
 }
 
-#global-controls {
+#settings-view {
     min-width: 400px;
 }
-#global-controls .setting-item {
-    display: flex;
-    flex-direction: row;
-    margin: 5px 0;
+#settings-view .setting-item {
+    margin-left: 10px;
+}
+#settings-view .setting-item .setting-label {
+    display: inline-block;
+    width: 50px;
 }
 
-#global-controls .dropdown .dropdown-menu {
+#settings-view .dropdown .dropdown-menu {
     position: fixed !important;
 }
 
@@ -594,16 +592,16 @@ rect.highlight-strip {
 .settings-block .settings-row .settings-label{
 } */
 
-#global-controls .table {
+#settings-view .table {
     text-align: left;
     vertical-align: middle;
     margin-bottom: 0;
 }
-#global-controls .table td,
-#global-controls .table th {
+#settings-view .table td,
+#settings-view .table th {
     padding: 0.1rem;
 }
-#global-controls .dropdown {
+#settings-view .dropdown {
     display: inline-block;
 }
 

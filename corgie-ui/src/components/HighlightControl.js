@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Button, Badge } from "react-bootstrap";
 import { selectNodes, highlightNodes, searchNodes, selectNodePair } from "../actions";
+import NodePairList from "./NodePairList";
 
 export class HighlightControl extends Component {
     callSearch(e) {
@@ -136,13 +137,16 @@ export class HighlightControl extends Component {
                             </Button>
                         </Form>
                     </div>
+
+                    <div style={{ margin: "10px 0", borderBottom: "1px solid grey" }}></div>
+                    <NodePairList />
+                    {numHighlightsAndFocus > 0 && !areHighlightsAlsoFocus && (
+                        <div className="view-footer">
+                            Note: a node can only exist in one focal group. Duplicated focal nodes will be
+                            removed.
+                        </div>
+                    )}
                 </div>
-                {numHighlightsAndFocus > 0 && !areHighlightsAlsoFocus && (
-                    <div className="view-footer">
-                        Note: a node can only exist in one focal group. Duplicated focal nodes will be
-                        removed.
-                    </div>
-                )}
             </div>
         );
     }
