@@ -2,10 +2,10 @@ import React, { Component, memo, useCallback } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import debounce from "lodash.debounce";
-import { Form, Modal, Button, Badge, Col } from "react-bootstrap";
+import { Form, Modal, Button, Badge, Col, Tabs, Tab } from "react-bootstrap";
 import { FixedSizeList } from "react-window";
 import { format } from "d3";
-import { getNeighborDistance, getCosineDistance } from "../utils";
+import { getNeighborDistance, getCosineDistance, getEuclideanDistance } from "../utils";
 import {
     highlightNodePairs,
     hoverNode,
@@ -235,6 +235,7 @@ export class NodePairView extends Component {
             nodePairFilter,
             spec,
             highlightDistVals,
+            hasFeatures,
         } = this.props;
         const { highlightNodePairs, changeParam } = this.props;
         const labelOrId = nodes && nodes[0].label ? "label" : "id";
@@ -258,6 +259,41 @@ export class NodePairView extends Component {
             );
         });
 
+        const getScatterHistList = (isTopoVsLatent) => (
+            <div className="scatter-hist-list">
+                {displaySpecial.concat(display).map((d, i) => (
+                    <div className="stuff-container" key={i}>
+                        <div className="container-title">
+                            {d.title} (#={d.src ? numFormat(d.src.length) : ""})
+                        </div>
+                        <div className="container-body">
+                            {d.isComputing ? (
+                                <ComputingSpinner />
+                            ) : (
+                                <ScatterHistogram
+                                    data={d}
+                                    isTopoVsLatent={isTopoVsLatent}
+                                    hasHist={true}
+                                    useLinearScale={useLinearScale}
+                                    spec={spec}
+                                    xLabel="latent"
+                                    yLabel={isTopoVsLatent ? "topo" : "feature"}
+                                    hVals={highlightDistVals}
+                                    brushedFunc={highlightNodePairs.bind(null, isTopoVsLatent, i)}
+                                    brushedArea={
+                                        isTopoVsLatent === nodePairFilter.isTopoVsLatent &&
+                                        nodePairFilter.which === i
+                                            ? nodePairFilter.brushedArea
+                                            : null
+                                    }
+                                />
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+
         return (
             <div className="view" id="node-pair-view">
                 <h5 className="view-title text-center">Node Pairs</h5>
@@ -269,7 +305,7 @@ export class NodePairView extends Component {
                                 <Button
                                     variant="outline-primary"
                                     size="xs"
-                                    onClick={highlightNodePairs.bind(null, null, null, null, true)}
+                                    onClick={highlightNodePairs.bind(null, null, null, null, null, true)}
                                 >
                                     List top {unseenTopK} predicted unseen edges to highlighted nodes
                                 </Button>
@@ -300,7 +336,7 @@ export class NodePairView extends Component {
                                     <Button
                                         variant="outline-danger"
                                         size="xs"
-                                        onClick={highlightNodePairs.bind(null, null, null)}
+                                        onClick={highlightNodePairs.bind(null, null, null, null)}
                                     >
                                         clear highlights
                                     </Button>
@@ -310,7 +346,7 @@ export class NodePairView extends Component {
                     </div>
 
                     <div style={{ paddingLeft: "5px" }}>
-                        <h6>Compare distances of node pairs in latent vs. topo</h6>
+                        <h6>Compare distances of node pairs in latent, topology, and feature space</h6>
                         <div>
                             <Button
                                 size="xs"
@@ -320,7 +356,7 @@ export class NodePairView extends Component {
                                 Create distance distribution with self-specified conditions
                             </Button>
                         </div>
-                        <div>
+                        <div style={{marginBottom: '5px'}}>
                             <Form inline>
                                 <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
                                 <Form.Check
@@ -345,36 +381,16 @@ export class NodePairView extends Component {
                                 />
                             </Form>
                         </div>
-                        <div className="scatter-hist-list">
-                            {displaySpecial.concat(display).map((d, i) => (
-                                <div className="stuff-container" key={i}>
-                                    <div className="container-title">
-                                        {d.title} (#={d.src ? numFormat(d.src.length) : ""})
-                                    </div>
-                                    <div className="container-body">
-                                        {d.isComputing ? (
-                                            <ComputingSpinner />
-                                        ) : (
-                                            <ScatterHistogram
-                                                data={d}
-                                                hasHist={true}
-                                                useLinearScale={useLinearScale}
-                                                spec={spec}
-                                                xLabel="latent"
-                                                yLabel="topo"
-                                                hVals={highlightDistVals}
-                                                brushedFunc={highlightNodePairs.bind(null, i)}
-                                                brushedArea={
-                                                    nodePairFilter.which === i
-                                                        ? nodePairFilter.brushedArea
-                                                        : null
-                                                }
-                                            />
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        <Tabs defaultActiveKey="topo-vs-latent">
+                            <Tab eventKey="topo-vs-latent" title="topo vs. latent">
+                                {getScatterHistList(true)}
+                            </Tab>
+                            {hasFeatures && (
+                                <Tab eventKey="feature-vs-latent" title="feature vs. latent">
+                                    {getScatterHistList(false)}
+                                </Tab>
+                            )}
+                        </Tabs>
                     </div>
                 </div>
 
@@ -382,12 +398,13 @@ export class NodePairView extends Component {
                     Topological distance of node pair = 1.0 - Jaccard Index of {hops}-hop neighbor sets of two
                     nodes. <br />
                     Latent distance of node pair = cosine distance of node embeddings. <br />
-                    Luminance ~ #node pairs with specific distance values.
-                    {this.props.selectedNodes.length > 2 && (
-                        <div style={{ fontWeight: "bold" }}>
-                            Note: the diff will only show up when there are exactly 2 focal groups.
+                    {hasFeatures && (
+                        <div>
+                            Feature distance = euclidean distance (scaled to [0,1]) of (normalized) node
+                            feature vectors
                         </div>
                     )}
+                    Luminance ~ #node pairs with specific distance values.
                 </div>
 
                 {this.renderCreateModal()}
@@ -398,8 +415,9 @@ export class NodePairView extends Component {
 
 const mapStateToProps = (state) => {
     const emb = state.latent.emb;
-    const { neighborMasks } = state.graph;
+    const { neighborMasks, sparseFeatures, denseFeatures, nodes } = state.graph;
     const { hoveredNodes, selectedNodes } = state;
+    const f = sparseFeatures || denseFeatures || null;
 
     let highlightDistVals = null,
         hx = null,
@@ -420,11 +438,15 @@ const mapStateToProps = (state) => {
             highlightDistVals = [
                 getCosineDistance(emb[hx], emb[hy]),
                 getNeighborDistance(neighborMasks[hx], neighborMasks[hy], state.param.neighborDistanceMetric),
+                f && nodes[hx].typeId === nodes[hy].typeId
+                    ? state.distances.featureScale(getEuclideanDistance(f[hx], f[hy]))
+                    : null,
             ];
         }
     }
     return {
         nodes: state.graph.nodes,
+        nodeTypes: state.graph.nodeTypes,
         selectedNodes,
         hasLinkPredictions: state.hasLinkPredictions,
         highlightedNodePairs: state.highlightedNodePairs,
@@ -436,6 +458,7 @@ const mapStateToProps = (state) => {
         hops: state.param.hops,
         formData: state.scatterplotForm,
         unseenTopK: state.param.unseenTopK,
+        hasFeatures: !!f,
     };
 };
 

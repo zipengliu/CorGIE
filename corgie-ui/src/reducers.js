@@ -34,18 +34,6 @@ function mapColorToNodeType(nodeTypes) {
     }
 }
 
-// count all, only happen in the initialization phase
-function countNodesByType(nodes) {
-    let counts = {};
-    for (let n of nodes) {
-        if (!counts.hasOwnProperty(n.type)) {
-            counts[n.type] = 0;
-        }
-        counts[n.type]++;
-    }
-    return Object.keys(counts).map((t, i) => ({ id: i, name: t, count: counts[t] }));
-}
-
 function countNeighborsByType(neighborMasksByType, selectedNodes) {
     // Not including itself
     let nei = [];
@@ -58,20 +46,6 @@ function countNeighborsByType(neighborMasksByType, selectedNodes) {
         }
     }
     return nei.map((n) => n.cardinality());
-}
-
-// Assign a node type index to each node and return a mapping from type (string) to typeIndex (int)
-// Note: this function changes the nodes
-function populateNodeTypeIndex(nodes, nodeTypes) {
-    let mapping = {},
-        a = [],
-        i = 0;
-    for (let nt of nodeTypes) {
-        mapping[nt.name] = nt.id;
-    }
-    for (let n of nodes) {
-        n.typeId = mapping[n.type];
-    }
 }
 
 function getNeighborMasksByType(nodes, edges, numberOfNodeTypes) {
@@ -424,59 +398,6 @@ function computeBoundingBox(coords, included) {
         height: yMax - yMin + 2 * padding,
     };
 }
-
-const computeScatterHistData = (distData, whichSubset, ref, numBins) => {
-    const { distMatTopo, distMatLatent, binGen } = distData;
-    let data = {
-        name: whichSubset,
-        dist: [],
-        src: [],
-        tgt: [],
-        binsLatent: null,
-        binsTopo: null,
-    };
-    let binRes;
-
-    function checkAndCompute(s, t) {
-        // Must check whether we have computed that value
-        if (distMatLatent[s].hasOwnProperty(t)) {
-            data.dist.push([distMatLatent[s][t], distMatTopo[s][t]]);
-            data.src.push(s);
-            data.tgt.push(t);
-        }
-    }
-
-    if (whichSubset === "edge") {
-        // Ref should be edges
-        for (let e of ref) {
-            checkAndCompute(e.source, e.target);
-        }
-        data.title = "connected by edges";
-    } else if (whichSubset.includes("between")) {
-        for (let i = 0; i < ref[0].length; i++) {
-            for (let j = 0; j < ref[1].length; j++) {
-                checkAndCompute(ref[0][i], ref[1][j]);
-            }
-        }
-        data.title = "between foc-0 and foc-1";
-    } else if (whichSubset.includes("foc")) {
-        for (let i = 0; i < ref.length; i++) {
-            for (let j = i + 1; j < ref.length; j++) {
-                checkAndCompute(ref[i], ref[j]);
-            }
-        }
-        data.title = `within ${whichSubset}`;
-    }
-    binRes = rectBinning(data.dist, [1, 1], numBins);
-    Object.assign(data, {
-        binsLatent: binGen(data.dist.map((x) => x[0])),
-        binsTopo: binGen(data.dist.map((x) => x[1])),
-        gridBins: binRes.bins,
-        gridBinsMaxCnt: binRes.maxCnt,
-    });
-    console.log(data);
-    return data;
-};
 
 function processPredictionResults(nodes, edges, predRes) {
     if (!predRes) return;
@@ -841,7 +762,7 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.FETCH_DATA_SUCCESS:
             draft.loaded = true;
-            const { graph, emb, emb2d, attrs, features, hops, predRes, initialLayout } = action.data;
+            const { graph, emb, emb2d, attrs, hops, predRes, initialLayout, distances } = action.data;
             // the scalar values in emb are in string format, so convert them to float first
             for (let e of emb) {
                 for (let i = 0; i < e.length; i++) {
@@ -856,15 +777,7 @@ const reducers = produce((draft, action) => {
 
             draft.param.hops = hops;
             draft.datasetId = action.data.datasetId;
-            draft.graph = {
-                nodes: graph.nodes,
-                edges: graph.edges,
-                edgeDict: graph.edgeDict,
-                neighborMasks: graph.neighborMasks,
-                neighborMasksByHop: graph.neighborMasksByHop,
-                nodeTypes: countNodesByType(graph.nodes),
-                features,
-            };
+            draft.graph = graph;
             draft.initialLayout.numNodes = graph.nodes.length;
             draft.initialLayout.numEdges = graph.edges.length;
             if (action.data.initialLayout) {
@@ -878,16 +791,15 @@ const reducers = produce((draft, action) => {
             }
 
             // compute feature aggregation
-            if (features && features[0][0] % 1 == 0) {
-                // is binary features
+            if (graph.sparseFeatures) {
                 // TODO deal with general numerical features
                 draft.featureAgg.active = true;
-                draft.featureAgg.numFeatures = features[0].length;
+                draft.featureAgg.numFeatures = graph.sparseFeatures[0].length;
                 draft.featureAgg.stripMapping = getCompressFeatureMapping(
-                    features[0].length,
+                    graph.sparseFeatures[0].length,
                     draft.spec.feature.maxNumStrips
                 );
-                fAggCntData = aggregateBinaryFeatures(features, null);
+                fAggCntData = aggregateBinaryFeatures(graph.sparseFeatures, null);
                 fAggBlock = {
                     title: "All",
                     cnts: fAggCntData.cnts,
@@ -898,7 +810,6 @@ const reducers = produce((draft, action) => {
                 fAggBlock.scale = scaleSequential(interpolateGreys).domain([0, fAggBlock.maxCnts]);
                 draft.featureAgg.display.push(fAggBlock);
             }
-            populateNodeTypeIndex(graph.nodes, draft.graph.nodeTypes);
             mapColorToNodeType(draft.graph.nodeTypes);
 
             // draft.graph.neighborMasksByHop = getNeighborMasksByHop(graph.nodes, graph.edges, draft.param.hops);
@@ -941,8 +852,16 @@ const reducers = produce((draft, action) => {
             setNodeColors(draft, draft.param.colorBy);
 
             const numPairs = (graph.nodes.length * (graph.nodes.length - 1)) / 2;
+            draft.distances.featureDistMax = distances.featureDistMax;
+            draft.distances.display = [distances.distSample, distances.distEdge];
             draft.distances.display[0].title =
-                numPairs <= draft.distances.maxSample ? "all" : "random samples";
+                numPairs > distances.distSample.src.length ? "random samples" : "all";
+            draft.distances.display[1].title = "edges";
+            if (distances.featureDistMax) {
+                draft.distances.featureScale = scaleLinear()
+                    .domain([0, distances.featureDistMax])
+                    .range([0, 1]);
+            }
 
             draft.isNodeSelected = new Array(graph.nodes.length).fill(false);
             return;
@@ -966,7 +885,6 @@ const reducers = produce((draft, action) => {
             return;
 
         case ACTION_TYPES.COMPUTE_DISTANCES_DONE:
-            console.log("Data recieved.  Storing data...", new Date());
             if (action.isSpecial) {
                 // if (action.idx < draft.distances.displaySpecial.length) {
                 // Object.assign(draft.distances.displaySpecial[action.idx], action.distData);
@@ -1056,7 +974,7 @@ const reducers = produce((draft, action) => {
                 if (draft.featureAgg.active && action.fromView !== "feature") {
                     // Compute which cell needs to be highlighted
                     fAggCntData = aggregateBinaryFeatures(
-                        draft.graph.features,
+                        draft.graph.sparseFeatures,
                         draft.highlightedNodes,
                         false
                     );
@@ -1084,6 +1002,7 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.HIGHLIGHT_NODE_PAIRS:
             const { brushedArea, which, brushedPairs, showTopkUnseen } = action;
+            draft.param.nodePairFilter.isTopoVsLatent = action.isTopoVsLatent;
             draft.param.nodePairFilter.brushedArea = brushedArea;
             draft.param.nodePairFilter.which = which;
             if (which === null) {
@@ -1137,7 +1056,7 @@ const reducers = produce((draft, action) => {
                     if (action.fromFeature === null) {
                         // Handle the features of hovered nodes
                         fAggCntData = aggregateBinaryFeatures(
-                            draft.graph.features,
+                            draft.graph.sparseFeatures,
                             draft.hoveredNodesAndNeighbors,
                             false
                         );
@@ -1234,7 +1153,7 @@ const reducers = produce((draft, action) => {
                 // Compute the features for the focal nodes
                 if (draft.featureAgg.active) {
                     newSel.map((s, i) => {
-                        fAggCntData = aggregateBinaryFeatures(draft.graph.features, s);
+                        fAggCntData = aggregateBinaryFeatures(draft.graph.sparseFeatures, s);
                         fAggBlock = {
                             title: `foc-${i}`,
                             cnts: fAggCntData.cnts,
@@ -1366,7 +1285,7 @@ const reducers = produce((draft, action) => {
             return;
         case ACTION_TYPES.CHANGE_FOCAL_PARAM_DONE:
             if (draft.focalLayout.layoutId === action.layoutId) {
-                Object.assign(draft.focalLayout, {...action.layoutRes, running: false, runningMsg: null});
+                Object.assign(draft.focalLayout, { ...action.layoutRes, running: false, runningMsg: null });
                 if (action.layoutRes.coords) {
                     draft.focalLayout.qt = buildQT(
                         action.layoutRes.coords,

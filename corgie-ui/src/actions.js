@@ -2,7 +2,13 @@ import "whatwg-fetch";
 import * as Comlink from "comlink";
 import { csvParseRows } from "d3";
 import { getSelectedNeighbors } from "./utils";
-import { computeNeighborMasks, filterEdgeAndComputeDict } from "./utils";
+import {
+    countNodesByType,
+    populateNodeTypeIndex,
+    // computeNeighborMasks,
+    // filterEdgeAndComputeDict,
+    // normalizeFeatures,
+} from "./utils";
 
 import FocalLayoutWorker from "./focalLayout.worker";
 import InitialLayoutWorker from "./initialLayout.worker";
@@ -11,6 +17,7 @@ import { range as lodashRange } from "lodash";
 // Note that this is a dirty and quick way to retrieve info about dataset
 import datasetsInfo from "./datasets";
 import UmapWorker from "./umap.worker";
+import bs from "bitset";
 
 function findHopsInDatasetInfo(id) {
     const defaultHops = 2;
@@ -73,12 +80,12 @@ export function fetchGraphData(homePath, datasetId) {
             // emb: node embeddings
             // emb2d: umap results of node embeddings
             // attrs: meta data for dense features with independent semantics (optional)
-            // features: feature matrix for sparse features with combined semantics (optional)
+            // sparseFeatures: feature matrix for sparse features with combined semantics (optional)
             // predRes: prediction results
             //          node classification: a json dict with two arrays "predLabels", "trueLabels"
             //          link prediction: a json dict with two arrays "posLinkRes", "negLinkRes"
             //              Each item in the array is four numbers: src, tgt, prediction (1/0), truth (1/0)
-            let [graph, emb, emb2d, attrs, features, predRes, initialLayout] = [
+            let [graph, emb, emb2d, attrs, predRes, initialLayout, distances] = [
                 await fetch(`${where}/graph.json`).then((r) => r.json()),
                 await fetch(`${where}/node-embeddings.csv`)
                     .then((r) => r.text())
@@ -92,19 +99,6 @@ export function fetchGraphData(homePath, datasetId) {
                     .catch(() => {
                         return []; // In case there is no meta data
                     }),
-                await fetch(`${where}/features.csv`)
-                    .then((r) => r.text())
-                    .then(csvParseRows)
-                    .then((d) => {
-                        if (isNaN(d[0][0])) {
-                            throw new Error();
-                        }
-                        // Check if integer or float
-                        const func = d[0][0] % 1 == 0 ? parseInt : parseFloat;
-                        // Convert a 2D matrix of numbers
-                        return d.map((row) => row.map((x) => func(x)));
-                    })
-                    .catch(() => null),
                 await fetch(`${where}/prediction-results.json`)
                     .then((r) => r.json())
                     .catch(() => null),
@@ -115,17 +109,24 @@ export function fetchGraphData(homePath, datasetId) {
                         return d;
                     })
                     .catch(() => null),
+                await fetch(`${where}/distances.json`)
+                    .then((r) => r.json())
+                    .catch(() => null),
             ];
 
             const state = getState();
             const { neighborDistanceMetric } = state.param;
             const { numBins } = state.spec.scatterHist;
-            const hops = findHopsInDatasetInfo(datasetId);
+            const hops = graph.hops;
 
-            const edgeRes = filterEdgeAndComputeDict(graph.nodes.length, graph.links);
-            graph.edges = edgeRes.edges;
-            graph.edgeDict = edgeRes.edgeDict;
-            Object.assign(graph, computeNeighborMasks(graph.nodes.length, graph.edgeDict, hops));
+            graph.nodeTypes = countNodesByType(graph.nodes);
+            populateNodeTypeIndex(graph.nodes, graph.nodeTypes);
+            // const edgeRes = filterEdgeAndComputeDict(graph.nodes.length, graph.links);
+            // graph.edges = edgeRes.edges;
+            // graph.edgeDict = edgeRes.edgeDict;
+            // Object.assign(graph, computeNeighborMasks(graph.nodes.length, graph.edgeDict, hops));
+            graph.neighborMasks = graph.neighborMasks.map((m) => bs.fromHexString(m));
+            graph.neighborMasksByHop = graph.neighborMasksByHop.map((h) => h.map((m) => bs.fromHexString(m)));
 
             focalLayoutWorker.initializeState(
                 graph.nodes.length,
@@ -144,6 +145,9 @@ export function fetchGraphData(homePath, datasetId) {
                 );
             }
 
+            // graph.denseFeatures = attrs.length ? normalizeFeatures(attrs, graph.nodes) : null;
+            // graph.sparseFeatures = sparseFeatures;
+
             dispatch(
                 fetchDataSuccess({
                     datasetId,
@@ -151,10 +155,10 @@ export function fetchGraphData(homePath, datasetId) {
                     emb,
                     emb2d,
                     attrs,
-                    features,
                     hops,
                     predRes,
                     initialLayout,
+                    distances,
                 })
             );
 
@@ -174,17 +178,20 @@ export function fetchGraphData(homePath, datasetId) {
                 graph.nodes.length,
                 graph.edges,
                 graph.neighborMasks.map((x) => x.toString()),
+                graph.sparseFeatures || graph.denseFeatures || null,
+                graph.nodes.map((n) => n.typeId),
                 neighborDistanceMetric,
-                numBins
+                numBins,
+                distances.distSample.featureDistMax
             );
-            const sampleDistData = await distanceWorker.computeDistances(
-                "sample",
-                null,
-                state.distances.maxSample
-            );
-            dispatch(computeDistancesDone(sampleDistData, 0));
-            const edgeDistData = await distanceWorker.computeDistances("edge");
-            dispatch(computeDistancesDone(edgeDistData, 1));
+            // const sampleDistData = await distanceWorker.computeDistances(
+            //     "sample",
+            //     null,
+            //     state.distances.maxSample
+            // );
+            // dispatch(computeDistancesDone(sampleDistData, 0));
+            // const edgeDistData = await distanceWorker.computeDistances("edge");
+            // dispatch(computeDistancesDone(edgeDistData, 1));
         } catch (e) {
             dispatch(fetchDataError(e));
         }
@@ -215,8 +222,21 @@ export function highlightNodes(nodeIndices, brushedArea = null, fromView = null,
     return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIndices, brushedArea, fromView, which };
 }
 
-export function highlightNodePairs(which, brushedArea, brushedPairs, showTopkUnseen = false) {
-    return { type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS, brushedArea, which, brushedPairs, showTopkUnseen };
+export function highlightNodePairs(
+    isTopoVsLatent,
+    which,
+    brushedArea,
+    brushedPairs,
+    showTopkUnseen = false,
+) {
+    return {
+        type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS,
+        brushedArea,
+        which,
+        brushedPairs,
+        showTopkUnseen,
+        isTopoVsLatent,
+    };
 }
 
 export function hoverNode(nodeIdx, fromFeature = null) {

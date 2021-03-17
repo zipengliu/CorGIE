@@ -42,6 +42,7 @@ export default {
 
     distances: {
         maxSample: 1000000,
+        featureScale: null,
         displaySpecial: [],
         display: [
             { isComputing: true, title: "all (down-sampled)" },
@@ -114,6 +115,7 @@ export default {
 
         nodePairFilter: {
             // ascending: true, // sort the node pairs by latent distance in ascending order
+            isTopoVsLatent: null,
             which: null,
             brushedArea: null,
             useLinearScale: true,

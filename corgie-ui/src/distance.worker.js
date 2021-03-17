@@ -1,27 +1,47 @@
 import * as Comlink from "comlink";
-import { bin as d3bin } from "d3";
+import { bin as d3bin, scaleLinear, extent } from "d3";
 import bs from "bitset";
-import { getNeighborDistance, getCosineDistance, rectBinning } from "./utils";
+import { getNeighborDistance, getCosineDistance, getEuclideanDistance, rectBinning } from "./utils";
 
 // Store some big objects in the worker thread to avoid data transmission
 let state = {
     emb: null,
-    numNodes: null,
+    features: null,
+    nodeTypeIds: null, // array of typeId for each node
     edges: null,
     neighborMasks: null,
     distMetric: null,
     numBins: null,
     distMatLatent: null,
     distMatTopo: null,
+    distMatFeature: null,
+    featureDistMax: null,
+    featureScale: null,
 };
 
-function initializeState(emb, numNodes, edges, neighborMasks, distMetric, numBins) {
+function initializeState(
+    emb,
+    numNodes,
+    edges,
+    neighborMasks,
+    features,
+    nodeTypeIds,
+    distMetric,
+    numBins,
+    featureDistMax
+) {
     state.emb = emb;
     state.numNodes = numNodes;
     state.edges = edges;
     state.neighborMasks = neighborMasks.map((m) => bs(m));
+    state.features = features;
+    state.nodeTypeIds = nodeTypeIds;
     state.distMetric = distMetric;
     state.numBins = numBins;
+    if (features) {
+        state.featureDistMax = featureDistMax;
+        state.featureScale = scaleLinear().domain([0, featureDistMax]).range([0, 1]);
+    }
 
     function initDistMat(n) {
         let d = {};
@@ -32,13 +52,15 @@ function initializeState(emb, numNodes, edges, neighborMasks, distMetric, numBin
     }
     state.distMatLatent = initDistMat(numNodes);
     state.distMatTopo = initDistMat(numNodes);
+    state.distMatFeature = features ? initDistMat(numNodes) : null;
 }
 
 function computeDistances(mode, targetNodes = null, maxNumPairs = 0, targetPairs = null) {
-    console.log("Computing distances ...", new Date());
+    console.log("Computing distances ...");
+    const startTime = new Date();
 
     const n = state.numNodes;
-    const { distMatLatent, distMatTopo, emb, neighborMasks } = state;
+    const { distMatLatent, distMatTopo, distMatFeature, emb, neighborMasks, nodeTypeIds, features } = state;
 
     let numPairs, pairGen;
     if (mode === "all") {
@@ -110,58 +132,77 @@ function computeDistances(mode, targetNodes = null, maxNumPairs = 0, targetPairs
         tgtBuf = new Uint16Array(tgtArrayBuffer);
     const dist = [],
         distLatent = [],
-        distTopo = [];
+        distTopo = [],
+        distFeature = [];
 
     function computeDist(i, j, k) {
-        let dLat, dTopo;
+        let dLat, dTopo, dFeat;
         if (distMatLatent[i].hasOwnProperty(j)) {
             dLat = distMatLatent[i][j];
             dTopo = distMatTopo[i][j];
+            dFeat = features ? distMatFeature[i][j] : null;
         } else {
             dLat = getCosineDistance(emb[i], emb[j]);
             dTopo = getNeighborDistance(neighborMasks[i], neighborMasks[j], state.distMetric);
+            dFeat =
+                !features || nodeTypeIds[i] !== nodeTypeIds[j]
+                    ? 0
+                    : state.featureScale(getEuclideanDistance(features[i], features[j]));
+                    // : getEuclideanDistance(features[i], features[j]);
             distMatLatent[i][j] = dLat;
             distMatLatent[j][i] = dLat;
             distMatTopo[i][j] = dTopo;
             distMatTopo[j][i] = dTopo;
+            if (features) {
+                distMatFeature[i][j] = dFeat;
+                distMatFeature[j][i] = dFeat;
+            }
         }
         distLatent.push(dLat);
         distTopo.push(dTopo);
-        dist.push([dLat, dTopo]);
+        if (features) {
+            distFeature.push(dFeat);
+            dist.push([dLat, dTopo, dFeat]);
+        } else {
+            dist.push([dLat, dTopo]);
+        }
         srcBuf[k] = i;
         tgtBuf[k] = j;
     }
 
     let k = 0;
-    // let pairIter = pairGen();
-    // let iterRes = pairIter.next();
-    // while (!iterRes.done) {
-    //     const s = iterRes.value[0],
-    //         t = iterRes.value[1];
-    //     computeDist(s, t, k);
-    //     k++;
-    //     iterRes = pairIter.next();
-    // }
     for (const p of pairGen()) {
         computeDist(p[0], p[1], k);
         k++;
     }
-    console.log("Binning distances...", new Date());
+    console.log("Binning distances...");
 
     const binGen1d = d3bin().domain([0, 1]).thresholds(state.numBins);
     const binsLatent = binGen1d(distLatent),
         binsTopo = binGen1d(distTopo);
-    const gridRes = rectBinning(dist, [1, 1], state.numBins);
+    const gridsTopo = rectBinning(dist, [0, 1], [1, 1], state.numBins);
+    let binsFeature = null,
+        gridsFeature = null;
+    if (features) {
+        binsFeature = binGen1d(distFeature);
+        gridsFeature = rectBinning(dist, [0, 2], [1, 1], state.numBins);
+    }
 
-    console.log("Finish computing distances!", new Date());
+    const endTime = new Date();
+    console.log(
+        "Finish computing distances.  total time: ",
+        (endTime.getTime() - startTime.getTime()) / 1000,
+        "s"
+    );
     return Comlink.transfer(
         {
             src: srcBuf,
             tgt: tgtBuf,
             binsLatent,
             binsTopo,
-            gridBins: gridRes.bins,
-            gridBinsMaxCnt: gridRes.maxCnt,
+            binsFeature,
+            gridsTopo,
+            gridsFeature,
         },
         [srcBuf.buffer, tgtBuf.buffer]
     );

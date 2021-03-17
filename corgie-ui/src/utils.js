@@ -1,6 +1,32 @@
 import bs from "bitset";
 import { scaleLinear, extent, lab } from "d3";
 
+// count all, only happen in the initialization phase
+export function countNodesByType(nodes) {
+    let counts = {};
+    for (let n of nodes) {
+        if (!counts.hasOwnProperty(n.type)) {
+            counts[n.type] = 0;
+        }
+        counts[n.type]++;
+    }
+    return Object.keys(counts).map((t, i) => ({ id: i, name: t, count: counts[t] }));
+}
+
+// Assign a node type index to each node and return a mapping from type (string) to typeIndex (int)
+// Note: this function changes the nodes
+export function populateNodeTypeIndex(nodes, nodeTypes) {
+    let mapping = {},
+        a = [],
+        i = 0;
+    for (let nt of nodeTypes) {
+        mapping[nt.name] = nt.id;
+    }
+    for (let n of nodes) {
+        n.typeId = mapping[n.type];
+    }
+}
+
 export function aggregateBinaryFeatures(features, highlightNodes, computeMapping = true) {
     const m = features[0].length;
     const cnts = new Array(m).fill(0);
@@ -107,6 +133,14 @@ export function getCosineDistance(u, v) {
     const mag = Math.sqrt(magU) * Math.sqrt(magV);
     const sim = p / mag;
     return sim2dist(sim);
+}
+
+export function getEuclideanDistance(u, v) {
+    let s = 0;
+    for (let i = 0; i < u.length; i++) {
+        s += Math.pow(u[i] - v[i], 2);
+    }
+    return Math.sqrt(s);
 }
 
 // Get the positional color for a node that sits at (x, y), where x,y is in [0,1]
@@ -218,7 +252,7 @@ export function binarySearch(arr, v) {
     return l;
 }
 
-export function rectBinning(data, extent, numBins) {
+export function rectBinning(data, accessCol, extent, numBins) {
     const unitX = extent[0] / numBins,
         unitY = extent[1] / numBins;
     const bins = new Array(numBins);
@@ -236,14 +270,8 @@ export function rectBinning(data, extent, numBins) {
         m = Math.max(m, bins[i][j].length);
     }
 
-    if (data.constructor === Float32Array) {
-        for (let i = 0; i < data.length; i += 2) {
-            inc(data[i], data[i + 1], i >> 1);
-        }
-    } else {
-        for (let i = 0; i < data.length; i += 1) {
-            inc(data[i][0], data[i][1], i);
-        }
+    for (let i = 0; i < data.length; i += 1) {
+        inc(data[i][accessCol[0]], data[i][accessCol[1]], i);
     }
     return { bins, maxCnt: m };
 }
@@ -350,4 +378,16 @@ export function computeEdgeDict(numNodes, edges) {
         d[e.target][e.source] = true;
     }
     return d;
+}
+
+export function normalizeFeatures(attrMeta, nodes) {
+    const scalingFuncs = [];
+    for (let a of attrMeta) {
+        const f = nodes.map((n) => Number(n[a.name]) || 0);
+        const e = extent(f);
+        scalingFuncs.push(scaleLinear().domain(e).range([0, 1]));
+    }
+    return nodes.map((n) =>
+        attrMeta.map((a, i) => (n.hasOwnProperty(a.name) ? scalingFuncs[i](n[a.name]) : 0))
+    );
 }

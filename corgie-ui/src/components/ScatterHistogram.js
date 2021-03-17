@@ -14,6 +14,7 @@ import Brush from "./Brush";
 function ScatterHistogram({
     hasHist,
     data,
+    isTopoVsLatent,
     spec,
     xLabel,
     yLabel,
@@ -25,7 +26,14 @@ function ScatterHistogram({
     const { margins, histWidth, scatterWidth, legendWidth, histHeight, scatterHeight, tickLabelGap } = spec;
     const u = spec.gridBinSize,
         numBins = spec.numBins;
-    const { binsLatent, binsTopo, gridBins, src, tgt } = data;
+    const { binsLatent, binsTopo, binsFeature, gridsTopo, gridsFeature, src, tgt } = data;
+    const gridBins = isTopoVsLatent ? gridsTopo.bins : gridsFeature.bins,
+        gridBinsMaxCnt = isTopoVsLatent ? gridsTopo.maxCnt : gridsFeature.maxCnt,
+        binsY = isTopoVsLatent ? binsTopo : binsFeature;
+    let hValsY;
+    if (hVals) {
+        hValsY = isTopoVsLatent ? hVals[1] : hVals[2];
+    }
 
     const svgWidth =
             margins.left +
@@ -40,7 +48,7 @@ function ScatterHistogram({
     const uLat = u * scatterWidth,
         uTopo = u * scatterHeight;
     let colorScale,
-        linearColorScale = scaleSequential(interpolateGreys).domain([0, data.gridBinsMaxCnt]);
+        linearColorScale = scaleSequential(interpolateGreys).domain([0, gridBinsMaxCnt]);
     if (useLinearScale) {
         colorScale = linearColorScale;
     } else {
@@ -48,17 +56,17 @@ function ScatterHistogram({
             const s = scaleSequentialLog(interpolateGreys).domain([1, domainMax + 1]);
             return (x) => s(x + 1);
         };
-        colorScale = getColorLogScale(data.gridBinsMaxCnt);
+        colorScale = getColorLogScale(gridBinsMaxCnt);
     }
-    let histScales, maxCntLatent, maxCntTopo;
+    let histScales, maxCntLatent, maxCntY;
 
     if (hasHist) {
         maxCntLatent = max(binsLatent.map((b) => b.length));
-        maxCntTopo = max(binsTopo.map((b) => b.length));
+        maxCntY = max(binsY.map((b) => b.length));
         if (useLinearScale) {
             histScales = {
                 latent: scaleLinear().domain([0, maxCntLatent]).range([0, histHeight]),
-                topo: scaleLinear().domain([0, maxCntTopo]).range([0, histWidth]),
+                y: scaleLinear().domain([0, maxCntY]).range([0, histWidth]),
             };
         } else {
             const getLogScale = (domainMax, rangeMax) => {
@@ -69,7 +77,7 @@ function ScatterHistogram({
             };
             histScales = {
                 latent: getLogScale(maxCntLatent, histHeight),
-                topo: getLogScale(maxCntTopo, histWidth),
+                y: getLogScale(maxCntY, histWidth),
             };
         }
     }
@@ -133,19 +141,19 @@ function ScatterHistogram({
                                 y={uTopo * i}
                                 height={uLat}
                                 width={uTopo}
-                                fill={linearColorScale((i * data.gridBinsMaxCnt) / 5)}
+                                fill={linearColorScale((i * gridBinsMaxCnt) / 5)}
                             />
                         ))}
                     </g>
                     <text x={9} y={12 + 3 * uTopo} textAnchor="start">
                         {cntFormat(
                             useLinearScale
-                                ? data.gridBinsMaxCnt / 2
-                                : Math.pow(10, Math.log10(data.gridBinsMaxCnt + 1) / 2)
+                                ? gridBinsMaxCnt / 2
+                                : Math.pow(10, Math.log10(gridBinsMaxCnt + 1) / 2)
                         )}
                     </text>
                     <text x={uLat / 2} y={24 + 5 * uTopo} textAnchor="middle">
-                        {cntFormat(data.gridBinsMaxCnt)}
+                        {cntFormat(gridBinsMaxCnt)}
                     </text>
                 </g>
 
@@ -236,13 +244,15 @@ function ScatterHistogram({
                     )}
                     {hVals && (
                         <g className="value-marker">
-                            <g transform={`translate(0,${(1 - hVals[1]) * scatterHeight})`}>
-                                <line x1={0} y1={0} x2={scatterWidth} y2={0} />
-                                <rect x={scatterWidth} y={-8} width={34} height={16} />
-                                <text x={scatterHeight + 2} y={4}>
-                                    {valFormat(hVals[1])}
-                                </text>
-                            </g>
+                            {hValsY && (
+                                <g transform={`translate(0,${(1 - hValsY) * scatterHeight - 1})`}>
+                                    <line x1={0} y1={0} x2={scatterWidth} y2={0} />
+                                    <rect x={scatterWidth} y={-8} width={34} height={16} />
+                                    <text x={scatterHeight + 2} y={4}>
+                                        {valFormat(hValsY)}
+                                    </text>
+                                </g>
+                            )}
                             <g transform={`translate(${hVals[0] * scatterWidth},0)`}>
                                 <line x1={0} y1={0} x2={0} y2={scatterHeight} />
                                 <rect x={-20} y={-12} width={40} height={16} />
@@ -328,24 +338,24 @@ function ScatterHistogram({
                                 {new Array(histTickNum).fill(0).map((_, i) => (
                                     <line
                                         key={i}
-                                        x1={-histScales.topo((maxCntTopo / histTickNum) * (i + 1))}
+                                        x1={-histScales.y((maxCntY / histTickNum) * (i + 1))}
                                         y1={2}
-                                        x2={-histScales.topo((maxCntTopo / histTickNum) * (i + 1))}
+                                        x2={-histScales.y((maxCntY / histTickNum) * (i + 1))}
                                         y2={6}
                                     />
                                 ))}
                                 <text x={-histWidth} y={17} textAnchor="middle">
-                                    {cntFormat(maxCntTopo)}
+                                    {cntFormat(maxCntY)}
                                 </text>
                             </g>
                             <g>
-                                {binsTopo.map((b, i) => (
+                                {binsY.map((b, i) => (
                                     <rect
                                         className="bar"
                                         key={i}
-                                        x={-histScales.topo(b.length)}
+                                        x={-histScales.y(b.length)}
                                         y={-b.x1 * scatterHeight}
-                                        width={histScales.topo(b.length)}
+                                        width={histScales.y(b.length)}
                                         height={uTopo - 1}
                                     >
                                         <title>
