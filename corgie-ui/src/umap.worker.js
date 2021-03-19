@@ -16,16 +16,17 @@ function initializeState(neighborMasks, neighborMasks1hop, distMetric) {
     state.distMetric = distMetric;
 }
 
-const minNNeigh = 10,
-    maxNNeigh = 20;
+const minNNeigh = 15,
+    maxNNeigh = 25;
 const nNeighScale = scaleLinear()
     .domain([minNNeigh, 1000])
     .range([minNNeigh, maxNNeigh])
     .clamp(true);
-const minDistScale = scaleLinear()
-    .domain([minNNeigh, 1000])
-    .range([1, 0.05])
-    .clamp(true);
+// const minDistScale = scaleLinear()
+//     .domain([minNNeigh, 1000])
+//     .range([0.2, 0.05])
+//     .clamp(true);
+const minDistScale = () => 0.1;
 
 const runUMAP = (nodeIdxArr, useGlobalMask, nodeSize) => {
     const masks = useGlobalMask ? state.neighborMasks : state.neighborMasks1hop;

@@ -14,6 +14,7 @@ import HighlightControl from "./HighlightControl";
 import FocusControl from "./FocusControl";
 import SettingsView from "./SettingsView";
 import DistanceView from "./DistanceView";
+import SVGdefs from './SVGdefs';
 import "./App.css";
 
 class App extends Component {
@@ -82,6 +83,7 @@ class App extends Component {
                         <GraphView />
                     </div>
                 </div>
+                <SVGdefs />
                 <DetailView />
             </div>
         );

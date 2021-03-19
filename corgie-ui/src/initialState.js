@@ -4,7 +4,7 @@ export default {
     loaded: false,
     datasetId: null,
     homePath: "",
-    // homePath: '/~zipeng/private/cofegrem-prototype',
+    // homePath: '/~zipeng/private/corgie-prototype',
 
     numNodeClasses: false,
     hasLinkPredictions: false,
@@ -122,10 +122,7 @@ export default {
         },
         unseenTopK: 5,
 
-        topoVsLatent: {
-            topoDistFunc: null, // We are going to have different metrics to measure topo difference
-            shownNodePairs: "edge", // Could be all, edge, highlighted, and by types (e.g movie-movie, movie-user)
-        },
+        activeDistanceTab: 'topo-vs-latent',
     },
 
     spec: {
@@ -182,9 +179,9 @@ export default {
         scatterHist: {
             margins: { top: 15, bottom: 12, left: 18, right: 20 },
             histHeight: 30,
-            scatterHeight: 100,
             histWidth: 30,
-            scatterWidth: 100,
+            scatterHeight: 80,
+            scatterWidth: 80,
             tickLabelGap: 15,
             dotSize: 2,
             numBins: 20,

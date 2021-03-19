@@ -542,18 +542,27 @@ function setNodeColors(draft, colorBy) {
 }
 
 // Determine if all nodes are in a focal group.  If yes return the gid (>0), else return 0
-function areNodesAllInFocalGroups(nodes, isNodeSelected) {
+function findFocalGroups(nodes, isNodeSelected) {
     let r = 0;
-    for (let nid of nodes) {
-        if (isNodeSelected[nid]) {
-            if (r > 0 && isNodeSelected[nid] !== r) {
-                // Other nodes are in the focal group r, but this one is not in r or not focal node
+    if (nodes.length === 2) {
+        // determine if the two nodes between to two different focal group respectively
+        const g1 = isNodeSelected[nodes[0]],
+        g2 = isNodeSelected[nodes[1]];
+        if (g1 > 0 && g2 > 0 && g1 !== g2) {
+            return Math.max(g1, g2) + 1;
+        }
+    } else {
+        for (let nid of nodes) {
+            if (isNodeSelected[nid]) {
+                if (r > 0 && isNodeSelected[nid] !== r) {
+                    // Other nodes are in the focal group r, but this one is not in r or not focal node
+                    return 0;
+                }
+                r = isNodeSelected[nid];
+            } else if (r > 0) {
+                // Other nodes are in the focal group, but this one is not
                 return 0;
             }
-            r = isNodeSelected[nid];
-        } else if (r > 0) {
-            // Other nodes are in the focal group, but this one is not
-            return 0;
         }
     }
     return r;
@@ -979,7 +988,7 @@ const reducers = produce((draft, action) => {
                         false
                     );
                     draft.featureAgg.highlighted = {
-                        displayId: areNodesAllInFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
+                        displayId: findFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
                         cnts: fAggCntData.cnts,
                         compressedCnts: compressFeatureValues(
                             fAggCntData.cnts,
@@ -988,7 +997,7 @@ const reducers = produce((draft, action) => {
                     };
                 } else if (draft.nodeAttrs.active && action.fromView !== "node-attr") {
                     draft.nodeAttrs.highlighted = {
-                        displayId: areNodesAllInFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
+                        displayId: findFocalGroups(draft.highlightedNodes, draft.isNodeSelected),
                         data: summarizeNodeAttrs(
                             draft.graph.nodes,
                             draft.attrMeta,
@@ -1061,10 +1070,7 @@ const reducers = produce((draft, action) => {
                             false
                         );
                         draft.featureAgg.hovered = {
-                            displayId: areNodesAllInFocalGroups(
-                                draft.hoveredNodesAndNeighbors,
-                                draft.isNodeSelected
-                            ),
+                            displayId: findFocalGroups(draft.hoveredNodesAndNeighbors, draft.isNodeSelected),
                             cnts: fAggCntData.cnts,
                             compressedCnts: compressFeatureValues(
                                 fAggCntData.cnts,
@@ -1085,10 +1091,7 @@ const reducers = produce((draft, action) => {
                 }
                 if (draft.nodeAttrs.active) {
                     draft.nodeAttrs.hovered = {
-                        displayId: areNodesAllInFocalGroups(
-                            draft.hoveredNodesAndNeighbors,
-                            draft.isNodeSelected
-                        ),
+                        displayId: findFocalGroups(draft.hoveredNodesAndNeighbors, draft.isNodeSelected),
                         data: summarizeNodeAttrs(
                             draft.graph.nodes,
                             draft.attrMeta,
@@ -1170,12 +1173,12 @@ const reducers = produce((draft, action) => {
                     });
                     if (newSel.length === 2) {
                         // Compute the diff feature data
-                        const diffCnts = draft.featureAgg.display[1].cnts.map(
-                            (c1, i) => c1 - draft.featureAgg.display[2].cnts[i]
+                        const diffCnts = draft.featureAgg.display[1].cnts.map((c1, i) =>
+                            Math.abs(c1 - draft.featureAgg.display[2].cnts[i])
                         );
-                        // const diffExtent = extent(diffCnts);
+                        const diffMax = max(diffCnts);
                         // const t = Math.max(Math.abs(diffExtent[0]), Math.abs(diffExtent[1]));
-                        const t = Math.max(newSel[0].length, newSel[1].length);
+                        // const t = Math.max(newSel[0].length, newSel[1].length);
                         const diffCompressedCnts = compressFeatureValues(
                             diffCnts,
                             draft.spec.feature.maxNumStrips
@@ -1193,7 +1196,8 @@ const reducers = produce((draft, action) => {
                             cnts: diffCnts,
                             compressedCnts: diffCompressedCnts,
                             featToNid: diffFeatToNid,
-                            scale: scaleSequential(interpolateRdBu).domain([-t, t]),
+                            // scale: scaleSequential(interpolateRdBu).domain([-t, t]),
+                            scale: scaleSequential(interpolateGreys).domain([0, diffMax]),
                         });
                         draft.param.features.collapsed.push(false);
                     }

@@ -249,7 +249,7 @@ class NodeAttrView extends Component {
                             hovered={featureAgg.hovered}
                             highlighted={featureAgg.highlighted}
                             toggleFunc={changeParam.bind(this, "features.collapsed", null, true, i)}
-                            legendText={d.title === "diff" ? "counts of foc-0 - counts of foc-1" : "#nodes"}
+                            legendText={d.title === "diff" ? "|counts of foc-0 - counts of foc-1|" : "#nodes"}
                         />
                     </div>
                 </div>

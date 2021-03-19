@@ -5,7 +5,7 @@ import NodeRep from "./NodeRep";
 
 // Visual encoding for focal nodes: black strokes
 // Note that focalGroups is an array of array
-export const FocusLayer = memo(({ focalGroups, nodes, coords, focalBBox, nodeSize }) => (
+export const FocusLayer = memo(({ focalGroups, nodes, coords, focalBBox, nodeSize, useStroke }) => (
     <Layer listening={false}>
         <Group>
             {!!focalBBox &&
@@ -25,7 +25,12 @@ export const FocusLayer = memo(({ focalGroups, nodes, coords, focalBBox, nodeSiz
                         y={coords[nodeIdx].y}
                         radius={nodeSize}
                         typeId={nodes[nodeIdx].typeId}
-                        style={{ fillEnabled: false, stroke: "black", strokeWidth: 1 }}
+                        style={{
+                            fillEnabled: false,
+                            stroke: useStroke? useStroke: '#000',
+                            strokeWidth: 1,
+                            strokeEnabled: !!useStroke,
+                        }}
                     />
                 ))}
             </Group>

@@ -107,6 +107,7 @@ class Embeddings2D extends Component {
                                     nodes={nodes}
                                     coords={coords}
                                     nodeSize={nodeSize}
+                                    useStroke="#ddd"
                                 />
                             )}
                             {highlightedNodes.length > 0 && (
@@ -194,7 +195,7 @@ function BaseLayerUnconnected({ nodeColors, colorBy, nodeSize, coords, nodes, ho
                         radius={nodeSize}
                         typeId={nodes[i].typeId}
                         style={{
-                            fill: colorBy === "umap" ? "grey" : nodeColors[i],
+                            fill: colorBy === "umap" ? "black" : nodeColors[i],
                             strokeEnabled: false,
                         }}
                         events={{

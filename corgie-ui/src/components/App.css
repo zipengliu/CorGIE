@@ -527,8 +527,8 @@ rect.highlight-strip {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    justify-content: space-around;
-    /* justify-content: start; */
+    /* justify-content: space-around; */
+    justify-content: center;
 }
 .scatter-hist-list .stuff-container {
     margin: 5px 5px 0 0;

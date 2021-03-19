@@ -118,6 +118,7 @@ class GraphLayout extends Component {
                                     nodes={nodes}
                                     nodeColors={nodeColors}
                                     nodeSize={nodeSize}
+                                    useStroke={this.props.useStrokeForFocal ? "#000" : false}
                                 />
                             )}
                             {highlightedNodes.length > 0 && (

@@ -266,7 +266,12 @@ export class DistanceView extends Component {
             <div className="view" id="distance-view">
                 <h5 className="view-title text-center">Distances in latent, topology, and feature spaces</h5>
                 <div className="view-body">
-                    <Tabs defaultActiveKey="topo-vs-latent">
+                    <Tabs
+                        activeKey={this.props.activeTab}
+                        onSelect={(k) => {
+                            changeParam("activeDistanceTab", k);
+                        }}
+                    >
                         <Tab eventKey="topo-vs-latent" title="topo vs. latent">
                             {getScatterHistList(true)}
                         </Tab>
@@ -366,11 +371,13 @@ const mapStateToProps = (state) => {
         nodeTypes: state.graph.nodeTypes,
         selectedNodes,
         highlightedNodes: state.highlightedNodes,
+        hasLinkPredictions: state.hasLinkPredictions,
         highlightDistVals,
         distances: state.distances,
         spec: state.spec.scatterHist,
         nodePairFilter: state.param.nodePairFilter,
         hops: state.param.hops,
+        activeTab: state.param.activeDistanceTab,
         formData: state.scatterplotForm,
         hasFeatures: !!f,
     };

@@ -169,14 +169,6 @@ function Histogram({
                     </g>
                 )}
             </g>
-            <defs>
-                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="0" refY="5" orient="auto">
-                    <polygon points="0 0, 10 5, 0 10" fill="black" />
-                </marker>
-                <marker id="arrowhead-big" markerWidth="12" markerHeight="12" refX="0" refY="6" orient="auto">
-                    <polygon points="0 0, 12 6, 0 12" fill="black" />
-                </marker>
-            </defs>
         </svg>
     );
 }

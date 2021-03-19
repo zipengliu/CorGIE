@@ -86,7 +86,7 @@ function GraphView({
                                 {focalLayout.running ? (
                                     <ComputingSpinner />
                                 ) : (
-                                    <GraphLayout layoutData={focalLayout} />
+                                    <GraphLayout layoutData={focalLayout} useStrokeForFocal={false} />
                                 )}
                                 {!!focalLayout.runningMsg && (
                                     <div style={{ margin: "10px" }}>
@@ -115,7 +115,7 @@ function GraphView({
                             {initialLayout.running ? (
                                 <ComputingSpinner />
                             ) : (
-                                <GraphLayout layoutData={initialLayout} />
+                                <GraphLayout layoutData={initialLayout} useStrokeForFocal={true} />
                             )}
                         </div>
                     </div>

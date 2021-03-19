@@ -181,8 +181,7 @@ export function fetchGraphData(homePath, datasetId) {
                 graph.sparseFeatures || graph.denseFeatures || null,
                 graph.nodes.map((n) => n.typeId),
                 neighborDistanceMetric,
-                numBins,
-                distances.distSample.featureDistMax
+                numBins
             );
             // const sampleDistData = await distanceWorker.computeDistances(
             //     "sample",
@@ -222,13 +221,7 @@ export function highlightNodes(nodeIndices, brushedArea = null, fromView = null,
     return { type: ACTION_TYPES.HIGHLIGHT_NODES, nodeIndices, brushedArea, fromView, which };
 }
 
-export function highlightNodePairs(
-    isTopoVsLatent,
-    which,
-    brushedArea,
-    brushedPairs,
-    showTopkUnseen = false,
-) {
+export function highlightNodePairs(isTopoVsLatent, which, brushedArea, brushedPairs, showTopkUnseen = false) {
     return {
         type: ACTION_TYPES.HIGHLIGHT_NODE_PAIRS,
         brushedArea,

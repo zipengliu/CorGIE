@@ -71,7 +71,7 @@ export class SettingsView extends Component {
             <div id="settings-view" className="view">
                 <h5 className="view-title">Settings</h5>
                 <div className="view-body">
-                    <div>Node</div>
+                    <div>Node visuals</div>
                     <div className="setting-item">
                         <div className="setting-label">Color:</div>
                         <div style={{ display: "inline-block" }}>
@@ -83,7 +83,7 @@ export class SettingsView extends Component {
                                 <Dropdown.Toggle
                                     id="color-by-toggle-btn"
                                     size="xxs"
-                                    variant="outline-secondary"
+                                    variant="primary"
                                 >
                                     {colorByNaming[colorBy]}
                                 </Dropdown.Toggle>
@@ -252,7 +252,7 @@ export class SettingsView extends Component {
                         </ButtonGroup>
                     </div>
 
-                    <div>Interaction</div>
+                    <div>Filter for Interaction</div>
 
                     <div className="setting-item">
                         <span style={{ marginRight: "5px" }}>neighborhood activation:</span>
@@ -262,7 +262,7 @@ export class SettingsView extends Component {
                                     this.props.changeParam("hopsActivated", parseInt(h), false);
                                 }}
                             >
-                                <Dropdown.Toggle id="hops-to-show" size="xxs" variant="outline-secondary">
+                                <Dropdown.Toggle id="hops-to-show" size="xxs" variant="primary">
                                     {hopsActivated}
                                 </Dropdown.Toggle>
 
@@ -295,7 +295,7 @@ export class SettingsView extends Component {
                                         <Dropdown.Toggle
                                             id="highlight-node-type-dropdown"
                                             size="xxs"
-                                            variant="outline-secondary"
+                                            variant="primary"
                                         >
                                             {highlightNodeType === "all"
                                                 ? "all"
@@ -334,7 +334,7 @@ export class SettingsView extends Component {
                                         <Dropdown.Toggle
                                             id="highlight-node-type-dropdown"
                                             size="xxs"
-                                            variant="outline-secondary"
+                                            variant="primary"
                                         >
                                             {nodeLabelNaming[highlightNodeLabel]}
                                         </Dropdown.Toggle>
