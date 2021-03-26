@@ -11,13 +11,14 @@
 .App .view {
     border: 1px solid grey;
     border-radius: 5px;
-    margin: 10px 5px;
+    margin: 5px 5px;
     -webkit-box-shadow: 3px 3px 5px 0px grey;
     -moz-box-shadow: 3px 3px 5px 0px grey;
     box-shadow: 3px 3px 5px 0px grey;
 }
 .view .view-title {
     text-align: center;
+    font-size: 1rem;
     margin-bottom: 0;
     background-color: #343a40;
     color: white;
@@ -276,31 +277,36 @@
     max-width: 400px;
 }
 #focus-control .focal-group {
-    margin-bottom: 10px;
+    margin-bottom: 5px;
 }
 
 #distance-view {
     /* max-width: 800px; */
     /* font-size: 0.875rem; */
 }
+#distance-view .tab-pane.show {
+    padding: 5px;
+    border: 1px solid #dee2e6;
+    border-top: 0;
+}
 
-#create-scatterplot-modal .modal-content {
+.modal-content {
     border: 1px solid grey;
     border-radius: 5px;
 }
-#create-scatterplot-modal .modal-header {
+.modal-header {
     background-color: #343a40;
     color: white;
     padding: 0.8rem 1.2rem;
 }
-#create-scatterplot-modal .modal-header .modal-title {
+.modal-header .modal-title {
     font-size: 1.2rem;
     line-height: 1.2;
 }
-#create-scatterplot-modal .modal-header .close {
+.modal-header .close {
     color: white;
 }
-#create-scatterplot-modal .modal-body {
+.modal-body {
     padding: 1rem 1.2rem;
 }
 #create-scatterplot-modal .form-row {
@@ -480,11 +486,11 @@ rect.highlight-strip {
     /* position: absolute;
     right: 5px;
     top: 5px; */
-    background-color: #666;
-    color: white;
+    /* background-color: #666;
+    color: white; */
     cursor: pointer;
-    font-size: 0.7rem;
-    padding: 1px 4px;
+    /* font-size: 0.7rem; */
+    /* padding: 1px 4px; */
 }
 
 .search-text-box {
@@ -505,21 +511,15 @@ rect.highlight-strip {
 }
 
 #embeddings-view canvas:nth-child(n + 3),
-#graph-view canvas:not(:first-child) {
+#initial-graph-view canvas:not(:first-child),
+#focal-graph-view canvas:not(:first-child) {
     pointer-events: none;
 }
-
-#graph-view .graph-layout-list {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-around;
-}
-#graph-view .stuff-container .container-body {
-    padding: 10px;
+#focal-graph-view.no-layout {
+    max-width: 300px;
 }
 
-#graph-view .custom-control {
+#focal-graph-view .custom-control {
     margin-right: 8px;
 }
 
@@ -536,9 +536,16 @@ rect.highlight-strip {
 
 #settings-view {
     min-width: 400px;
+    /* width: 210px; */
+}
+#settings-view .view-body {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
 }
 #settings-view .setting-item {
-    margin-left: 10px;
+    /* margin-left: 10px; */
 }
 #settings-view .setting-item .setting-label {
     display: inline-block;

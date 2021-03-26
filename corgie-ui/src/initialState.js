@@ -95,6 +95,7 @@ export default {
             layout: "umap",
             // layout: 'spiral',
             // layout: 'group-constraint-cola',
+            showSettings: false,
             useEdgeBundling: true,
             useGlobalMask: true,
         },
@@ -111,6 +112,7 @@ export default {
             brushedArea: null,
             searchLabel: null,
             searchId: null,
+            searchShown: false,
         },
 
         nodePairFilter: {

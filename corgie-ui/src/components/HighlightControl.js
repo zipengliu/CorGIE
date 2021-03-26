@@ -2,8 +2,16 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Form, Button, Badge } from "react-bootstrap";
-import { selectNodes, highlightNodes, searchNodes, selectNodePair } from "../actions";
-import NodePairList from "./NodePairList";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCaretRight, faCaretDown } from "@fortawesome/free-solid-svg-icons";
+import {
+    selectNodes,
+    highlightNodes,
+    searchNodes,
+    selectNodePair,
+    changeParam,
+    highlightNodePairs,
+} from "../actions";
 
 export class HighlightControl extends Component {
     callSearch(e) {
@@ -20,15 +28,26 @@ export class HighlightControl extends Component {
         }
     }
     render() {
-        const { selectedNodes, highlightedNodes, numHighlightsAndFocus } = this.props;
-        const { selectNodes, selectNodePair, highlightNodes } = this.props;
+        const { selectedNodes, highlightedNodes, numHighlightsAndFocus, searchShown } = this.props;
+        const { unseenTopK, hasLinkPredictions } = this.props;
+        const { selectNodes, selectNodePair, highlightNodes, changeParam, highlightNodePairs } = this.props;
         const areHighlightsAlsoFocus =
             highlightedNodes.length && numHighlightsAndFocus === highlightedNodes.length;
 
         return (
             <div className="view" id="highlight-control">
                 <h5 className="view-title text-center">
-                    Highlight <Badge variant="primary">{highlightedNodes.length}</Badge>
+                    Highlight
+                    {highlightedNodes.length > 0 && (
+                        <Button
+                            variant="danger"
+                            size="xxs"
+                            style={{ marginLeft: "10px" }}
+                            onClick={highlightNodes.bind(null, [], null, null, null)}
+                        >
+                            clear
+                        </Button>
+                    )}
                 </h5>
                 <div className="view-body">
                     {/* <div>
@@ -36,7 +55,9 @@ export class HighlightControl extends Component {
                     </div> */}
                     {highlightedNodes.length > 0 && (
                         <div>
-                            <div>Focus on highlighted nodes:</div>
+                            <div>
+                                <Badge variant="primary">{highlightedNodes.length}</Badge> nodes highlighted.
+                            </div>
                             <div>
                                 <Button
                                     variant="outline-primary"
@@ -97,49 +118,65 @@ export class HighlightControl extends Component {
                                     </Button>
                                 </div>
                             )}
-                            <div>
-                                <Button
-                                    variant="outline-danger"
-                                    size="xs"
-                                    onClick={highlightNodes.bind(null, [], null, null, null)}
-                                >
-                                    clear highlights
-                                </Button>
-                            </div>
+                            {hasLinkPredictions && (
+                                <div style={{ marginTop: "10px" }}>
+                                    <Button
+                                        variant="outline-primary"
+                                        size="xs"
+                                        onClick={highlightNodePairs.bind(null, null, null, null, null, true)}
+                                    >
+                                        List top {unseenTopK} predicted unseen edges
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    <div>
-                        <div>Search nodes by</div>
-                        <Form inline onSubmit={this.callSearch.bind(this)}>
-                            <Form.Control
-                                className="search-text-box"
-                                id="search-node-label"
-                                placeholder="label"
-                                name="searchLabel"
-                                size="sm"
-                            ></Form.Control>
-                            <span style={{ margin: "0 5px" }}>or</span>
-                            <Form.Control
-                                className="search-text-box"
-                                id="search-node-id"
-                                placeholder="id"
-                                name="searchId"
-                                size="sm"
-                            ></Form.Control>
-                            <Button
-                                variant="outline-secondary"
-                                size="xs"
-                                style={{ marginLeft: "5px" }}
-                                type="submit"
+                    <div style={{ marginTop: "5px" }}>
+                        <div>
+                            <span
+                                style={{ cursor: "pointer" }}
+                                onClick={changeParam.bind(
+                                    null,
+                                    "nodeFilter.searchShown",
+                                    null,
+                                    true,
+                                    null
+                                )}
                             >
-                                search
-                            </Button>
-                        </Form>
+                                <FontAwesomeIcon icon={searchShown ? faCaretRight : faCaretDown} />
+                            </span>
+                            <span style={{ marginLeft: "5px" }}>Search nodes by</span>
+                        </div>
+                        {searchShown && (
+                            <Form inline onSubmit={this.callSearch.bind(this)} style={{ marginLeft: "9px" }}>
+                                <Form.Control
+                                    className="search-text-box"
+                                    id="search-node-label"
+                                    placeholder="label"
+                                    name="searchLabel"
+                                    size="sm"
+                                ></Form.Control>
+                                <span style={{ margin: "0 5px" }}>or</span>
+                                <Form.Control
+                                    className="search-text-box"
+                                    id="search-node-id"
+                                    placeholder="id"
+                                    name="searchId"
+                                    size="sm"
+                                ></Form.Control>
+                                <Button
+                                    variant="outline-secondary"
+                                    size="xs"
+                                    style={{ marginLeft: "5px" }}
+                                    type="submit"
+                                >
+                                    search
+                                </Button>
+                            </Form>
+                        )}
                     </div>
 
-                    <div style={{ margin: "10px 0", borderBottom: "1px solid grey" }}></div>
-                    <NodePairList />
                     {numHighlightsAndFocus > 0 && !areHighlightsAlsoFocus && (
                         <div className="view-footer">
                             Note: a node can only exist in one focal group. Duplicated focal nodes will be
@@ -155,6 +192,9 @@ export class HighlightControl extends Component {
 const mapStateToProps = (state) => ({
     selectedNodes: state.selectedNodes,
     highlightedNodes: state.highlightedNodes,
+    searchShown: state.param.nodeFilter.searchShown,
+    unseenTopK: state.param.unseenTopK,
+    hasLinkPredictions: state.hasLinkPredictions,
     numHighlightsAndFocus: state.highlightedNodes.reduce(
         (prev, cur) => prev + (state.isNodeSelected[cur] ? 1 : 0),
         0
@@ -168,6 +208,8 @@ const mapDispatchToProps = (dispatch) =>
             highlightNodes,
             searchNodes,
             selectNodePair,
+            changeParam,
+            highlightNodePairs,
         },
         dispatch
     );

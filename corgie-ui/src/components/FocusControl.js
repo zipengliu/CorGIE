@@ -2,6 +2,8 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Button, Badge } from "react-bootstrap";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import { selectNodes } from "../actions";
 
 export class FocusControl extends Component {
@@ -10,13 +12,21 @@ export class FocusControl extends Component {
         // const { nodes, nodeTypes } = graph;
         return (
             <div className="view" id="focus-control">
-                <h5 className="view-title text-center">Focus</h5>
-                <div className="view-body">
-                    {selectedNodes.length === 0 && (
-                        <div>
-                            No focal group yet. Try highlight interesting nodes (by brushing / clicking) and then create focal groups.
-                        </div>
+                <h5 className="view-title text-center">
+                    Focus
+                    {selectedNodes.length > 0 && (
+                        <Button
+                            variant="danger"
+                            size="xxs"
+                            style={{ marginLeft: "10px" }}
+                            onClick={this.props.selectNodes.bind(null, "CLEAR", null, null)}
+                        >
+                            clear
+                        </Button>
                     )}
+                </h5>
+                <div className="view-body">
+                    {selectedNodes.length === 0 && <div>No focal groups yet.</div>}
                     {selectedNodes.map((g, i) => (
                         <div className="focal-group" key={i}>
                             <span
@@ -24,22 +34,13 @@ export class FocusControl extends Component {
                                 style={{ marginRight: "5px" }}
                                 onClick={this.props.selectNodes.bind(null, "DELETE", null, i)}
                             >
-                                X
+                                <FontAwesomeIcon icon={faTrashAlt} />
                             </span>
                             <span>
                                 foc-{i}: <Badge variant="dark">{g.length}</Badge> nodes
                             </span>
                         </div>
                     ))}
-                    {selectedNodes.length > 0 && (
-                        <Button
-                            variant="outline-danger"
-                            size="xs"
-                            onClick={this.props.selectNodes.bind(null, "CLEAR", null, null)}
-                        >
-                            clear all focal nodes
-                        </Button>
-                    )}
                 </div>
             </div>
         );

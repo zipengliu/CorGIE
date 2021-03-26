@@ -11,8 +11,9 @@ import {
     changeScatterplotForm,
     addDistanceScatterplot,
 } from "../actions";
-import { ComputingSpinner } from "./GraphView";
+import { ComputingSpinner } from "./InitialLayoutView";
 import ScatterHistogram from "./ScatterHistogram";
+import NodePairList from "./NodePairList";
 
 export class DistanceView extends Component {
     renderCreateModal() {
@@ -208,7 +209,7 @@ export class DistanceView extends Component {
                             Number of filtered node pairs: {nodePairs.length}
                         </div>
                         <Button
-                            type="submit"
+                            // type="submit"
                             onClick={this.props.addDistanceScatterplot}
                             disabled={!nodePairs.length}
                         >
@@ -222,6 +223,7 @@ export class DistanceView extends Component {
 
     render() {
         const { hops, distances, nodePairFilter, spec, highlightDistVals, hasFeatures } = this.props;
+        const { highlightedNodePairs } = this.props;
         const { highlightNodePairs, changeParam } = this.props;
         const { display, displaySpecial } = distances;
         const { useLinearScale } = nodePairFilter;
@@ -266,21 +268,26 @@ export class DistanceView extends Component {
             <div className="view" id="distance-view">
                 <h5 className="view-title text-center">Distances in latent, topology, and feature spaces</h5>
                 <div className="view-body">
-                    <Tabs
-                        activeKey={this.props.activeTab}
-                        onSelect={(k) => {
-                            changeParam("activeDistanceTab", k);
-                        }}
-                    >
-                        <Tab eventKey="topo-vs-latent" title="topo vs. latent">
-                            {getScatterHistList(true)}
-                        </Tab>
-                        {hasFeatures && (
-                            <Tab eventKey="feature-vs-latent" title="feature vs. latent">
-                                {getScatterHistList(false)}
-                            </Tab>
-                        )}
-                    </Tabs>
+                    <div style={{ display: "flex", flexDirection: "row", justifyContent: "space-around" }}>
+                        {highlightedNodePairs.length > 0 && <NodePairList />}
+                        <div>
+                            <Tabs
+                                activeKey={this.props.activeTab}
+                                onSelect={(k) => {
+                                    changeParam("activeDistanceTab", k);
+                                }}
+                            >
+                                <Tab eventKey="topo-vs-latent" title="topo vs. latent">
+                                    {getScatterHistList(true)}
+                                </Tab>
+                                {hasFeatures && (
+                                    <Tab eventKey="feature-vs-latent" title="feature vs. latent">
+                                        {getScatterHistList(false)}
+                                    </Tab>
+                                )}
+                            </Tabs>
+                        </div>
+                    </div>
                     <div style={{ marginTop: "10px" }}>
                         <Button
                             size="xs"
@@ -370,6 +377,7 @@ const mapStateToProps = (state) => {
     return {
         nodeTypes: state.graph.nodeTypes,
         selectedNodes,
+        highlightedNodePairs: state.highlightedNodePairs,
         highlightedNodes: state.highlightedNodes,
         hasLinkPredictions: state.hasLinkPredictions,
         highlightDistVals,

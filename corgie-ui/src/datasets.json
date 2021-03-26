@@ -142,6 +142,28 @@
         "desc": "Applying GCN on Pubmed dataset"
     },
     {
+        "id": "power-gcn",
+        "name": "power-gcn",
+        "source": "Power dataset provided by Muhan Zhang",
+        "numNodes": 4941,
+        "numEdges": 6594,
+        "numTypes": 1,
+        "nodeFeatures": "None",
+        "hops": 2,
+        "desc": ""
+    },
+    {
+        "id": "usair-gcn",
+        "name": "USAir-gcn",
+        "source": "USAir dataset provided by Muhan Zhang",
+        "numNodes": 332,
+        "numEdges": 2126,
+        "numTypes": 1,
+        "nodeFeatures": "None",
+        "hops": 2,
+        "desc": ""
+    },
+    {
         "id": "coauthor-sample-100",
         "name": "Coauthor network sample 100",
         "source": "DBLP coauthor network",

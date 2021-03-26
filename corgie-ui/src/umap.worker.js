@@ -3,6 +3,7 @@ import { UMAP } from "umap-js";
 import bs from "bitset";
 import { scaleLinear, forceSimulation, forceManyBody, forceCollide, forceLink } from "d3";
 import { getNeighborDistance } from "./utils";
+import seedrandom from "seedrandom";
 
 const state = {
     distMetric: null,
@@ -18,10 +19,7 @@ function initializeState(neighborMasks, neighborMasks1hop, distMetric) {
 
 const minNNeigh = 15,
     maxNNeigh = 25;
-const nNeighScale = scaleLinear()
-    .domain([minNNeigh, 1000])
-    .range([minNNeigh, maxNNeigh])
-    .clamp(true);
+const nNeighScale = scaleLinear().domain([minNNeigh, 1000]).range([minNNeigh, maxNNeigh]).clamp(true);
 // const minDistScale = scaleLinear()
 //     .domain([minNNeigh, 1000])
 //     .range([0.2, 0.05])
@@ -78,10 +76,12 @@ const runUMAP = (nodeIdxArr, useGlobalMask, nodeSize) => {
         return coords.map((c) => [c.x, c.y]);
     } else {
         const distFunc = (x, y) => getNeighborDistance(masks[x], masks[y], state.distMetric); // Global signature
+        const rng = seedrandom("hello.");
         const umapParams = {
             distanceFn: distFunc,
             nNeighbors: Math.round(nNeighScale(n)),
             minDist: minDistScale(n),
+            random: rng,
         };
         const sim = new UMAP(umapParams);
         console.log("Calling UMAP... #nodes =", n, " params = ", umapParams);

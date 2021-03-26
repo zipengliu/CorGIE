@@ -547,7 +547,7 @@ function findFocalGroups(nodes, isNodeSelected) {
     if (nodes.length === 2) {
         // determine if the two nodes between to two different focal group respectively
         const g1 = isNodeSelected[nodes[0]],
-        g2 = isNodeSelected[nodes[1]];
+            g2 = isNodeSelected[nodes[1]];
         if (g1 > 0 && g2 > 0 && g1 !== g2) {
             return Math.max(g1, g2) + 1;
         }
@@ -569,7 +569,7 @@ function findFocalGroups(nodes, isNodeSelected) {
 }
 
 function clearHighlights(draft) {
-    draft.param.nodeFilter = {};
+    draft.param.nodeFilter = { searchShown: false };
     draft.highlightedNodes = [];
     draft.highlightedEdges = [];
     draft.featureAgg.highlighted = null;

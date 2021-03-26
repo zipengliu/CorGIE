@@ -8,7 +8,7 @@ import { selectNodePair, highlightNodePairs, hoverNode } from "../actions";
 
 export class NodePairList extends Component {
     render() {
-        const { nodes, unseenTopK, hasLinkPredictions, highlightedNodes, highlightedNodePairs } = this.props;
+        const { nodes, highlightedNodePairs } = this.props;
         const { selectNodePair, highlightNodePairs } = this.props;
 
         const labelOrId = nodes && nodes[0].label ? "label" : "id";
@@ -30,21 +30,10 @@ export class NodePairList extends Component {
 
         return (
             <div>
-                <h6>Node pairs</h6>
-                {highlightedNodes.length > 0 && hasLinkPredictions && (
-                    <div>
-                        <Button
-                            variant="outline-primary"
-                            size="xs"
-                            onClick={highlightNodePairs.bind(null, null, null, null, null, true)}
-                        >
-                            List top {unseenTopK} predicted unseen edges to highlighted nodes
-                        </Button>
-                    </div>
-                )}
+                {/* <h6>Node pairs</h6> */}
                 <div>
-                    <Badge variant="primary">{highlightedNodePairs.length}</Badge> node pairs highlighted.{" "}
-                    {highlightedNodePairs.length > 0 && "Click to focus."}
+                    <Badge variant="primary">{highlightedNodePairs.length}</Badge> pairs highlighted.
+                    {/* {highlightedNodePairs.length > 0 && "Click to focus."} */}
                 </div>
                 {highlightedNodePairs.length > 0 && (
                     <div>
@@ -52,7 +41,7 @@ export class NodePairList extends Component {
                             <FixedSizeList
                                 className="list-group"
                                 height={
-                                    highlightedNodePairs.length > 10 ? 250: 25 * highlightedNodePairs.length
+                                    highlightedNodePairs.length > 8 ? 200 : 25 * highlightedNodePairs.length
                                 }
                                 width="100%"
                                 itemSize={25}
@@ -79,10 +68,7 @@ export class NodePairList extends Component {
 
 const mapStateToProps = (state) => ({
     nodes: state.graph.nodes,
-    unseenTopK: state.param.unseenTopK,
     highlightedNodePairs: state.highlightedNodePairs,
-    highlightedNodes: state.highlightedNodes,
-    hasLinkPredictions: state.hasLinkPredictions,
 });
 
 const mapDispatchToProps = (dispatch) =>

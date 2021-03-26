@@ -4,7 +4,8 @@ import { bindActionCreators } from "redux";
 import { withRouter } from "react-router-dom";
 import { fetchGraphData } from "../actions";
 import AppNav from "./AppNav";
-import GraphView from "./GraphView";
+import InitialLayoutView from "./InitialLayoutView";
+import FocalLayoutView from "./FocalLayoutView";
 import EmbeddingsView from "./EmbeddingsView";
 // import PowerSetIntersectionView from "./PowerSetIntersectionView";
 import DetailView from "./DetailView";
@@ -14,7 +15,7 @@ import HighlightControl from "./HighlightControl";
 import FocusControl from "./FocusControl";
 import SettingsView from "./SettingsView";
 import DistanceView from "./DistanceView";
-import SVGdefs from './SVGdefs';
+import SVGdefs from "./SVGdefs";
 import "./App.css";
 
 class App extends Component {
@@ -27,9 +28,10 @@ class App extends Component {
     }
     updateDimensions() {
         if (this.props.loaded) {
-            const bboxParent = this.appRef.current.getBoundingClientRect(),
-                bboxLeft = this.leftColRef.current.getBoundingClientRect();
-            this.setState({ rightWidth: bboxParent.width - bboxLeft.width - 10 });
+            const bboxParent = this.appRef.current.getBoundingClientRect();
+            // bboxLeft = this.leftColRef.current.getBoundingClientRect();
+            const bboxLeft = 630;
+            this.setState({ rightWidth: bboxParent.width - bboxLeft - 10 });
         }
     }
     componentDidMount() {
@@ -64,13 +66,15 @@ class App extends Component {
 
                 <div className="App" ref={this.appRef}>
                     <div ref={this.leftColRef} style={{ flexShrink: 2 }}>
+                        <div>
+                            <SettingsView />
+                        </div>
                         <div style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}>
                             <div>
                                 <FocusControl />
                                 <HighlightControl />
                             </div>
                             <div>
-                                <SettingsView />
                                 <EmbeddingsView />
                             </div>
                         </div>
@@ -80,7 +84,18 @@ class App extends Component {
                     </div>
                     <div style={{ maxWidth: rightWidth ? rightWidth + "px" : "auto" }}>
                         {hasNodeFeatures && <NodeAttrView />}
-                        <GraphView />
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "row",
+                                justifyContent: "flex-start",
+                                alignItems: "flex-start",
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            <FocalLayoutView />
+                            <InitialLayoutView />
+                        </div>
                     </div>
                 </div>
                 <SVGdefs />
