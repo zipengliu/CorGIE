@@ -37,7 +37,7 @@ class App extends Component {
     componentDidMount() {
         const { datasetId } = this.props.match.params;
         window.addEventListener("resize", this.bindedUpdate);
-        this.props.fetchGraphData(this.props.homePath, datasetId);
+        this.props.fetchGraphData(datasetId);
     }
     componentWillUnmount() {
         window.removeEventListener("resize", this.bindedUpdate);
@@ -57,20 +57,18 @@ class App extends Component {
                 </div>
             );
         }
-        const { numNodes, numEdges, homePath, datasetId, hasNodeFeatures } = this.props;
+        const { numNodes, numEdges, datasetId, hasNodeFeatures } = this.props;
         const { rightWidth } = this.state;
 
         return (
             <div>
-                <AppNav datasetId={datasetId} homePath={homePath} stats={{ numNodes, numEdges }} />
+                <AppNav datasetId={datasetId} stats={{ numNodes, numEdges }} />
 
                 <div className="App" ref={this.appRef}>
-                    <div ref={this.leftColRef} style={{ flexShrink: 2 }}>
-                        <div>
-                            <SettingsView />
-                        </div>
+                    <div ref={this.leftColRef} style={{ flexShrink: 1 }}>
                         <div style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}>
                             <div>
+                                <SettingsView />
                                 <FocusControl />
                                 <HighlightControl />
                             </div>
@@ -82,7 +80,7 @@ class App extends Component {
                             <DistanceView />
                         </div>
                     </div>
-                    <div style={{ maxWidth: rightWidth ? rightWidth + "px" : "auto" }}>
+                    <div style={{ maxWidth: rightWidth ? rightWidth + "px" : "auto", flexGrow: 2 }}>
                         {hasNodeFeatures && <NodeAttrView />}
                         <div
                             style={{
@@ -106,7 +104,7 @@ class App extends Component {
 }
 
 const mapStateToProps = (state) => ({
-    homePath: state.homePath,
+    // homePath: state.homePath,
     datasetId: state.datasetId,
     loaded: state.loaded,
     numNodes: state.loaded ? state.graph.nodes.length : 0,

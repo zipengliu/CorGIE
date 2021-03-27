@@ -1,15 +1,14 @@
 import React, { Component } from "react";
-import { connect } from "react-redux";
 import { Table } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import AppNav from "./AppNav";
 import datasets from "../datasets";
 
-export class DatasetList extends Component {
+export default class DatasetList extends Component {
     render() {
         return (
             <div>
-                <AppNav homePath={this.props.homePath} />
+                <AppNav />
                 <Table striped hover bordered>
                     <thead>
                         <tr>
@@ -46,11 +45,3 @@ export class DatasetList extends Component {
         );
     }
 }
-
-const mapStateToProps = (state, ownProps) => ({
-    homePath: state.homePath
-});
-
-const mapDispatchToProps = {};
-
-export default connect(mapStateToProps, mapDispatchToProps)(DatasetList);

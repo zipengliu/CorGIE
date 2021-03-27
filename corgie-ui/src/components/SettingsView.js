@@ -69,9 +69,9 @@ export class SettingsView extends Component {
 
         return (
             <div id="settings-view" className="view">
-                <h5 className="view-title">Settings for nodes and user interaction</h5>
+                <h5 className="view-title">Settings</h5>
                 <div className="view-body">
-                    <div style={{ maxWidth: "260px", marginRight: "5px" }}>
+                    <div style={{ marginRight: "5px" }}>
                         {/* <div className="text-center">Node visuals</div> */}
                         <div className="setting-item">
                             <div className="setting-label">Color:</div>
@@ -262,11 +262,11 @@ export class SettingsView extends Component {
                             </ButtonGroup>
                         </div>
                     </div>
-                    <div>
+                    <div style={{ flexShrink: 0 }}>
                         {/* <div className="text-center">Filter for Interaction</div> */}
 
                         <div className="setting-item">
-                            <span style={{ marginRight: "5px" }}>neighborhood activation:</span>
+                            <span style={{ marginRight: "5px" }}>hops for interaction:</span>
                             <div style={{ display: "inline-block" }}>
                                 <Dropdown
                                     onSelect={(h) => {
@@ -286,7 +286,6 @@ export class SettingsView extends Component {
                                     </Dropdown.Menu>
                                 </Dropdown>
                             </div>
-                            <span style={{ marginLeft: "5px" }}>hops</span>
                         </div>
 
                         {(nodeTypes.length > 1 || numNodeClasses) && (
@@ -336,7 +335,7 @@ export class SettingsView extends Component {
                                 )}
                                 {numNodeClasses && (
                                     <div style={{ display: "inline-block" }}>
-                                        <span style={{ marginRight: "5px" }}>by node labels</span>
+                                        {/* <span style={{ marginRight: "5px" }}>by node labels</span> */}
                                         <Dropdown
                                             onSelect={(k) => {
                                                 this.props.changeParam("highlightNodeLabel", k);

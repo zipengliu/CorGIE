@@ -3,7 +3,7 @@ import { bin as d3bin } from "d3";
 export default {
     loaded: false,
     datasetId: null,
-    homePath: "",
+    // homePath: "",
     // homePath: '/~zipeng/private/corgie-prototype',
 
     numNodeClasses: false,

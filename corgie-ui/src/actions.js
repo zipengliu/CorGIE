@@ -68,9 +68,9 @@ const ACTION_TYPES = {
 };
 export default ACTION_TYPES;
 
-export function fetchGraphData(homePath, datasetId) {
+export function fetchGraphData(datasetId) {
     return async function (dispatch, getState) {
-        const where = `${homePath}/data/${datasetId}`;
+        const where = `data/${datasetId}`;
         console.log("fetching data from ", where);
 
         dispatch(fetchDataPending());

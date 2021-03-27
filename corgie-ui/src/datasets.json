@@ -98,48 +98,26 @@
         "desc": "Applying GAT on Cora dataset"
     },
     {
-        "id": "cora-gcn",
-        "name": "cora-gcn",
-        "source": "paper citation network",
-        "numNodes": 2708,
-        "numEdges": 10556,
-        "numTypes": 1,
-        "nodeFeatures": "One-hot word vector (binary). Dictionary length: 1433.",
-        "hops": 2,
-        "desc": "Applying GCN on Cora dataset"
-    },
-    {
-        "id": "cora-gcn-link-pred",
-        "name": "cora-gcn-link-predict",
-        "source": "paper citation network",
-        "numNodes": 2708,
-        "numEdges": 10556,
-        "numTypes": 1,
-        "nodeFeatures": "One-hot word vector (binary). Dictionary length: 1433.",
-        "hops": 2,
-        "desc": "Applying GCN on Cora dataset but for link prediction"
-    },
-    {
-        "id": "citeseer-gcn",
-        "name": "citeseer-gcn",
+        "id": "citeseer-gat",
+        "name": "citeseer-GAT",
         "source": "paper citation network",
         "numNodes": 3327,
-        "numEdges": 4732,
+        "numEdges": 4552,
         "numTypes": 1,
         "nodeFeatures": "One-hot word vector (binary).  Dictionary length: 3703.",
         "hops": 2,
-        "desc": "Applying GCN on CiteSeer dataset"
+        "desc": "Applying GAT on CiteSeer dataset"
     },
     {
-        "id": "pubmed-gcn",
-        "name": "pubmed-gcn",
+        "id": "pubmed-gat",
+        "name": "pubmed-GAT",
         "source": "paper citation network",
         "numNodes": 19717,
-        "numEdges": 44338,
+        "numEdges": 44324,
         "numTypes": 1,
         "nodeFeatures": "TF/IDF weighted word vector. Dictionary length 500.",
         "hops": 2,
-        "desc": "Applying GCN on Pubmed dataset"
+        "desc": "Applying GAT on Pubmed dataset"
     },
     {
         "id": "power-gcn",

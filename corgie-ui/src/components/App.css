@@ -281,7 +281,7 @@
 }
 
 #distance-view {
-    /* max-width: 800px; */
+    max-width: 640px;
     /* font-size: 0.875rem; */
 }
 #distance-view .tab-pane.show {
@@ -535,14 +535,14 @@ rect.highlight-strip {
 }
 
 #settings-view {
-    min-width: 400px;
-    /* width: 210px; */
+    /* min-width: 400px; */
+    width: 220px;
 }
 #settings-view .view-body {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-around;
+    /* display: flex;
+    flex-direction: row; */
+    /* flex-wrap: wrap; */
+    /* justify-content: space-around; */
 }
 #settings-view .setting-item {
     /* margin-left: 10px; */
@@ -558,7 +558,7 @@ rect.highlight-strip {
 
 .node-rep-legends {
     display: inline-block;
-    margin-left: 10px;
+    /* margin-left: 10px; */
     font-size: 14px;
 }
 .node-rep-legends .legend-item {
