@@ -90,10 +90,14 @@ export function fetchGraphData(datasetId) {
                 await fetch(`${where}/node-embeddings.csv`)
                     .then((r) => r.text())
                     .then(csvParseRows),
-                await fetch(`${where}/umap.csv`)
-                    .then((r) => r.text())
-                    .then(csvParseRows)
-                    .then((d) => d.map((x) => [parseFloat(x[0]), parseFloat(x[1])])),
+                await fetch(`${where}/umap.json`)
+                    .then((r) => r.json())
+                    .then((d) => ({
+                        umap: d.umap.map((c) => ({ x: parseFloat(c.x), y: parseFloat(c.y) })),
+                        edgeBundlePoints: d.edgeBundlePoints.map((coords) =>
+                            coords.map((v) => parseFloat(v))
+                        ),
+                    })),
                 await fetch(`${where}/attr-meta.json`)
                     .then((r) => r.json())
                     .catch(() => {

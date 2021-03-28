@@ -13,8 +13,8 @@ import { Layout as cola } from "webcola";
 import bs from "bitset";
 import { sampleSize, flatten, range as lodashRange } from "lodash";
 import { getNeighborDistance, computeEdgeDict } from "./utils";
-import forceBundling from "./forceBundling";
-import kernelBundling from "./kernelBundling";
+// import forceBundling from "./forceBundling";
+// import kernelBundling from "./kernelBundling";
 import mingleBundling from "./mingleBundling";
 
 const maxNumNodes = 10000;

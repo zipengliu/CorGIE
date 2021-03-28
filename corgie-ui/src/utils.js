@@ -90,9 +90,11 @@ export function compressFeatureValues(values, maxNumStrips, sort = false) {
 }
 
 // Rescale the coordinates to [0,0]-[w,h]
-export function coordsRescale(coords, w, h, paddings) {
-    let xArr = coords.map((x) => x[0]);
-    let yArr = coords.map((x) => x[1]);
+export function coordsRescale(umapRes, w, h, paddings) {
+    const coords = umapRes.umap,
+        ebp = umapRes.edgeBundlePoints;
+    let xArr = coords.map((c) => c.x);
+    let yArr = coords.map((c) => c.y);
     let xExtent = extent(xArr);
     let yExtent = extent(yArr);
 
@@ -103,7 +105,17 @@ export function coordsRescale(coords, w, h, paddings) {
         .domain(yExtent)
         .range([paddings.top, h - paddings.top - paddings.bottom]);
 
-    return coords.map((d) => ({ x: xScale(d[0]), y: yScale(d[1]) }));
+    return {
+        coords: coords.map((d) => ({ x: xScale(d.x), y: yScale(d.y) })),
+        ebp: ebp.map((e) => {
+            const e1 = [];
+            for (let i = 0; i < e.length; i += 2) {
+                e1.push(xScale(e[i]));
+                e1.push(yScale(e[i + 1]));
+            }
+            return e1;
+        }),
+    };
 }
 
 export function getNeighborDistance(mask1, mask2, metric) {

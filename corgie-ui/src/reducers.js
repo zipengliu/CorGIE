@@ -836,7 +836,7 @@ const reducers = produce((draft, action) => {
 
             draft.latent = {
                 emb,
-                coords: coordsRescale(
+                ...coordsRescale(
                     emb2d,
                     draft.spec.latent.width,
                     draft.spec.latent.height,

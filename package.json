@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "seedrandom": "^3.0.5"
+  }
+}

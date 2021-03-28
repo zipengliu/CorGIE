@@ -27,7 +27,7 @@ export const FocusLayer = memo(({ focalGroups, nodes, coords, focalBBox, nodeSiz
                         typeId={nodes[nodeIdx].typeId}
                         style={{
                             fillEnabled: false,
-                            stroke: useStroke? useStroke: '#000',
+                            stroke: useStroke ? useStroke : "#000",
                             strokeWidth: 1,
                             strokeEnabled: !!useStroke,
                         }}
@@ -48,6 +48,7 @@ export class HighlightLayer extends PureComponent {
             coords,
             nodeSize,
             edgeBundlePoints,
+            showEdges,
             width,
             height,
         } = this.props;
@@ -63,7 +64,8 @@ export class HighlightLayer extends PureComponent {
                     strokeEnabled={false}
                 />
                 <Group>
-                    {!!highlightedEdges &&
+                    {showEdges &&
+                        !!highlightedEdges &&
                         highlightedEdges.map(
                             (e, i) =>
                                 coords[e.source] &&
@@ -131,6 +133,7 @@ export class HoverLayer extends PureComponent {
             nodeColors,
             nodeSize,
             edgeBundlePoints,
+            showEdges,
             width,
             height,
         } = this.props;
@@ -146,7 +149,8 @@ export class HoverLayer extends PureComponent {
                     strokeEnabled={false}
                 />
                 <Group>
-                    {!!hoveredEdges &&
+                    {showEdges &&
+                        !!hoveredEdges &&
                         hoveredEdges.map(
                             (e, i) =>
                                 coords[e.source] &&

@@ -28,10 +28,10 @@ class App extends Component {
     }
     updateDimensions() {
         if (this.props.loaded) {
-            const bboxParent = this.appRef.current.getBoundingClientRect();
-            // bboxLeft = this.leftColRef.current.getBoundingClientRect();
-            const bboxLeft = 630;
-            this.setState({ rightWidth: bboxParent.width - bboxLeft - 10 });
+            const bboxParent = this.appRef.current.getBoundingClientRect(),
+                bboxLeft = this.leftColRef.current.getBoundingClientRect();
+            // const bboxLeft = 640;
+            this.setState({ rightWidth: bboxParent.width - bboxLeft.width - 10 });
         }
     }
     componentDidMount() {
@@ -104,7 +104,6 @@ class App extends Component {
 }
 
 const mapStateToProps = (state) => ({
-    // homePath: state.homePath,
     datasetId: state.datasetId,
     loaded: state.loaded,
     numNodes: state.loaded ? state.graph.nodes.length : 0,

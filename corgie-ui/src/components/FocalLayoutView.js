@@ -65,7 +65,7 @@ const SettingModal = ({ params, changeFocalParam, hops }) => (
 
 function FocalLayoutView({ focalLayout, hasFocalNodes, hops, params, changeFocalParam, focalAlg }) {
     return (
-        <div className={`view ${hasFocalNodes? '': 'no-layout'}`} id="focal-graph-view">
+        <div className={`view ${hasFocalNodes ? "" : "no-layout"}`} id="focal-graph-view">
             <h5 className="view-title text-center">
                 Focal graph layout
                 <span
@@ -87,7 +87,12 @@ function FocalLayoutView({ focalLayout, hasFocalNodes, hops, params, changeFocal
                         {focalLayout.running ? (
                             <ComputingSpinner />
                         ) : (
-                            <GraphLayout layoutData={focalLayout} useStrokeForFocal={false} />
+                            <GraphLayout
+                                layoutData={focalLayout}
+                                useStrokeForFocal={false}
+                                fromView="graph-layout"
+                                showEdges={params.useEdgeBundling? 'bundled': true}
+                            />
                         )}
                         {!!focalLayout.runningMsg && (
                             <div style={{ margin: "10px" }}>

@@ -1,4 +1,5 @@
 data/
+!data/pytorch-geometric-scripts/*.py
 .DS_Store
 
 *.pyc

@@ -281,7 +281,7 @@
 }
 
 #distance-view {
-    max-width: 640px;
+    max-width: 660px;
     /* font-size: 0.875rem; */
 }
 #distance-view .tab-pane.show {
@@ -510,6 +510,9 @@ rect.highlight-strip {
     fill-opacity: 0.3;
 }
 
+#embeddings-view {
+    font-size: 14px;
+}
 #embeddings-view canvas:nth-child(n + 3),
 #initial-graph-view canvas:not(:first-child),
 #focal-graph-view canvas:not(:first-child) {

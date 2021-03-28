@@ -352,7 +352,7 @@ function compute_compatibility_lists() {
 /*** ************************ ***/
 
 /*** Main Bundling Loop Methods ***/
-export default function () {
+module.exports = function () {
     var forcebundle = function () {
         var S = S_initial;
         var I = I_initial;

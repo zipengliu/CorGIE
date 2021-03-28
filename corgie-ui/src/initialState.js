@@ -78,7 +78,6 @@ export default {
         neighborDistanceMetric: "jaccard",
 
         nodeSize: 4,
-        embNodeSize: 3,
 
         // Only highlight nodes of type / label
         highlightNodeType: "all", // "all" or integer for a specific node type
@@ -98,6 +97,10 @@ export default {
             showSettings: false,
             useEdgeBundling: true,
             useGlobalMask: true,
+        },
+
+        embeddings: {
+            showEdges: false,
         },
 
         features: {

@@ -20,7 +20,12 @@ function GraphView({ initialLayout }) {
                 {initialLayout.running ? (
                     <ComputingSpinner />
                 ) : (
-                    <GraphLayout layoutData={initialLayout} useStrokeForFocal={true} />
+                    <GraphLayout
+                        layoutData={initialLayout}
+                        useStrokeForFocal={true}
+                        fromView="graph-layout"
+                        showEdges={true}
+                    />
                 )}
             </div>
             <div className="view-footer">
