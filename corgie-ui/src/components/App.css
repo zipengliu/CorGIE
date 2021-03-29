@@ -309,6 +309,16 @@
 .modal-body {
     padding: 1rem 1.2rem;
 }
+.modal-footer {
+    background-color: #ddd;
+    border-top: 1px solid #aaa;
+    padding: 5px;
+    font-size: 0.8rem;
+    justify-content: flex-start;
+}
+#embeddings-view.modal-dialog {
+    max-width: 1050px;
+}
 #create-scatterplot-modal .form-row {
     margin-bottom: 5px;
 }
@@ -617,4 +627,8 @@ rect.highlight-strip {
 
 #highlight-control {
     min-width: 200px;
+}
+
+#neighbor-latent-map {
+    max-width: 660px;
 }

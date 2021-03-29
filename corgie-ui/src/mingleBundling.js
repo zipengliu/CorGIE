@@ -1343,7 +1343,7 @@ const Graph = (function () {
     return Graph;
 })();
 
-export default (function () {
+module.exports = (function () {
     //General convenience functions and constants
     Math.PHI = (1 + Math.sqrt(5)) / 2;
 

@@ -107,7 +107,7 @@ export function coordsRescale(umapRes, w, h, paddings) {
 
     return {
         coords: coords.map((d) => ({ x: xScale(d.x), y: yScale(d.y) })),
-        ebp: ebp.map((e) => {
+        edgeBundlePoints: ebp.map((e) => {
             const e1 = [];
             for (let i = 0; i < e.length; i += 2) {
                 e1.push(xScale(e[i]));

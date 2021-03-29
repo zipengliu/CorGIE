@@ -331,7 +331,7 @@ const mapStateToPropsBaseLayer = (state) => ({
 const BaseLayer = connect(mapStateToPropsBaseLayer, mapDispatchToProps)(BaseLayerUnconnected);
 
 const ColorTiles = memo(({ w }) => {
-    const unitSize = 4,
+    const unitSize = 5,
         num = w / unitSize;
     const tileArr = new Array(num).fill(0);
     return (

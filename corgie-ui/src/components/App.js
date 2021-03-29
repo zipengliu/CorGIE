@@ -15,6 +15,7 @@ import HighlightControl from "./HighlightControl";
 import FocusControl from "./FocusControl";
 import SettingsView from "./SettingsView";
 import DistanceView from "./DistanceView";
+import NeighborLatentMap from "./NeighborLatentMap";
 import SVGdefs from "./SVGdefs";
 import "./App.css";
 
@@ -75,6 +76,9 @@ class App extends Component {
                             <div>
                                 <EmbeddingsView />
                             </div>
+                        </div>
+                        <div>
+                            <NeighborLatentMap />
                         </div>
                         <div>
                             <DistanceView />

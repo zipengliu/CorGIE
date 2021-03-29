@@ -97,6 +97,7 @@ export function fetchGraphData(datasetId) {
                         edgeBundlePoints: d.edgeBundlePoints.map((coords) =>
                             coords.map((v) => parseFloat(v))
                         ),
+                        neighborPos: d.neighborBinning
                     })),
                 await fetch(`${where}/attr-meta.json`)
                     .then((r) => r.json())

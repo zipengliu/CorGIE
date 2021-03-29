@@ -26,7 +26,6 @@ export default {
     },
 
     selectedNodes: [], // Array of array
-    selBoundingBox: [],
     isNodeSelected: {}, // Dict for ALL selected nodes
     isNodeSelectedNeighbor: {},
 
@@ -100,7 +99,13 @@ export default {
         },
 
         embeddings: {
+            maxWindow: false,
             showEdges: false,
+        },
+        neighborLatentMap: {
+            isOpen: true,
+            hop: 1,
+            useLinearScale: true,
         },
 
         features: {
@@ -146,7 +151,13 @@ export default {
             width: 400,
             height: 400,
             paddings: { top: 16, bottom: 4, left: 6, right: 6 },
-            nodeSize: 3,
+            widthMax: 1000,
+            heightMax: 1000,
+            paddingsMax: { top: 20, bottom: 10, left: 10, right: 10 },
+        },
+        neighborLatentMap: {
+            cellSize: 8,
+            gap: 4, // Gap between blocks
         },
         intersectionPlot: {
             margins: { top: 10, bottom: 10, left: 10, right: 10 },

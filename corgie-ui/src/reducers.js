@@ -576,7 +576,8 @@ function clearHighlights(draft) {
     draft.nodeAttrs.highlighted = null;
 }
 
-function buildQT(coords, width, height) {
+function buildQT(layoutData) {
+    const { coords, width, height } = layoutData;
     const qt = new Quadtree({
         x: 0,
         y: 0,
@@ -792,11 +793,7 @@ const reducers = produce((draft, action) => {
             if (action.data.initialLayout) {
                 Object.assign(draft.initialLayout, initialLayout);
                 draft.initialLayout.running = false;
-                draft.initialLayout.qt = buildQT(
-                    initialLayout.coords,
-                    initialLayout.width,
-                    initialLayout.height
-                );
+                draft.initialLayout.qt = buildQT(initialLayout);
             }
 
             // compute feature aggregation
@@ -836,16 +833,32 @@ const reducers = produce((draft, action) => {
 
             draft.latent = {
                 emb,
-                ...coordsRescale(
-                    emb2d,
-                    draft.spec.latent.width,
-                    draft.spec.latent.height,
-                    draft.spec.latent.paddings
-                ),
+                layoutMin: {
+                    ...coordsRescale(
+                        emb2d,
+                        draft.spec.latent.width,
+                        draft.spec.latent.height,
+                        draft.spec.latent.paddings
+                    ),
+                    width: draft.spec.latent.width,
+                    height: draft.spec.latent.height,
+                },
+                layoutMax: {
+                    ...coordsRescale(
+                        emb2d,
+                        draft.spec.latent.widthMax,
+                        draft.spec.latent.heightMax,
+                        draft.spec.latent.paddingsMax
+                    ),
+                    width: draft.spec.latent.widthMax,
+                    height: draft.spec.latent.heightMax,
+                },
+                neighborPos: emb2d.neighborPos,
             };
             // Build quadtree for the embedding 2D coordinates
-            draft.latent.qt = buildQT(draft.latent.coords, draft.spec.latent.width, draft.spec.latent.height);
-            draft.latent.posColor = draft.latent.coords.map((c) =>
+            draft.latent.layoutMin.qt = buildQT(draft.latent.layoutMin);
+            draft.latent.layoutMax.qt = buildQT(draft.latent.layoutMax);
+            draft.latent.posColor = draft.latent.layoutMin.coords.map((c) =>
                 getNodeEmbeddingColor(c.x / draft.spec.latent.width, c.y / draft.spec.latent.height)
             );
 
@@ -877,11 +890,7 @@ const reducers = produce((draft, action) => {
 
         case ACTION_TYPES.COMPUTE_INIT_LAYOUT_DONE:
             Object.assign(draft.initialLayout, action.layoutRes);
-            draft.initialLayout.qt = buildQT(
-                action.layoutRes.coords,
-                action.layoutRes.width,
-                action.layoutRes.height
-            );
+            draft.initialLayout.qt = buildQT(action.layoutRes);
             draft.initialLayout.running = false;
             return;
 
@@ -1119,7 +1128,6 @@ const reducers = produce((draft, action) => {
                 draft.isNodeSelectedNeighbor = {};
                 draft.neighGrp = null;
                 draft.focalLayout = { running: false };
-                draft.selBoundingBox = [];
             } else {
                 draft.isNodeSelected = neighRes.isNodeSelected;
                 draft.isNodeSelectedNeighbor = neighRes.isNodeSelectedNeighbor;
@@ -1151,7 +1159,12 @@ const reducers = produce((draft, action) => {
                     running: true,
                     layoutId: action.layoutId,
                 };
-                draft.selBoundingBox = newSel.map((s) => computeBoundingBox(draft.latent.coords, s));
+                draft.latent.layoutMin.focalBBox = newSel.map((s) =>
+                    computeBoundingBox(draft.latent.layoutMin.coords, s)
+                );
+                draft.latent.layoutMax.focalBBox = newSel.map((s) =>
+                    computeBoundingBox(draft.latent.layoutMax.coords, s)
+                );
 
                 // Compute the features for the focal nodes
                 if (draft.featureAgg.active) {
@@ -1230,11 +1243,7 @@ const reducers = produce((draft, action) => {
                     running: false,
                 };
                 if (action.layoutRes.coords) {
-                    draft.focalLayout.qt = buildQT(
-                        action.layoutRes.coords,
-                        action.layoutRes.width,
-                        action.layoutRes.height
-                    );
+                    draft.focalLayout.qt = buildQT(action.layoutRes);
                 }
             }
             return;
@@ -1291,11 +1300,7 @@ const reducers = produce((draft, action) => {
             if (draft.focalLayout.layoutId === action.layoutId) {
                 Object.assign(draft.focalLayout, { ...action.layoutRes, running: false, runningMsg: null });
                 if (action.layoutRes.coords) {
-                    draft.focalLayout.qt = buildQT(
-                        action.layoutRes.coords,
-                        action.layoutRes.width,
-                        action.layoutRes.height
-                    );
+                    draft.focalLayout.qt = buildQT(action.layoutRes);
                 }
             }
             return;

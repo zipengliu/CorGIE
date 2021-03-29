@@ -6,6 +6,7 @@
 //      * Compute the distances in latent, topo, and distance space.
 //      * Perform UMAP on node embeddings (if not yet)
 //      * Perform force-directed edge bundling on edges of UMAP
+//      * Perform neighbor binning in latent space
 //
 // Required input files:
 //      * graph.json:  node and edge data in NetworkX format
@@ -20,7 +21,7 @@
 //      * graph.json: sanitized graph, edge dictionary, neighbor masks
 //      * initial-layout.json: D3 force-directed layout
 //      * distances.json: distance values
-//      * umap.json: 2D UMAP result of node embeddings, edge bundilng results
+//      * umap.json: 2D UMAP result of node embeddings, edge bundilng results, neighbor binning
 
 const fs = require("fs");
 const { readFile, writeFile } = require("fs/promises");
@@ -30,6 +31,7 @@ const neatCsv = require("neat-csv");
 const UMAP = require("umap-js");
 const seedrandom = require("seedrandom");
 const forceBundling = require("./forceBundling");
+const mingleBundling = require("../../src/mingleBundling");
 const datasetsInfo = require("../../src/datasets.json");
 
 const {
@@ -40,9 +42,12 @@ const {
     scaleSqrt,
     scaleLog,
     scaleLinear,
+    scaleQuantize,
     extent,
     bin,
 } = require("d3");
+
+const BIN_GRANULARITY = 8;
 
 const padding = 16;
 function computeForceLayoutWithD3(numNodes, edges, padding, bounded) {
@@ -441,6 +446,155 @@ function getUMAPresults(filepath, emb) {
         });
 }
 
+function performEdgeBundling(edges, coords, method = "force") {
+    console.log("Edge bundling....");
+    const startTime = new Date();
+
+    const edgeCoords = new Array(edges.length);
+    // enlarge the coords to avoid artefacts in edge bundling algorithm
+    // const scaleX = scaleLinear()
+    //         .domain(extent(coords.map((c) => c.x)))
+    //         .range([0, 400]),
+    //     scaleY = scaleLinear()
+    //         .domain(extent(coords.map((c) => c.y)))
+    //         .range([0, 400]);
+    // coords = coords.map((c) => ({ x: scaleX(c.x), y: scaleY(c.y) }));
+    if (method === "force") {
+        const fbdl = forceBundling()
+            .nodes(coords)
+            .edges(edges)
+            .subdivision_rate(1.05)
+            .iterations(10)
+            .iterations_rate(0.5);
+
+        const bundleRes = fbdl();
+
+        // Flatten the coordinates since the Konva library in CorGIE uses flatten coords
+        for (let i = 0; i < edges.length; i++) {
+            let flattenCoords = [];
+            if (!bundleRes[i]) {
+                // Happends sometimes when the two coords are too close
+                const { source, target } = edges[i];
+                console.log('edge bundling failed at ', i, coords[source], coords[target]);
+                flattenCoords = [
+                    coords[source].x.toFixed(3),
+                    coords[source].y.toFixed(3),
+                    coords[target].x.toFixed(3),
+                    coords[target].y.toFixed(3),
+                ];
+            } else {
+                for (let c of bundleRes[i]) {
+                    flattenCoords.push(c.x.toFixed(3));
+                    flattenCoords.push(c.y.toFixed(3));
+                }
+            }
+            edgeCoords[i] = flattenCoords;
+        }
+    } else {
+        // MINGLE bundling
+        const delta = 0.8;
+        const bundle = new mingleBundling({
+            curviness: 1,
+            angleStrength: 1,
+        });
+        const edgeData = edges.map((e, i) => ({
+            id: i,
+            name: i,
+            data: {
+                coords: [coords[e.source].x, coords[e.source].y, coords[e.target].x, coords[e.target].y],
+            },
+        }));
+        bundle.setNodes(edgeData);
+        bundle.buildNearestNeighborGraph(10);
+        bundle.MINGLE();
+
+        bundle.graph.each(function (node) {
+            const edges = node.unbundleEdges(delta);
+            for (let e of edges) {
+                const originalEdgeId = e[0].node.id;
+                const flattenCoords = [];
+                for (let point of e) {
+                    flattenCoords.push(point.unbundledPos[0].toFixed(3));
+                    flattenCoords.push(point.unbundledPos[1].toFixed(3));
+                }
+                edgeCoords[originalEdgeId] = flattenCoords;
+            }
+        });
+    }
+
+    const endTime = new Date();
+    console.log("Edge bundling takes ", (endTime.getTime() - startTime.getTime()) / 1000, "s");
+    return {
+        umap: coords.map((c) => ({ x: c.x.toFixed(3), y: c.y.toFixed(3) })),
+        edgeBundlePoints: edgeCoords,
+    };
+}
+
+function neighborBinning(coords, neighborMasksByHop, m) {
+    console.log("Neighbor binning...");
+    const binsByHop = [];
+
+    // Init bins
+    function copyBins(oriBins) {
+        const bins = new Array(m);
+        for (let i = 0; i < m; i++) {
+            bins[i] = new Array(m);
+            for (let j = 0; j < m; j++) {
+                bins[i][j] = new Array(m);
+                for (let k = 0; k < m; k++) {
+                    if (!oriBins) {
+                        bins[i][j][k] = new Array(m).fill(0);
+                    } else {
+                        bins[i][j][k] = oriBins[i][j][k].slice();
+                    }
+                }
+            }
+        }
+        return bins;
+    }
+
+    // Init node mapping from block (x,y) -> node IDs
+    const mapping = new Array(m);
+    for (let i = 0; i < m; i++) {
+        mapping[i] = new Array(m);
+        for (let j = 0; j < m; j++) {
+            mapping[i][j] = [];
+        }
+    }
+
+    const extentX = extent(coords.map((c) => c.x)),
+        extentY = extent(coords.map((c) => c.y));
+    const r = new Array(m).fill(0).map((_, i) => i);
+    const scaleX = scaleQuantize().domain(extentX).range(r),
+        scaleY = scaleQuantize().domain(extentY).range(r);
+
+    let bins = null,
+        maxBinVals = new Array(neighborMasksByHop.length).fill(0);
+    for (let h = 0; h < neighborMasksByHop.length; h++) {
+        const masks = neighborMasksByHop[h];
+        if (!bins) {
+            bins = copyBins(0);
+        } else {
+            bins = copyBins(bins);
+        }
+        for (let nodeId = 0; nodeId < masks.length; nodeId++) {
+            const x = scaleX(coords[nodeId].x),
+                y = scaleY(coords[nodeId].y);
+            if (h === 0) {
+                mapping[x][y].push(nodeId);
+            }
+            for (let tid of masks[nodeId].toArray()) {
+                const a = scaleX(coords[tid].x),
+                    b = scaleY(coords[tid].y);
+                bins[x][y][a][b]++;
+                maxBinVals[h] = Math.max(maxBinVals[h], bins[x][y][a][b]);
+            }
+        }
+        binsByHop.push(bins);
+    }
+    return { binsByHop, maxBinVals, granu: m, mapping };
+}
+
 const datasetId = process.argv[2];
 console.log("==============");
 console.log("Pre-pocessing dataset ", datasetId);
@@ -489,35 +643,13 @@ fs.createReadStream(`${dataDir}/node-embeddings.csv`)
     .on("end", () => {
         // Compute UMAP
         getUMAPresults(`${dataDir}/umap.csv`, emb).then((umapRes) => {
-            // console.log(umapRes);
             console.log("UMAP results obtained.");
 
-            // Edge bundling
             const coords = umapRes.map((r) => ({ x: r[0], y: r[1] }));
-            const fbdl = forceBundling().nodes(coords).edges(graph.edges);
-            // .subdivision_rate(1.05)
-            // .iterations(10)
-            // .iterations_rate(0.5)
+            const b = neighborBinning(coords, graph.neighborMasksByHop, BIN_GRANULARITY);
+            const e = performEdgeBundling(graph.edges, coords);
 
-            const bundleRes = fbdl();
-
-            // Flatten the coordinates since the Konva library in CorGIE uses flatten coords
-            const edgeCoords = [];
-            for (let r of bundleRes) {
-                let flattenCoords = [];
-                for (let c of r) {
-                    flattenCoords.push(c.x.toFixed(3));
-                    flattenCoords.push(c.y.toFixed(3));
-                }
-                edgeCoords.push(flattenCoords);
-            }
-            // console.log(edgeCoords);
-
-            const jsonData = JSON.stringify({
-                umap: coords.map((c) => ({ x: c.x.toFixed(3), y: c.y.toFixed(3) })),
-                edgeBundlePoints: edgeCoords,
-            });
-            writeFile(`${dataDir}/umap.json`, jsonData).then(() => {
+            writeFile(`${dataDir}/umap.json`, JSON.stringify({ ...e, neighborBinning: b })).then(() => {
                 console.log("Writing UMAP results successfully!");
             });
         });

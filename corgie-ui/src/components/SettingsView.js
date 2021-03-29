@@ -6,6 +6,7 @@ import { format as d3Format } from "d3";
 import { Stage, Layer } from "react-konva";
 import { range as lodashRange } from "lodash";
 import { highlightNodes, changeHops, changeParam, hoverNode } from "../actions";
+import ColorLegend from "./ColorLegend";
 import NodeRep from "./NodeRep";
 
 export class SettingsView extends Component {
@@ -57,14 +58,11 @@ export class SettingsView extends Component {
         const { nodeTypes } = graph;
         const { colorBy, colorScale, nodeSize, hops, hopsActivated } = param;
         const { highlightNodeType, highlightNodeLabel } = param;
-        let e, numberFormat, colorMin, colorMax;
+        let e, numberFormat;
         const useAttrColors = Number.isInteger(colorBy);
         if (useAttrColors) {
             e = colorScale.domain();
-            colorMin = colorScale(e[0]);
-            colorMax = colorScale(e[1]);
             numberFormat = e[0] < 1 ? d3Format("~g") : d3Format("~s");
-            // TODO show color legends for labels and node types
         }
 
         return (
@@ -137,68 +135,53 @@ export class SettingsView extends Component {
                             </div>
 
                             {/* Color legends */}
-                            <div className="node-rep-legends node-color">
-                                {useAttrColors && (
-                                    <div className="node-rep-legends node-color">
-                                        <span style={{ marginRight: "3px" }}>{numberFormat(e[0])}</span>
-                                        <div
-                                            style={{
-                                                display: "inline-block",
-                                                height: "10px",
-                                                width: "100px",
-                                                background: `linear-gradient(90deg, ${colorMin} 0%, ${colorMax} 100%)`,
-                                            }}
-                                        ></div>
-                                        <span style={{ marginLeft: "3px" }}>{numberFormat(e[1])}</span>
-                                    </div>
-                                )}
-                                {/* {colorBy === "umap" && (
+                            {useAttrColors && (
+                                <ColorLegend
+                                    cn="node-rep-legends node-color"
+                                    scale={colorScale}
+                                    numFormat={numberFormat}
+                                />
+                            )}
+                            {/* {colorBy === "umap" && (
                                     <div className="node-rep-legends node-color">See colors below</div>
                                 )} */}
-                                {colorBy === "correctness" && (
-                                    <div className="node-rep-legends node-color">
-                                        <div className="legend-item">
+                            {colorBy === "correctness" && (
+                                <div className="node-rep-legends node-color">
+                                    <div className="legend-item">
+                                        <div
+                                            className="visual-block"
+                                            style={{ backgroundColor: colorScale(false) }}
+                                        ></div>
+                                        <div className="legend-label">correct</div>
+                                    </div>
+                                    <div className="legend-item">
+                                        <div
+                                            className="visual-block"
+                                            style={{ backgroundColor: colorScale(true) }}
+                                        ></div>
+                                        <div className="legend-label">wrong</div>
+                                    </div>
+                                </div>
+                            )}
+                            {(colorBy === "pred-labels" || colorBy === "true-labels") && (
+                                <div className="node-rep-legends node-color">
+                                    {lodashRange(numNodeClasses).map((i) => (
+                                        <div
+                                            className="legend-item"
+                                            key={i}
+                                            onMouseOver={this.hoverNodeLabel.bind(this, i)}
+                                            onMouseOut={hoverNode.bind(null, null)}
+                                            onClick={highlightNodes.bind(null, null, null, "node-label", i)}
+                                        >
                                             <div
                                                 className="visual-block"
-                                                style={{ backgroundColor: colorScale(false) }}
+                                                style={{ backgroundColor: colorScale(i) }}
                                             ></div>
-                                            <div className="legend-label">correct</div>
+                                            <div className="legend-label">{i}</div>
                                         </div>
-                                        <div className="legend-item">
-                                            <div
-                                                className="visual-block"
-                                                style={{ backgroundColor: colorScale(true) }}
-                                            ></div>
-                                            <div className="legend-label">wrong</div>
-                                        </div>
-                                    </div>
-                                )}
-                                {(colorBy === "pred-labels" || colorBy === "true-labels") && (
-                                    <div className="node-rep-legends node-color">
-                                        {lodashRange(numNodeClasses).map((i) => (
-                                            <div
-                                                className="legend-item"
-                                                key={i}
-                                                onMouseOver={this.hoverNodeLabel.bind(this, i)}
-                                                onMouseOut={hoverNode.bind(null, null)}
-                                                onClick={highlightNodes.bind(
-                                                    null,
-                                                    null,
-                                                    null,
-                                                    "node-label",
-                                                    i
-                                                )}
-                                            >
-                                                <div
-                                                    className="visual-block"
-                                                    style={{ backgroundColor: colorScale(i) }}
-                                                ></div>
-                                                <div className="legend-label">{i}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Shape legends for node type  */}
