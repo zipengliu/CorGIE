@@ -184,6 +184,7 @@ export function fetchGraphData(datasetId) {
                 graph.edges,
                 graph.neighborMasks.map((x) => x.toString()),
                 graph.sparseFeatures || graph.denseFeatures || null,
+                distances.featureDistMax,
                 graph.nodes.map((n) => n.typeId),
                 neighborDistanceMetric,
                 numBins

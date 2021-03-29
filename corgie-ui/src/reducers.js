@@ -964,9 +964,9 @@ const reducers = produce((draft, action) => {
                 if (
                     action.fromView === "node-attr" ||
                     action.fromView === "feature" ||
-                    action.fromView === "emb" ||
-                    action.fromView === "graph-edge" ||
-                    draft.param.onlyActivateOne
+                    // action.fromView === "emb" ||
+                    // action.fromView === "graph-edge" ||
+                    draft.param.hopsHighlight === 0
                 ) {
                     draft.highlightedNodes = action.nodeIndices;
                     draft.highlightedEdges = getEdgesWithinGroup(
@@ -978,7 +978,7 @@ const reducers = produce((draft, action) => {
                     // Highlight their neighbors as well
                     neiRes = getNeighbors(
                         draft.graph.neighborMasksByHop,
-                        draft.param.hopsActivated,
+                        draft.param.hopsHighlight,
                         draft.graph.edgeDict,
                         action.nodeIndices,
                         true
@@ -1046,16 +1046,16 @@ const reducers = produce((draft, action) => {
                 draft.hoveredEdges = [];
                 draft.featureAgg.hovered = null;
                 draft.nodeAttrs.hovered = null;
-            } else if (Number.isInteger(action.nodeIdx)) {
+            } else {
                 // Hover on a node
-                draft.hoveredNodes = [action.nodeIdx];
-                if (draft.param.onlyActivateOne) {
-                    draft.hoveredNodesAndNeighbors = [action.nodeIdx];
-                    draft.hoveredEdges = [];
+                draft.hoveredNodes = Number.isInteger(action.nodeIdx) ? [action.nodeIdx] : action.nodeIdx;
+                if (draft.param.hopsHover === 0) {
+                    draft.hoveredNodesAndNeighbors = draft.hoveredNodes.slice();
+                    draft.hoveredEdges = getEdgesWithinGroup(draft.graph.edgeDict, draft.hoveredNodes, null);
                 } else {
                     neiRes = getNeighbors(
                         draft.graph.neighborMasksByHop,
-                        draft.param.hopsActivated,
+                        draft.param.hopsHover,
                         draft.graph.edgeDict,
                         draft.hoveredNodes,
                         true
@@ -1063,12 +1063,9 @@ const reducers = produce((draft, action) => {
                     draft.hoveredNodesAndNeighbors = neiRes.nodes;
                     draft.hoveredEdges = neiRes.edges;
                 }
-            } else {
-                // Hover on a node pair or edge (or a node type)
-                draft.hoveredNodes = action.nodeIdx;
-                draft.hoveredNodesAndNeighbors = action.nodeIdx;
-                draft.hoveredEdges = getEdgesWithinGroup(draft.graph.edgeDict, draft.hoveredNodes, null);
             }
+
+            // Compute feature partial distribution for the relevant nodes
             if (draft.hoveredNodesAndNeighbors.length) {
                 if (draft.featureAgg.active) {
                     if (action.fromFeature === null) {
@@ -1268,23 +1265,14 @@ const reducers = produce((draft, action) => {
                 }
             }
 
-            if (["hopsActivated", "highlightNodeType", "highlightNodeLabel"].indexOf(action.param) !== -1) {
+            if (["hopsHighlight", "highlightNodeType", "highlightNodeLabel"].indexOf(action.param) !== -1) {
                 clearHighlights(draft);
             }
 
             // Special param changes
             if (action.param === "colorBy") {
                 setNodeColors(draft, action.value);
-            } else if (action.param === "hopsActivated") {
-                draft.param.onlyActivateOne = action.value === 0;
             }
-            // else if (action.param === "onlyActivateOne") {
-            //     if (draft.param.onlyActivateOne) {
-            //         draft.param.hopsActivated = 0;
-            //     } else if (draft.param.hopsActivated === 0) {
-            //         draft.param.hopsActivated = 1;
-            //     }
-            // }
             // else if (action.param === "nodePairFilter.ascending") {
             //     draft.highlightedNodePairs.sort(action.value ? ascFunc : descFunc);
             // }

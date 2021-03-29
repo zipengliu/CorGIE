@@ -67,8 +67,8 @@ export default {
 
     param: {
         hops: 2,
-        hopsActivated: 1,
-        onlyActivateOne: false, // whether to activate one node or one node + its neighbors
+        hopsHover: 1,
+        hopsHighlight: 0,
 
         colorBy: "umap", // Could be "umap" (for emb 2d postion), "pred-labels", "true-labels", "correctness", or a name of the attribute
         colorScale: null,
@@ -103,7 +103,7 @@ export default {
             showEdges: false,
         },
         neighborLatentMap: {
-            isOpen: true,
+            isOpen: false,
             hop: 1,
             useLinearScale: true,
         },
@@ -151,8 +151,8 @@ export default {
             width: 400,
             height: 400,
             paddings: { top: 16, bottom: 4, left: 6, right: 6 },
-            widthMax: 1000,
-            heightMax: 1000,
+            widthMax: 800,
+            heightMax: 800,
             paddingsMax: { top: 20, bottom: 10, left: 10, right: 10 },
         },
         neighborLatentMap: {

@@ -177,12 +177,12 @@ export class HighlightControl extends Component {
                         )}
                     </div>
 
-                    {numHighlightsAndFocus > 0 && !areHighlightsAlsoFocus && (
+                    {/* {numHighlightsAndFocus > 0 && !areHighlightsAlsoFocus && (
                         <div className="view-footer">
                             Note: a node can only exist in one focal group. Duplicated focal nodes will be
                             removed.
                         </div>
-                    )}
+                    )} */}
                 </div>
             </div>
         );

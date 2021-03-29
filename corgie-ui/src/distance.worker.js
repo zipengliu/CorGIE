@@ -15,9 +15,20 @@ let state = {
     distMatLatent: null,
     distMatTopo: null,
     distMatFeature: null,
+    featureDistMax: null,
 };
 
-function initializeState(emb, numNodes, edges, neighborMasks, features, nodeTypeIds, distMetric, numBins) {
+function initializeState(
+    emb,
+    numNodes,
+    edges,
+    neighborMasks,
+    features,
+    featureDistMax,
+    nodeTypeIds,
+    distMetric,
+    numBins
+) {
     state.emb = emb;
     state.numNodes = numNodes;
     state.edges = edges;
@@ -26,6 +37,8 @@ function initializeState(emb, numNodes, edges, neighborMasks, features, nodeType
     state.nodeTypeIds = nodeTypeIds;
     state.distMetric = distMetric;
     state.numBins = numBins;
+    state.featureDistMax = featureDistMax;
+    state.featureScale = scaleLinear().domain([0, featureDistMax]).range([0, 1]);
 
     function initDistMat(n) {
         let d = {};
@@ -131,8 +144,7 @@ function computeDistances(mode, targetNodes = null, maxNumPairs = 0, targetPairs
             dFeat =
                 !features || nodeTypeIds[i] !== nodeTypeIds[j]
                     ? 0
-                    : getEuclideanDistance(features[i], features[j]);
-            // : state.featureScale(getEuclideanDistance(features[i], features[j]));
+                    : state.featureScale(getEuclideanDistance(features[i], features[j]));
             distMatLatent[i][j] = dLat;
             distMatLatent[j][i] = dLat;
             distMatTopo[i][j] = dTopo;

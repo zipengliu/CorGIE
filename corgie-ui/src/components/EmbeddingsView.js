@@ -5,6 +5,7 @@ import { Form, Modal } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExpandAlt, faCompressAlt } from "@fortawesome/free-solid-svg-icons";
 import GraphLayout from "./GraphLayout";
+import SettingsView from './SettingsView'
 import { changeParam } from "../actions";
 
 class EmbeddingsView extends Component {
@@ -67,8 +68,9 @@ class EmbeddingsView extends Component {
                             showEdges={showEdges}
                         />
                         {this.renderForm()}
+                        <SettingsView />
                     </Modal.Body>
-                    <Modal.Footer>Click or brush to highlight nodes without neighbors.</Modal.Footer>
+                    {/* <Modal.Footer>Click or brush to highlight nodes without neighbors.</Modal.Footer> */}
                 </Modal>
             );
         }
@@ -94,7 +96,7 @@ class EmbeddingsView extends Component {
                     {this.renderForm()}
                 </div>
 
-                <div className="view-footer">Click or brush to highlight nodes without neighbors.</div>
+                {/* <div className="view-footer">Click or brush to highlight nodes without neighbors.</div> */}
             </div>
         );
     }

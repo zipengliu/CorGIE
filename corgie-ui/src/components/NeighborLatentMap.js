@@ -35,7 +35,7 @@ export class NeighborLatentMap extends Component {
             const debouncedHover = useCallback(debounce((x) => hoverNode(x), 300));
             return (
                 <Group
-                    onClick={highlightNodes.bind(null, mapping[x][y], null, null, null)}
+                    onClick={highlightNodes.bind(null, mapping[x][y], null, 'neighbor-latent-map', null)}
                     onMouseOver={debouncedHover.bind(null, mapping[x][y])}
                     onMouseOut={debouncedHover.bind(null, null)}
                 >

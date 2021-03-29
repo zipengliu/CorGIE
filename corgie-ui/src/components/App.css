@@ -8,7 +8,7 @@
     /* flex-wrap: wrap; */
 }
 
-.App .view {
+.view {
     border: 1px solid grey;
     border-radius: 5px;
     margin: 5px 5px;
@@ -317,7 +317,7 @@
     justify-content: flex-start;
 }
 #embeddings-view.modal-dialog {
-    max-width: 1050px;
+    max-width: 850px;
 }
 #create-scatterplot-modal .form-row {
     margin-bottom: 5px;
@@ -550,15 +550,30 @@ rect.highlight-strip {
 #settings-view {
     /* min-width: 400px; */
     width: 220px;
+    font-size: 0.875rem;
+}
+.modal-content #settings-view {
+    width: 800px;
 }
 #settings-view .view-body {
-    /* display: flex;
-    flex-direction: row; */
-    /* flex-wrap: wrap; */
-    /* justify-content: space-around; */
+    display: flex;
+    flex-direction: row; 
+    flex-wrap: wrap;
+    justify-content: space-around;
+    margin: -10px 0 0 0;
 }
-#settings-view .setting-item {
-    /* margin-left: 10px; */
+#settings-view .view-body > * {
+    margin-top: 10px;
+}
+/* #settings-view .setting-item:not(:first-child) {
+    margin-top: 5px;
+} */
+#settings-view .setting-item{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-top: 2px;
 }
 #settings-view .setting-item .setting-label {
     display: inline-block;

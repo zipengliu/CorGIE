@@ -56,7 +56,7 @@ export class SettingsView extends Component {
         const { numNodeClasses, hasLinkPredictions } = this.props;
         const { colorByNaming, nodeLabelNaming } = this;
         const { nodeTypes } = graph;
-        const { colorBy, colorScale, nodeSize, hops, hopsActivated } = param;
+        const { colorBy, colorScale, nodeSize, hops, hopsHover, hopsHighlight } = param;
         const { highlightNodeType, highlightNodeLabel } = param;
         let e, numberFormat;
         const useAttrColors = Number.isInteger(colorBy);
@@ -245,37 +245,14 @@ export class SettingsView extends Component {
                             </ButtonGroup>
                         </div>
                     </div>
-                    <div style={{ flexShrink: 0 }}>
+                    <div style={{marginTop: '10px'}}>
                         {/* <div className="text-center">Filter for Interaction</div> */}
-
-                        <div className="setting-item">
-                            <span style={{ marginRight: "5px" }}>hops for interaction:</span>
-                            <div style={{ display: "inline-block" }}>
-                                <Dropdown
-                                    onSelect={(h) => {
-                                        this.props.changeParam("hopsActivated", parseInt(h), false);
-                                    }}
-                                >
-                                    <Dropdown.Toggle id="hops-to-show" size="xxs" variant="primary">
-                                        {hopsActivated}
-                                    </Dropdown.Toggle>
-
-                                    <Dropdown.Menu>
-                                        {new Array(hops + 1).fill(0).map((_, i) => (
-                                            <Dropdown.Item key={i} eventKey={i} active={hopsActivated === i}>
-                                                {i}
-                                            </Dropdown.Item>
-                                        ))}
-                                    </Dropdown.Menu>
-                                </Dropdown>
-                            </div>
-                        </div>
 
                         {(nodeTypes.length > 1 || numNodeClasses) && (
                             <div className="setting-item">
-                                <span style={{ marginRight: "5px" }}>brushable targets: </span>
+                                <div style={{ marginRight: "5px" }}>brushable targets: </div>
                                 {nodeTypes.length > 1 && (
-                                    <div style={{ display: "inline-block", marginRight: "15px" }}>
+                                    <div style={{ marginRight: "15px" }}>
                                         <span style={{ marginRight: "5px" }}>by node type</span>
                                         <Dropdown
                                             onSelect={(k) => {
@@ -317,7 +294,7 @@ export class SettingsView extends Component {
                                     </div>
                                 )}
                                 {numNodeClasses && (
-                                    <div style={{ display: "inline-block" }}>
+                                    <div>
                                         {/* <span style={{ marginRight: "5px" }}>by node labels</span> */}
                                         <Dropdown
                                             onSelect={(k) => {
@@ -385,6 +362,52 @@ export class SettingsView extends Component {
                                 )}
                             </div>
                         )}
+
+                        <div className="setting-item">
+                            <span style={{ marginRight: "5px" }}>hops for hover:</span>
+                            <div style={{ display: "inline-block" }}>
+                                <Dropdown
+                                    onSelect={(h) => {
+                                        this.props.changeParam("hopsHover", parseInt(h), false);
+                                    }}
+                                >
+                                    <Dropdown.Toggle id="hops-hover" size="xxs" variant="primary">
+                                        {hopsHover}
+                                    </Dropdown.Toggle>
+
+                                    <Dropdown.Menu>
+                                        {new Array(hops + 1).fill(0).map((_, i) => (
+                                            <Dropdown.Item key={i} eventKey={i} active={hopsHover === i}>
+                                                {i}
+                                            </Dropdown.Item>
+                                        ))}
+                                    </Dropdown.Menu>
+                                </Dropdown>
+                            </div>
+                        </div>
+
+                        <div className="setting-item">
+                            <span style={{ marginRight: "5px" }}>hops for highlight:</span>
+                            <div style={{ display: "inline-block" }}>
+                                <Dropdown
+                                    onSelect={(h) => {
+                                        this.props.changeParam("hopsHighlight", parseInt(h), false);
+                                    }}
+                                >
+                                    <Dropdown.Toggle id="hops-highlight" size="xxs" variant="primary">
+                                        {hopsHighlight}
+                                    </Dropdown.Toggle>
+
+                                    <Dropdown.Menu>
+                                        {new Array(hops + 1).fill(0).map((_, i) => (
+                                            <Dropdown.Item key={i} eventKey={i} active={hopsHighlight=== i}>
+                                                {i}
+                                            </Dropdown.Item>
+                                        ))}
+                                    </Dropdown.Menu>
+                                </Dropdown>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
