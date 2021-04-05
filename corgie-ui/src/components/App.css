@@ -110,6 +110,11 @@
     animation: blinkingEffect 1.5s infinite;
 }
 
+.tooltip-inner {
+    text-align: left;
+    max-width: 500px;
+}
+
 #node-attr-view .stuff-container-hori .container-title {
     width: 40px;
 }
@@ -274,15 +279,16 @@
 }
 
 #focus-control {
-    max-width: 400px;
+    max-width: 240px;
 }
 #focus-control .focal-group {
     margin-bottom: 5px;
 }
 
 #distance-view {
-    max-width: 660px;
-    /* font-size: 0.875rem; */
+    /* max-width: 660px; */
+    font-size: 0.875rem;
+    flex-shrink: 1;
 }
 #distance-view .tab-pane.show {
     padding: 5px;
@@ -549,7 +555,7 @@ rect.highlight-strip {
 
 #settings-view {
     /* min-width: 400px; */
-    width: 220px;
+    width: 240px;
     font-size: 0.875rem;
 }
 .modal-content #settings-view {
@@ -557,9 +563,9 @@ rect.highlight-strip {
 }
 #settings-view .view-body {
     display: flex;
-    flex-direction: row; 
+    flex-direction: row;
     flex-wrap: wrap;
-    justify-content: space-around;
+    /* justify-content: space-around; */
     margin: -10px 0 0 0;
 }
 #settings-view .view-body > * {
@@ -568,7 +574,7 @@ rect.highlight-strip {
 /* #settings-view .setting-item:not(:first-child) {
     margin-top: 5px;
 } */
-#settings-view .setting-item{
+#settings-view .setting-item {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -641,9 +647,10 @@ rect.highlight-strip {
 }
 
 #highlight-control {
-    min-width: 200px;
+    max-width: 240px;
 }
 
 #neighbor-latent-map {
     max-width: 660px;
+    font-size: 14px;
 }

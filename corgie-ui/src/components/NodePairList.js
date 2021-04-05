@@ -29,7 +29,7 @@ export class NodePairList extends Component {
         });
 
         return (
-            <div style={{ minWidth: "180px" }}>
+            <div style={{ minWidth: "120px" }}>
                 {/* <h6>Node pairs</h6> */}
                 <div>
                     <Badge variant="primary">{highlightedNodePairs.length}</Badge> pairs highlighted.

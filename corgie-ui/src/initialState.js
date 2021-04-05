@@ -103,9 +103,9 @@ export default {
             showEdges: false,
         },
         neighborLatentMap: {
-            isOpen: false,
+            isOpen: true,
             hop: 1,
-            useLinearScale: true,
+            useLinearScale: false,
         },
 
         features: {
@@ -128,7 +128,7 @@ export default {
             isTopoVsLatent: null,
             which: null,
             brushedArea: null,
-            useLinearScale: true,
+            useLinearScale: false,
         },
         unseenTopK: 5,
 
@@ -156,8 +156,8 @@ export default {
             paddingsMax: { top: 20, bottom: 10, left: 10, right: 10 },
         },
         neighborLatentMap: {
-            cellSize: 8,
-            gap: 4, // Gap between blocks
+            cellSize: 6,
+            gap: 2, // Gap between blocks
         },
         intersectionPlot: {
             margins: { top: 10, bottom: 10, left: 10, right: 10 },

@@ -1,9 +1,10 @@
 import React, { Component, useCallback, memo } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form, Dropdown } from "react-bootstrap";
+import { Form, Dropdown, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCompressAlt, faExpandAlt } from "@fortawesome/free-solid-svg-icons";
+import { faQuestionCircle } from "@fortawesome/free-regular-svg-icons";
 import { scaleSequential, interpolateGreys, scaleSequentialLog } from "d3";
 import debounce from "lodash.debounce";
 import { Stage, Layer, Group, Rect } from "react-konva";
@@ -30,12 +31,12 @@ export class NeighborLatentMap extends Component {
             cntScale = getColorLogScale(maxBinVals[hop - 1]);
         }
 
-        const BlockRep = memo(({block, x, y}) => {
+        const BlockRep = memo(({ block, x, y }) => {
             // TODO potentiall buggy, should just change class component to function
             const debouncedHover = useCallback(debounce((x) => hoverNode(x), 300));
             return (
                 <Group
-                    onClick={highlightNodes.bind(null, mapping[x][y], null, 'neighbor-latent-map', null)}
+                    onClick={highlightNodes.bind(null, mapping[x][y], null, "neighbor-latent-map", null)}
                     onMouseOver={debouncedHover.bind(null, mapping[x][y])}
                     onMouseOut={debouncedHover.bind(null, null)}
                 >
@@ -48,7 +49,9 @@ export class NeighborLatentMap extends Component {
                                     y={cellSize * j}
                                     width={cellSize}
                                     height={cellSize}
-                                    strokeEnabled={false}
+                                    strokeEnabled={i === x && j === y}
+                                    stroke="red"
+                                    strokeWidth={0.5}
                                     fill={cntScale(val)}
                                 />
                             ))}
@@ -59,9 +62,23 @@ export class NeighborLatentMap extends Component {
         });
 
         return (
-            <div className="view" id="neighbor-latent-map">
+            <div className="view" id="neighbor-latent-map" style={{ width: canvasSize + 40 }}>
                 <h5 className="view-title">
-                    Neighbors in latent space
+                    Latent neighbor blocks
+                    <span style={{ marginLeft: "5px", cursor: "pointer" }}>
+                        <OverlayTrigger
+                            placement="right"
+                            overlay={
+                                <Tooltip id="neighbor-latent-map-tooltip">
+                                    A block = the neighbor distribution of nodes located in an area of 2D
+                                    latent space. <br /> Luminance of a cell in a block = # their neighbors
+                                    located in that area of 2D latent space.
+                                </Tooltip>
+                            }
+                        >
+                            <FontAwesomeIcon icon={faQuestionCircle} />
+                        </OverlayTrigger>
+                    </span>
                     <span
                         style={{ float: "right", marginRight: "5px", cursor: "pointer" }}
                         onClick={changeParam.bind(null, "neighborLatentMap.isOpen", null, true, null)}
@@ -74,26 +91,30 @@ export class NeighborLatentMap extends Component {
                         <Layer x={gap} y={gap}>
                             {binData.map((blockX, i) => (
                                 <Group key={i} x={(blockSize + gap) * i} y={0}>
-                                    {blockX.map((block, j) => (
-                                        <Group key={j} x={0} y={(blockSize + gap) * j}>
-                                            {/* border of a block */}
-                                            <Rect
-                                                x={0}
-                                                y={0}
-                                                width={blockSize}
-                                                height={blockSize}
-                                                fillEnabled={false}
-                                                stroke="grey"
-                                                strokeWidth={0.5}
-                                            />
-                                            <BlockRep block={block} x={i} y={j} />
-                                        </Group>
-                                    ))}
+                                    {blockX.map((block, j) =>
+                                        mapping[i][j].length > 0 ? (
+                                            <Group key={j} x={0} y={(blockSize + gap) * j}>
+                                                {/* border of a block */}
+                                                <Rect
+                                                    x={0}
+                                                    y={0}
+                                                    width={blockSize}
+                                                    height={blockSize}
+                                                    fillEnabled={false}
+                                                    stroke="grey"
+                                                    strokeWidth={0.5}
+                                                />
+                                                <BlockRep block={block} x={i} y={j} />
+                                            </Group>
+                                        ) : (
+                                            <Group key={j} />
+                                        )
+                                    )}
                                 </Group>
                             ))}
                         </Layer>
                     </Stage>
-                    <div style={{ display: "flex", flexDirection: "row" }}>
+                    <div style={{ display: "flex", flexDirection: "row", marginTop: "5px" }}>
                         <div style={{ marginRight: "5px" }}>
                             <span style={{ marginRight: "5px" }}>#neighbors within </span>
                             <div style={{ display: "inline-block" }}>
@@ -123,7 +144,7 @@ export class NeighborLatentMap extends Component {
                         </div>
                         <ColorLegend scale={cntScale} domain={[0, maxBinVals[hop - 1]]} />
                     </div>
-                    <Form inline style={{ marginLeft: "15px" }}>
+                    <Form inline>
                         <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
                         <Form.Check
                             inline
@@ -154,11 +175,6 @@ export class NeighborLatentMap extends Component {
                             )}
                         />
                     </Form>
-                </div>
-                <div className="view-footer" style={{ display: isOpen ? "block" : "none" }}>
-                    A block represents the neighbor distribution of nodes located in that area of 2D latent
-                    space. A colored cell within a block represents #neighbors located in that area of 2D
-                    latent space.
                 </div>
             </div>
         );

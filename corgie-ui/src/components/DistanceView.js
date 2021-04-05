@@ -1,7 +1,9 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form, Modal, Button, Col, Tabs, Tab } from "react-bootstrap";
+import { Form, Modal, Button, Col, Tabs, Tab, OverlayTrigger, Tooltip } from "react-bootstrap";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faQuestionCircle } from "@fortawesome/free-regular-svg-icons";
 import { format } from "d3";
 import { getNeighborDistance, getCosineDistance, getEuclideanDistance } from "../utils";
 import {
@@ -265,8 +267,40 @@ export class DistanceView extends Component {
         );
 
         return (
-            <div className="view" id="distance-view">
-                <h5 className="view-title text-center">Distances in latent, topology, and feature spaces</h5>
+            <div
+                className="view"
+                id="distance-view"
+                style={{
+                    width:
+                        displaySpecial.length + display.length > 2 || highlightedNodePairs.length > 0
+                            ? 630
+                            : 430,
+                }}
+            >
+                <h5 className="view-title text-center">
+                    Distances in latent, topology, and feature spaces
+                    <span style={{ marginLeft: "5px", cursor: "pointer" }}>
+                        <OverlayTrigger
+                            placement="right"
+                            overlay={
+                                <Tooltip id="distance-view-tooltip">
+                                    Topological distance of node pair = 1.0 - Jaccard Index of {hops}-hop
+                                    neighbor sets of two nodes. <br />
+                                    Latent distance of node pair = cosine distance of node embeddings. <br />
+                                    {hasFeatures && (
+                                        <div>
+                                            Feature distance = euclidean distance (scaled to [0,1]) of
+                                            (normalized) node feature vectors
+                                        </div>
+                                    )}
+                                    Luminance ~ #node pairs with specific distance values.
+                                </Tooltip>
+                            }
+                        >
+                            <FontAwesomeIcon icon={faQuestionCircle} />
+                        </OverlayTrigger>
+                    </span>
+                </h5>
                 <div className="view-body">
                     <div style={{ display: "flex", flexDirection: "row", justifyContent: "space-around" }}>
                         {highlightedNodePairs.length > 0 && <NodePairList />}
@@ -322,19 +356,6 @@ export class DistanceView extends Component {
                         />
                     </Form>
                     {/* </div> */}
-                </div>
-
-                <div className="view-footer">
-                    Topological distance of node pair = 1.0 - Jaccard Index of {hops}-hop neighbor sets of two
-                    nodes. <br />
-                    Latent distance of node pair = cosine distance of node embeddings. <br />
-                    {hasFeatures && (
-                        <div>
-                            Feature distance = euclidean distance (scaled to [0,1]) of (normalized) node
-                            feature vectors
-                        </div>
-                    )}
-                    Luminance ~ #node pairs with specific distance values.
                 </div>
 
                 {this.renderCreateModal()}

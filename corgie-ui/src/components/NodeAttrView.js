@@ -2,7 +2,9 @@ import React, { Component, useCallback } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import cn from "classnames";
-import { Button } from "react-bootstrap";
+import { Button, OverlayTrigger, Tooltip } from "react-bootstrap";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faQuestionCircle } from "@fortawesome/free-regular-svg-icons";
 import debounce from "lodash.debounce";
 import { changeParam, highlightNodes, hoverNode } from "../actions";
 import Histogram from "./Histogram";
@@ -325,24 +327,36 @@ class NodeAttrView extends Component {
             <div id="node-attr-view" className="view">
                 <h5 className="view-title text-center">
                     Node features (#={featureAgg.active ? featureAgg.numFeatures : nodeAttrs.numAttrs})
+                    <span style={{ marginLeft: "5px", cursor: "pointer" }}>
+                        <OverlayTrigger
+                            placement="bottom"
+                            overlay={
+                                <Tooltip id="neighbor-latent-map-tooltip">
+                                    <span>
+                                        Each row shows feature distribution of all / a focal group of nodes.
+                                    </span>
+                                    {featureAgg.active && (
+                                        <span style={{ marginLeft: "5px" }}>
+                                            More saturated color indicates a bigger count of nodes for row
+                                            foc-i, or a bigger difference for row diff.
+                                        </span>
+                                    )}
+                                    {this.props.selectedNodes.length > 2 && (
+                                        <div style={{ fontWeight: "bold" }}>
+                                            Note: the diff will only show up when there are exactly 2 focal
+                                            groups.
+                                        </div>
+                                    )}
+                                </Tooltip>
+                            }
+                        >
+                            <FontAwesomeIcon icon={faQuestionCircle} />
+                        </OverlayTrigger>
+                    </span>
                 </h5>
                 <div className="view-body">
                     {featureVisBlock}
                     {nodeAttrVisBlock}
-                </div>
-                <div className="view-footer">
-                    <span>Each row shows feature distribution of all / a focal group of nodes.</span>
-                    {featureAgg.active && (
-                        <span style={{ marginLeft: "5px" }}>
-                            More saturated color indicates a bigger count of nodes for row foc-i, or a bigger
-                            difference for row diff.
-                        </span>
-                    )}
-                    {this.props.selectedNodes.length > 2 && (
-                        <div style={{ fontWeight: "bold" }}>
-                            Note: the diff will only show up when there are exactly 2 focal groups.
-                        </div>
-                    )}
                 </div>
             </div>
         );

@@ -58,8 +58,16 @@ class App extends Component {
                 </div>
             );
         }
-        const { numNodes, numEdges, datasetId, hasNodeFeatures } = this.props;
+        const { numNodes, numEdges, datasetId, hasNodeFeatures, neighborMapOpen } = this.props;
         const { rightWidth } = this.state;
+
+        const interactionViews = (
+            <div>
+                <SettingsView />
+                <FocusControl />
+                <HighlightControl />
+            </div>
+        );
 
         return (
             <div>
@@ -67,20 +75,26 @@ class App extends Component {
 
                 <div className="App" ref={this.appRef}>
                     <div ref={this.leftColRef} style={{ flexShrink: 1 }}>
-                        <div style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}>
-                            <div>
-                                <SettingsView />
-                                <FocusControl />
-                                <HighlightControl />
-                            </div>
-                            <div>
+                        {neighborMapOpen ? (
+                            <div
+                                style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}
+                            >
                                 <EmbeddingsView />
+                                <NeighborLatentMap />
                             </div>
-                        </div>
-                        <div>
-                            <NeighborLatentMap />
-                        </div>
-                        <div>
+                        ) : (
+                            <div
+                                style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}
+                            >
+                                {interactionViews}
+                                <div>
+                                    <EmbeddingsView />
+                                    <NeighborLatentMap />
+                                </div>
+                            </div>
+                        )}
+                        <div style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}>
+                            {neighborMapOpen && interactionViews}
                             <DistanceView />
                         </div>
                     </div>
@@ -113,6 +127,7 @@ const mapStateToProps = (state) => ({
     numNodes: state.loaded ? state.graph.nodes.length : 0,
     numEdges: state.loaded ? state.graph.edges.length : 0,
     hasNodeFeatures: state.loaded && (state.nodeAttrs.active || state.featureAgg.active),
+    neighborMapOpen: state.param.neighborLatentMap.isOpen,
     error: state.error,
 });
 

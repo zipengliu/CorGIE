@@ -23,7 +23,7 @@ export class SettingsView extends Component {
         wrong: "wrong prediction",
     };
 
-    componentWillMount() {
+    componentDidMount() {
         const { attrMeta, numNodeClasses } = this.props;
         for (let i = 0; i < attrMeta.length; i++) {
             const a = attrMeta[i];
