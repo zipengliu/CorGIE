@@ -301,19 +301,30 @@ function BaseLayerUnconnected({
                         <Group key={i}>
                             <Rect
                                 x={g.bounds.x}
+                                y={g.bounds.y - 16}
+                                width={100}
+                                height={16}
+                                opacity={0.8}
+                                fill="rgb(231, 215, 164)"
+                                stroke="rgb(231, 215, 164)"
+                                strokeWidth={1}
+                            />
+                            <Rect
+                                x={g.bounds.x}
                                 y={g.bounds.y}
                                 width={g.bounds.width}
                                 height={g.bounds.height}
                                 // stroke="black"
-                                stroke="#af7c0d"
-                                strokeWidth={1}
+                                // stroke="#af7c0d"
+                                stroke="rgb(231, 215, 164)"
+                                strokeWidth={2}
                                 // dash={[2, 2]}
                                 fillEnabled={false}
                             />
                             <Text
                                 text={`${g.name} (#=${g.num})`}
                                 x={g.bounds.x + 4}
-                                y={g.bounds.y + 2}
+                                y={g.bounds.y - 14}
                                 fontSize={14}
                             />
                         </Group>

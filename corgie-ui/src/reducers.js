@@ -1208,7 +1208,7 @@ const reducers = produce((draft, action) => {
                             // scale: scaleSequential(interpolateRdBu).domain([-t, t]),
                             scale: scaleSequential(interpolateGreys).domain([0, diffMax]),
                         });
-                        draft.param.features.collapsed.push(false);
+                        draft.param.features.collapsed.push(true);
                     }
                 }
                 // Allocate space for the distance data, waiting for worker to return the actual computed values

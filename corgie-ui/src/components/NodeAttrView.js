@@ -5,6 +5,7 @@ import cn from "classnames";
 import { Button, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faQuestionCircle } from "@fortawesome/free-regular-svg-icons";
+import { faBan } from "@fortawesome/free-solid-svg-icons";
 import debounce from "lodash.debounce";
 import { changeParam, highlightNodes, hoverNode } from "../actions";
 import Histogram from "./Histogram";
@@ -277,7 +278,8 @@ class NodeAttrView extends Component {
                                                 histSpec.margins.right,
                                         }}
                                     >
-                                        N/A
+                                        {/* N/A */}
+                                        <FontAwesomeIcon icon={faBan} />
                                     </div>
                                 ) : (
                                     <Histogram

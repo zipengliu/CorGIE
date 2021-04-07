@@ -84,7 +84,7 @@ function evaluateLayout(coords, nodesByHop) {
 function computeGroupPositions(selectedNodes, nodesByHop) {
     const numFoc = selectedNodes.length;
     const { hops } = state;
-    const { padding, gapBetweenHop } = state.spec;
+    const { padding, gapBetweenHop, gapBetweenFocal, paddingTop, paddingBottom } = state.spec;
 
     // Get the number of nodes for each hop
     const nums = nodesByHop.map((n) => n.length);
@@ -92,7 +92,8 @@ function computeGroupPositions(selectedNodes, nodesByHop) {
 
     // Allocate space for each hop
     let canvasHeight = state.getCanvasSize(numNodes);
-    const canvasWidth = canvasHeight * 1.5;
+    const canvasWidth = canvasHeight * 1.3;
+    canvasHeight += paddingTop + paddingBottom;
     // Resize the embeddings for the four different groups of nodes: selected, 1-hop, 2-hop, 3-hop,...
     const weights = [10, 10];
     console.assert(hops <= 5);
@@ -102,13 +103,11 @@ function computeGroupPositions(selectedNodes, nodesByHop) {
     const weightedSum = nums.reduce((prev, cur, i) => prev + Math.log2(cur + 1) * weights[i], 0);
     const usableWidth = canvasWidth - hops * gapBetweenHop;
     const groupWidths = nums.map((ni, i) => ((weights[i] * Math.log2(ni + 1)) / weightedSum) * usableWidth);
+    const availHeightsFocal =
+        canvasHeight - (numFoc - 1) * gapBetweenFocal - numFoc * 2 * padding - paddingTop - paddingBottom;
     const groupHeights = [
         selectedNodes.map((s) =>
-            Math.min(
-                groupWidths[0],
-                ((canvasHeight - (numFoc - 1) * gapBetweenHop - numFoc * 2 * padding) / nums[0]) * s.length +
-                    2 * padding
-            )
+            Math.min(groupWidths[0], (availHeightsFocal / nums[0]) * s.length + 2 * padding)
         ),
     ];
     let maxNeighHeight = 0;
@@ -119,18 +118,21 @@ function computeGroupPositions(selectedNodes, nodesByHop) {
     }
     // Re-visit the canvasHeight since the heights might not used up.
     const focalHeightSum = groupHeights[0].reduce((prev, cur) => prev + cur, 0);
-    let possibleFocalHeight = focalHeightSum + gapBetweenHop * (numFoc - 1);
-    canvasHeight = Math.min(canvasHeight, Math.max(possibleFocalHeight, maxNeighHeight));
+    let possibleFocalHeight = focalHeightSum + gapBetweenFocal * (numFoc - 1);
+    canvasHeight = Math.min(
+        canvasHeight,
+        Math.max(possibleFocalHeight, maxNeighHeight) + paddingBottom + paddingTop
+    );
     console.log({ canvasWidth, canvasHeight, groupWidths, groupHeights });
 
     let groups = [];
     let xOffset = 0,
-        yOffset = 0,
+        yOffset = paddingTop,
         actualGapFocal = 0;
     // position the focal groups
     if (numFoc > 1) {
         // The vertical gap between focal groups is not gapBetweenHop
-        actualGapFocal = (canvasHeight - focalHeightSum) / (numFoc - 1);
+        actualGapFocal = (canvasHeight - paddingTop - focalHeightSum) / (numFoc - 1);
     } else {
         yOffset = (canvasHeight - groupHeights[0][0]) / 2;
     }
@@ -149,7 +151,7 @@ function computeGroupPositions(selectedNodes, nodesByHop) {
     for (let i = 1; i <= hops; i++) {
         const bbox = {
             x: xOffset,
-            y: (canvasHeight - groupHeights[i]) / 2,
+            y: Math.max((canvasHeight - groupHeights[i]) / 2, paddingTop),
             width: groupWidths[i],
             height: groupHeights[i],
         };
@@ -870,7 +872,7 @@ function computeSpaceFillingCurveLayout(selectedNodes, neighArr, useGlobalMask) 
     // Move the coordinates such that (0,0) is on the top left for rendering
     const xExtent = extent(remappedCoords.map((c) => c.x));
     const yExtent = extent(remappedCoords.map((c) => c.y));
-    console.log({xExtent, yExtent});
+    console.log({ xExtent, yExtent });
     const width = xExtent[1] - xExtent[0] + 2 * padding;
     const height = yExtent[1] - yExtent[0] + 2 * padding;
 

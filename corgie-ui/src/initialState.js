@@ -138,9 +138,11 @@ export default {
 
     spec: {
         graph: {
-            margin: 5,
-            padding: 16, // padding of group
+            paddingTop: 20, // Padding of focal graph to fit in the group label
+            paddingBottom: 2,
+            padding: 10, // padding within group
             gapBetweenHop: 8,
+            gapBetweenFocal: 18,
 
             edgeType: "line",
             neighborMarkerMaxHeight: 30,
@@ -151,7 +153,7 @@ export default {
         latent: {
             width: 380,
             height: 380,
-            paddings: { top: 16, bottom: 4, left: 6, right: 6 },
+            paddings: { top: 18, bottom: 4, left: 6, right: 6 },
             widthMax: 800,
             heightMax: 800,
             paddingsMax: { top: 20, bottom: 10, left: 10, right: 10 },

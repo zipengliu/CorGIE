@@ -77,7 +77,7 @@ class App extends Component {
                     <div ref={this.leftColRef} style={{ flexShrink: 1 }}>
                         {neighborMapOpen ? (
                             <div
-                                style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}
+                                style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end", alignItems: "stretch" }}
                             >
                                 <EmbeddingsView />
                                 <NeighborLatentMap />
