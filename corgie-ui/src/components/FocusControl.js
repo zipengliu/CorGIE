@@ -16,7 +16,7 @@ export class FocusControl extends Component {
                     Focus
                     {selectedNodes.length > 0 && (
                         <Button
-                            variant="danger"
+                            variant="primary"
                             size="xxs"
                             style={{ marginLeft: "10px" }}
                             onClick={this.props.selectNodes.bind(null, "CLEAR", null, null)}

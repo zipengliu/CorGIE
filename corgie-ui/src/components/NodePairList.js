@@ -52,11 +52,11 @@ export class NodePairList extends Component {
                         </div>
                         <div>
                             <Button
-                                variant="outline-danger"
+                                variant="primary"
                                 size="xs"
                                 onClick={highlightNodePairs.bind(null, null, null, null)}
                             >
-                                clear highlights
+                                clear
                             </Button>
                         </div>
                     </div>

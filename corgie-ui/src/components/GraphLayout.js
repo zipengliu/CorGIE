@@ -134,7 +134,7 @@ class GraphLayout extends Component {
                                     useStroke={
                                         this.props.useStrokeForFocal
                                             ? fromView === "emb"
-                                                ? "#fff"
+                                                ? "#aaa"
                                                 : "#000"
                                             : false
                                     }
@@ -304,16 +304,17 @@ function BaseLayerUnconnected({
                                 y={g.bounds.y}
                                 width={g.bounds.width}
                                 height={g.bounds.height}
-                                stroke="black"
+                                // stroke="black"
+                                stroke="#af7c0d"
                                 strokeWidth={1}
-                                dash={[2, 2]}
+                                // dash={[2, 2]}
                                 fillEnabled={false}
                             />
                             <Text
                                 text={`${g.name} (#=${g.num})`}
-                                x={g.bounds.x + 2}
+                                x={g.bounds.x + 4}
                                 y={g.bounds.y + 2}
-                                fontSize={12}
+                                fontSize={14}
                             />
                         </Group>
                     ))}

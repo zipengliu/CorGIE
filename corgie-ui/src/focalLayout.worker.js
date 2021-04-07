@@ -26,7 +26,7 @@ let state = {
     hops: 0,
     neighborMasks: null,
     neighborMasks1hop: null,
-    getCanvasSize: scaleSqrt().domain([1, maxNumNodes]).range([400, 1000]).clamp(true),
+    getCanvasSize: scaleSqrt().domain([1, maxNumNodes]).range([350, 1000]).clamp(true),
     spec: null,
 };
 

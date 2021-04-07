@@ -61,7 +61,7 @@ export default {
         show: false,
         connectivity: "edge", // Possible values: all, edge, nonedge
         userInterests: "all", // Possible values: all, highlight, foc-i, foc-i*foc-j
-        linkPrediction: "all", // possible values: all, pred-true, pred-false 
+        linkPrediction: "all", // possible values: all, pred-true, pred-false
         nodePairs: [],
     },
 
@@ -106,6 +106,7 @@ export default {
             isOpen: true,
             hop: 1,
             useLinearScale: false,
+            showSettings: false,
         },
 
         features: {
@@ -132,7 +133,7 @@ export default {
         },
         unseenTopK: 5,
 
-        activeDistanceTab: 'topo-vs-latent',
+        activeDistanceTab: "topo-vs-latent",
     },
 
     spec: {
@@ -148,8 +149,8 @@ export default {
             minRingGap: 50, // Minimum gap between the two rings (along the radius axis)
         },
         latent: {
-            width: 400,
-            height: 400,
+            width: 380,
+            height: 380,
             paddings: { top: 16, bottom: 4, left: 6, right: 6 },
             widthMax: 800,
             heightMax: 800,
@@ -157,7 +158,7 @@ export default {
         },
         neighborLatentMap: {
             cellSize: 6,
-            gap: 2, // Gap between blocks
+            gap: 1, // Gap between blocks
         },
         intersectionPlot: {
             margins: { top: 10, bottom: 10, left: 10, right: 10 },
@@ -184,7 +185,7 @@ export default {
         },
         histogram: {
             margins: { top: 10, bottom: 18, left: 30, right: 10 },
-            height: 60,
+            height: 50,
             width: 100,
         },
         partialHistogram: {
@@ -194,8 +195,8 @@ export default {
         },
         scatterHist: {
             margins: { top: 15, bottom: 12, left: 18, right: 20 },
-            histHeight: 30,
-            histWidth: 30,
+            histHeight: 15,
+            histWidth: 20,
             scatterHeight: 80,
             scatterWidth: 80,
             tickLabelGap: 15,

@@ -65,7 +65,6 @@ class App extends Component {
             <div>
                 <SettingsView />
                 <FocusControl />
-                <HighlightControl />
             </div>
         );
 
@@ -73,6 +72,7 @@ class App extends Component {
             <div>
                 <AppNav datasetId={datasetId} stats={{ numNodes, numEdges }} />
 
+                <HighlightControl />
                 <div className="App" ref={this.appRef}>
                     <div ref={this.leftColRef} style={{ flexShrink: 1 }}>
                         {neighborMapOpen ? (
@@ -93,7 +93,14 @@ class App extends Component {
                                 </div>
                             </div>
                         )}
-                        <div style={{ display: "flex", flexDirection: "row", justifyContent: "flex-end" }}>
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "row",
+                                justifyContent: "flex-end",
+                                alignItems: "flex-start",
+                            }}
+                        >
                             {neighborMapOpen && interactionViews}
                             <DistanceView />
                         </div>

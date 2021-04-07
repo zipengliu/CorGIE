@@ -1,9 +1,10 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form, Modal, Button, Col, Tabs, Tab, OverlayTrigger, Tooltip } from "react-bootstrap";
+import { Form, Modal, Button, Col, Tabs, Tab, Nav, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faQuestionCircle } from "@fortawesome/free-regular-svg-icons";
+import { faWrench } from "@fortawesome/free-solid-svg-icons";
 import { format } from "d3";
 import { getNeighborDistance, getCosineDistance, getEuclideanDistance } from "../utils";
 import {
@@ -20,8 +21,9 @@ import NodePairList from "./NodePairList";
 export class DistanceView extends Component {
     renderCreateModal() {
         const { highlightedNodes, hasLinkPredictions, selectedNodes, formData } = this.props;
+        const { useLinearScale } = this.props.nodePairFilter;
         const { show, connectivity, userInterests, linkPrediction, nodePairs } = formData;
-        const { changeScatterplotForm } = this.props;
+        const { changeScatterplotForm, changeParam } = this.props;
         const numFoc = selectedNodes.length;
         const btwFoc = [];
         for (let i = 0; i < numFoc; i++) {
@@ -39,9 +41,35 @@ export class DistanceView extends Component {
                 onHide={this.props.changeScatterplotForm.bind(null, "show", false)}
             >
                 <Modal.Header closeButton>
-                    <Modal.Title>Create new node-pair scatterplot</Modal.Title>
+                    <Modal.Title>Customization</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
+                    <h6>Settings</h6>
+                    <Form inline>
+                        <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
+                        <Form.Check
+                            inline
+                            label="linear"
+                            type="radio"
+                            id="scale-linear-ctrl"
+                            checked={useLinearScale}
+                            onChange={() => {
+                                changeParam("nodePairFilter.useLinearScale", null, true);
+                            }}
+                        />
+                        <Form.Check
+                            inline
+                            label="log10"
+                            type="radio"
+                            id="scale-log-ctrl"
+                            checked={!useLinearScale}
+                            onChange={() => {
+                                changeParam("nodePairFilter.useLinearScale", null, true);
+                            }}
+                        />
+                    </Form>
+
+                    <h6 style={{ marginTop: "30px" }}>Create customized node-pair scatterplot</h6>
                     <Form>
                         <Form.Row>
                             <Form.Label column sm={2}>
@@ -224,7 +252,15 @@ export class DistanceView extends Component {
     }
 
     render() {
-        const { hops, distances, nodePairFilter, spec, highlightDistVals, hasFeatures } = this.props;
+        const {
+            hops,
+            distances,
+            nodePairFilter,
+            spec,
+            highlightDistVals,
+            hasFeatures,
+            activeTab,
+        } = this.props;
         const { highlightedNodePairs } = this.props;
         const { highlightNodePairs, changeParam } = this.props;
         const { display, displaySpecial } = distances;
@@ -273,8 +309,8 @@ export class DistanceView extends Component {
                 style={{
                     width:
                         displaySpecial.length + display.length > 2 || highlightedNodePairs.length > 0
-                            ? 630
-                            : 430,
+                            ? 580 
+                            : 420,
                 }}
             >
                 <h5 className="view-title text-center">
@@ -300,62 +336,37 @@ export class DistanceView extends Component {
                             <FontAwesomeIcon icon={faQuestionCircle} />
                         </OverlayTrigger>
                     </span>
+                    <span
+                        className="right-btn"
+                        onClick={this.props.changeScatterplotForm.bind(null, "show", true)}
+                    >
+                        <FontAwesomeIcon icon={faWrench} />
+                    </span>
                 </h5>
                 <div className="view-body">
                     <div style={{ display: "flex", flexDirection: "row", justifyContent: "space-around" }}>
-                        {highlightedNodePairs.length > 0 && <NodePairList />}
                         <div>
-                            <Tabs
-                                activeKey={this.props.activeTab}
-                                onSelect={(k) => {
-                                    changeParam("activeDistanceTab", k);
-                                }}
-                            >
-                                <Tab eventKey="topo-vs-latent" title="topo vs. latent">
-                                    {getScatterHistList(true)}
-                                </Tab>
-                                {hasFeatures && (
-                                    <Tab eventKey="feature-vs-latent" title="feature vs. latent">
-                                        {getScatterHistList(false)}
-                                    </Tab>
-                                )}
-                            </Tabs>
+                            {hasFeatures && (
+                                <Nav
+                                    variant="pills"
+                                    activeKey={activeTab}
+                                    onSelect={(k) => {
+                                        changeParam("activeDistanceTab", k);
+                                    }}
+                                >
+                                    <Nav.Item>
+                                        <Nav.Link eventKey="topo-vs-latent">Topo vs. latent</Nav.Link>
+                                    </Nav.Item>
+                                    <Nav.Item>
+                                        <Nav.Link eventKey="feature-vs-latent">Feature vs. latent</Nav.Link>
+                                    </Nav.Item>
+                                </Nav>
+                            )}
+
+                            {getScatterHistList(activeTab === "topo-vs-latent")}
                         </div>
+                        {highlightedNodePairs.length > 0 && <NodePairList />}
                     </div>
-                    <div style={{ marginTop: "10px" }}>
-                        <Button
-                            size="xs"
-                            variant="outline-primary"
-                            onClick={this.props.changeScatterplotForm.bind(null, "show", true)}
-                        >
-                            Create distance distribution with self-specified conditions
-                        </Button>
-                    </div>
-                    {/* <div> */}
-                    <Form inline>
-                        <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
-                        <Form.Check
-                            inline
-                            label="linear"
-                            type="radio"
-                            id="scale-linear-ctrl"
-                            checked={useLinearScale}
-                            onChange={() => {
-                                changeParam("nodePairFilter.useLinearScale", null, true);
-                            }}
-                        />
-                        <Form.Check
-                            inline
-                            label="log10"
-                            type="radio"
-                            id="scale-log-ctrl"
-                            checked={!useLinearScale}
-                            onChange={() => {
-                                changeParam("nodePairFilter.useLinearScale", null, true);
-                            }}
-                        />
-                    </Form>
-                    {/* </div> */}
                 </div>
 
                 {this.renderCreateModal()}

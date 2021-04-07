@@ -5,7 +5,7 @@ import { Form, Modal } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExpandAlt, faCompressAlt } from "@fortawesome/free-solid-svg-icons";
 import GraphLayout from "./GraphLayout";
-import SettingsView from './SettingsView'
+import SettingsView from "./SettingsView";
 import { changeParam } from "../actions";
 
 class EmbeddingsView extends Component {
@@ -77,13 +77,13 @@ class EmbeddingsView extends Component {
         return (
             <div id="embeddings-view" className="view">
                 <h5 className="view-title text-center">
-                    Latent space <small>(UMAP, #dim={numDim})</small>
                     <span
-                        style={{ float: "right", marginRight: "5px", cursor: "pointer" }}
+                        className="left-btn"
                         onClick={changeParam.bind(null, "embeddings.maxWindow", true, null, null)}
                     >
                         <FontAwesomeIcon icon={faExpandAlt} />
                     </span>
+                    Latent space <small>(UMAP, #dim={numDim})</small>
                 </h5>
 
                 <div className="view-body">

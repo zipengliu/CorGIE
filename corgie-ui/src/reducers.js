@@ -9,7 +9,6 @@ import {
     scaleSequential,
     interpolateGreens,
     interpolateGreys,
-    interpolateRdBu,
     scaleLinear,
     scaleOrdinal,
     schemeTableau10,
@@ -534,7 +533,7 @@ function setNodeColors(draft, colorBy) {
                 attrDomain[1],
             ]);
             draft.nodeColors = draft.graph.nodes.map((n) =>
-                n.hasOwnProperty(colorAttr.name) ? s(n[colorAttr.name]) : "grey"
+                n.hasOwnProperty(colorAttr.name) ? s(n[colorAttr.name]) : "black"
             );
     }
     draft.param.colorBy = colorBy;

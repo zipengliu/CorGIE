@@ -1,9 +1,9 @@
 import React, { Component, useCallback, memo } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Form, Dropdown, OverlayTrigger, Tooltip } from "react-bootstrap";
+import { Form, Dropdown, OverlayTrigger, Tooltip, Modal } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCompressAlt, faExpandAlt } from "@fortawesome/free-solid-svg-icons";
+import { faCompressAlt, faExpandAlt, faWrench } from "@fortawesome/free-solid-svg-icons";
 import { faQuestionCircle } from "@fortawesome/free-regular-svg-icons";
 import { scaleSequential, interpolateGreys, scaleSequentialLog } from "d3";
 import debounce from "lodash.debounce";
@@ -11,10 +11,43 @@ import { Stage, Layer, Group, Rect } from "react-konva";
 import ColorLegend from "./ColorLegend";
 import { changeParam, hoverNode, highlightNodes } from "../actions";
 
+const SettingModal = ({ params, changeParam }) => (
+    <Modal
+        show={params.showSettings}
+        centered
+        id="latent-neighbor-blocks-settings-modal"
+        onHide={changeParam.bind(null, "neighborLatentMap.showSettings", false, null, null)}
+    >
+        <Modal.Header closeButton>
+            <Modal.Title>Settings for latent neighbor blocks</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+            <Form inline>
+                <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
+                <Form.Check
+                    inline
+                    label="linear"
+                    type="radio"
+                    id="scale-linear-nei"
+                    checked={params.useLinearScale}
+                    onChange={changeParam.bind(null, "neighborLatentMap.useLinearScale", null, true, null)}
+                />
+                <Form.Check
+                    inline
+                    label="log10"
+                    type="radio"
+                    id="scale-log-nei"
+                    checked={!params.useLinearScale}
+                    onChange={changeParam.bind(null, "neighborLatentMap.useLinearScale", null, true, null)}
+                />
+            </Form>
+        </Modal.Body>
+    </Modal>
+);
 export class NeighborLatentMap extends Component {
     render() {
-        const { changeParam, hoverNode, highlightNodes } = this.props;
-        const { isOpen, useLinearScale, hop } = this.props.param;
+        const { changeParam, hoverNode, highlightNodes, param } = this.props;
+        const { isOpen, useLinearScale, hop } = param;
         const { binsByHop, maxBinVals, granu, mapping } = this.props.data;
         const { gap, cellSize } = this.props.spec;
         const binData = binsByHop[hop - 1]; // TODO could be changed by user
@@ -62,8 +95,14 @@ export class NeighborLatentMap extends Component {
         });
 
         return (
-            <div className="view" id="neighbor-latent-map" style={{ width: canvasSize + 40 }}>
+            <div className="view" id="neighbor-latent-map" style={{ width: canvasSize + 30 }}>
                 <h5 className="view-title">
+                    <span
+                        className="left-btn"
+                        onClick={changeParam.bind(null, "neighborLatentMap.isOpen", null, true, null)}
+                    >
+                        <FontAwesomeIcon icon={isOpen ? faCompressAlt : faExpandAlt} />
+                    </span>
                     Latent neighbor blocks
                     <span style={{ marginLeft: "5px", cursor: "pointer" }}>
                         <OverlayTrigger
@@ -80,10 +119,10 @@ export class NeighborLatentMap extends Component {
                         </OverlayTrigger>
                     </span>
                     <span
-                        style={{ float: "right", marginRight: "5px", cursor: "pointer" }}
-                        onClick={changeParam.bind(null, "neighborLatentMap.isOpen", null, true, null)}
+                        className="right-btn"
+                        onClick={changeParam.bind(null, "neighborLatentMap.showSettings", true, null, null)}
                     >
-                        <FontAwesomeIcon icon={isOpen ? faCompressAlt : faExpandAlt} />
+                        <FontAwesomeIcon icon={faWrench} />
                     </span>
                 </h5>
                 <div className="view-body" style={{ display: isOpen ? "block" : "none" }}>
@@ -144,38 +183,9 @@ export class NeighborLatentMap extends Component {
                         </div>
                         <ColorLegend scale={cntScale} domain={[0, maxBinVals[hop - 1]]} />
                     </div>
-                    <Form inline>
-                        <Form.Label style={{ marginRight: "5px" }}>Choose scale type:</Form.Label>
-                        <Form.Check
-                            inline
-                            label="linear"
-                            type="radio"
-                            id="scale-linear-nei"
-                            checked={useLinearScale}
-                            onChange={changeParam.bind(
-                                null,
-                                "neighborLatentMap.useLinearScale",
-                                null,
-                                true,
-                                null
-                            )}
-                        />
-                        <Form.Check
-                            inline
-                            label="log10"
-                            type="radio"
-                            id="scale-log-nei"
-                            checked={!useLinearScale}
-                            onChange={changeParam.bind(
-                                null,
-                                "neighborLatentMap.useLinearScale",
-                                null,
-                                true,
-                                null
-                            )}
-                        />
-                    </Form>
                 </div>
+
+                <SettingModal params={param} changeParam={changeParam} />
             </div>
         );
     }

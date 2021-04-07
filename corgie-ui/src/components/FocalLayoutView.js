@@ -1,9 +1,10 @@
 import React from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Spinner, Form, Modal } from "react-bootstrap";
+import { Spinner, Form, Modal, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWrench } from "@fortawesome/free-solid-svg-icons";
+import { faQuestionCircle } from "@fortawesome/free-regular-svg-icons";
 import GraphLayout from "./GraphLayout";
 import { ComputingSpinner } from "./InitialLayoutView";
 import { changeFocalParam } from "../actions";
@@ -68,8 +69,21 @@ function FocalLayoutView({ focalLayout, hasFocalNodes, hops, params, changeFocal
         <div className={`view ${hasFocalNodes ? "" : "no-layout"}`} id="focal-graph-view">
             <h5 className="view-title text-center">
                 Focal graph layout
+                <span style={{ marginLeft: "5px", cursor: "pointer" }}>
+                    <OverlayTrigger
+                        placement="right"
+                        overlay={
+                            <Tooltip id="distance-view-tooltip">
+                                Nodes of each group are layout using UMAP independently with the topological
+                                distance metric (Jaccard Index). Nodes outside {hops} hops are not shown.
+                            </Tooltip>
+                        }
+                    >
+                        <FontAwesomeIcon icon={faQuestionCircle} />
+                    </OverlayTrigger>
+                </span>
                 <span
-                    style={{ float: "right", marginRight: "5px", cursor: "pointer" }}
+                    className="right-btn"
                     onClick={changeFocalParam.bind(null, "focalGraph.showSettings", true)}
                 >
                     <FontAwesomeIcon icon={faWrench} />
@@ -91,7 +105,7 @@ function FocalLayoutView({ focalLayout, hasFocalNodes, hops, params, changeFocal
                                 layoutData={focalLayout}
                                 useStrokeForFocal={false}
                                 fromView="graph-layout"
-                                showEdges={params.useEdgeBundling? 'bundled': true}
+                                showEdges={params.useEdgeBundling ? "bundled" : true}
                             />
                         )}
                         {!!focalLayout.runningMsg && (
@@ -105,16 +119,8 @@ function FocalLayoutView({ focalLayout, hasFocalNodes, hops, params, changeFocal
             </div>
             {hasFocalNodes && (
                 <div className="view-footer">
-                    <div>
-                        #nodes: {focalLayout.numNodes}, #edges: {focalLayout.numEdges}, Layout algorithm:{" "}
-                        {focalLayout.name}
-                    </div>
-                    {focalAlg === "umap" && (
-                        <div>
-                            Nodes of each group are layout using UMAP independently with the topological
-                            distance metric (Jaccard Index). Nodes outside {hops} hops are not shown.
-                        </div>
-                    )}
+                    #nodes: {focalLayout.numNodes}, #edges: {focalLayout.numEdges}, Layout algorithm:{" "}
+                    {focalLayout.name}
                 </div>
             )}
 

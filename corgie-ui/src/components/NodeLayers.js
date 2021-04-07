@@ -11,8 +11,17 @@ export const FocusLayer = memo(({ focalGroups, nodes, coords, focalBBox, nodeSiz
             {!!focalBBox &&
                 focalBBox.map((h, i) => (
                     <Group key={i}>
-                        <Text x={h.x} y={h.y - 10} text={`foc-${i}`} fontSize={12} />
-                        <Rect {...h} stroke="black" strokeWidth={1} dash={[2, 2]} fillEnabled={false} />
+                        <Rect
+                            x={h.x}
+                            y={h.y - 14}
+                            width={37}
+                            height={14}
+                            strokeEnabled={false}
+                            opacity={0.8}
+                            fill="rgb(231, 215, 164)"
+                        />
+                        <Text x={h.x + 2} y={h.y - 13} text={`foc-${i}`} fontSize={14} />
+                        <Rect {...h} stroke="black" strokeWidth={1} fillEnabled={false} />
                     </Group>
                 ))}
         </Group>

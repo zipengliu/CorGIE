@@ -1,11 +1,13 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Dropdown, Button, ButtonGroup, Table } from "react-bootstrap";
+import { Dropdown, Button, ButtonGroup, Form } from "react-bootstrap";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCaretRight, faCaretDown } from "@fortawesome/free-solid-svg-icons";
 import { format as d3Format } from "d3";
 import { Stage, Layer } from "react-konva";
 import { range as lodashRange } from "lodash";
-import { highlightNodes, changeHops, changeParam, hoverNode } from "../actions";
+import { highlightNodes, changeHops, changeParam, hoverNode, searchNodes } from "../actions";
 import ColorLegend from "./ColorLegend";
 import NodeRep from "./NodeRep";
 
@@ -51,12 +53,27 @@ export class SettingsView extends Component {
         this.props.hoverNode(targets);
     }
 
+    callSearch(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target),
+            { searchLabel, searchId } = Object.fromEntries(formData.entries());
+        if (searchLabel) {
+            this.props.searchNodes(searchLabel, null);
+        } else {
+            const t = parseInt(searchId);
+            if (!isNaN(t)) {
+                this.props.searchNodes(null, t);
+            }
+        }
+    }
+
     render() {
         const { graph, param, attrMeta, changeParam, hoverNode, highlightNodes } = this.props;
         const { numNodeClasses, hasLinkPredictions } = this.props;
         const { colorByNaming, nodeLabelNaming } = this;
         const { nodeTypes } = graph;
         const { colorBy, colorScale, nodeSize, hops, hopsHover, hopsHighlight } = param;
+        const { searchShown } = param.nodeFilter;
         const { highlightNodeType, highlightNodeLabel } = param;
         let e, numberFormat;
         const useAttrColors = Number.isInteger(colorBy);
@@ -67,16 +84,55 @@ export class SettingsView extends Component {
 
         return (
             <div id="settings-view" className="view">
-                <h5 className="view-title">Settings</h5>
+                <h5 className="view-title text-center">Settings</h5>
                 <div className="view-body">
                     <div style={{ marginRight: "5px" }}>
                         {/* <div className="text-center">Node visuals</div> */}
+                        {/* Shape legends for node type  */}
+                        {nodeTypes.length > 1 && (
+                            <div className="setting-item">
+                                {/* <div className="setting-label">Shape:</div> */}
+                                <div className="node-rep-legends node-shape">
+                                    {nodeTypes.map((nt, i) => (
+                                        <div
+                                            className="legend-item"
+                                            key={i}
+                                            onMouseOver={this.hoverNodeType.bind(this, i)}
+                                            onMouseOut={hoverNode.bind(null, null)}
+                                            onClick={highlightNodes.bind(null, null, null, "node-type", i)}
+                                        >
+                                            <div className="visual-block">
+                                                <Stage width={14} height={14}>
+                                                    <Layer>
+                                                        <NodeRep
+                                                            x={7}
+                                                            y={7}
+                                                            radius={5}
+                                                            typeId={i}
+                                                            style={{
+                                                                fill:
+                                                                    colorBy === "node-type"
+                                                                        ? nt.color
+                                                                        : "grey",
+                                                                strokeEnabled: false,
+                                                            }}
+                                                        />
+                                                    </Layer>
+                                                </Stage>
+                                            </div>
+                                            <div className="legend-label">{`${nt.name} (${nt.count})`}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="setting-item">
                             <div className="setting-label">Color:</div>
                             <div style={{ display: "inline-block" }}>
                                 <Dropdown
                                     onSelect={(k) => {
-                                        this.props.changeParam("colorBy", k, false);
+                                        changeParam("colorBy", k, false);
                                     }}
                                 >
                                     <Dropdown.Toggle id="color-by-toggle-btn" size="xxs" variant="primary">
@@ -118,7 +174,7 @@ export class SettingsView extends Component {
                                         {attrMeta.length > 0 && <Dropdown.Divider />}
                                         {attrMeta.map((a, i) => (
                                             <Dropdown.Item key={i} eventKey={i} active={colorBy === i}>
-                                                {colorByNaming[i]}
+                                                {`${a.nodeType}: ${a.name}`}
                                             </Dropdown.Item>
                                         ))}
 
@@ -184,45 +240,6 @@ export class SettingsView extends Component {
                             )}
                         </div>
 
-                        {/* Shape legends for node type  */}
-                        {nodeTypes.length > 1 && (
-                            <div className="setting-item">
-                                <div className="setting-label">Shape:</div>
-                                <div className="node-rep-legends node-shape">
-                                    {nodeTypes.map((nt, i) => (
-                                        <div
-                                            className="legend-item"
-                                            key={i}
-                                            onMouseOver={this.hoverNodeType.bind(this, i)}
-                                            onMouseOut={hoverNode.bind(null, null)}
-                                            onClick={highlightNodes.bind(null, null, null, "node-type", i)}
-                                        >
-                                            <div className="visual-block">
-                                                <Stage width={14} height={14}>
-                                                    <Layer>
-                                                        <NodeRep
-                                                            x={7}
-                                                            y={7}
-                                                            radius={5}
-                                                            typeId={i}
-                                                            style={{
-                                                                fill:
-                                                                    colorBy === "node-type"
-                                                                        ? nt.color
-                                                                        : "grey",
-                                                                strokeEnabled: false,
-                                                            }}
-                                                        />
-                                                    </Layer>
-                                                </Stage>
-                                            </div>
-                                            <div className="legend-label">{`${nt.name} (${nt.count})`}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
                         <div className="setting-item">
                             <div className="setting-label">Size:</div>
                             <ButtonGroup size="xxs">
@@ -245,7 +262,7 @@ export class SettingsView extends Component {
                             </ButtonGroup>
                         </div>
                     </div>
-                    <div style={{marginTop: '10px'}}>
+                    <div style={{ marginTop: "10px" }}>
                         {/* <div className="text-center">Filter for Interaction</div> */}
 
                         {(nodeTypes.length > 1 || numNodeClasses) && (
@@ -253,10 +270,10 @@ export class SettingsView extends Component {
                                 <div style={{ marginRight: "5px" }}>brushable targets: </div>
                                 {nodeTypes.length > 1 && (
                                     <div style={{ marginRight: "15px" }}>
-                                        <span style={{ marginRight: "5px" }}>by node type</span>
+                                        {/* <span style={{ marginRight: "5px" }}>by node type</span> */}
                                         <Dropdown
                                             onSelect={(k) => {
-                                                this.props.changeParam(
+                                                changeParam(
                                                     "highlightNodeType",
                                                     k === "all" ? k : parseInt(k)
                                                 );
@@ -286,7 +303,7 @@ export class SettingsView extends Component {
                                                         eventKey={i}
                                                         active={highlightNodeType === i}
                                                     >
-                                                        {nt.name}
+                                                        node type: {nt.name}
                                                     </Dropdown.Item>
                                                 ))}
                                             </Dropdown.Menu>
@@ -298,7 +315,7 @@ export class SettingsView extends Component {
                                         {/* <span style={{ marginRight: "5px" }}>by node labels</span> */}
                                         <Dropdown
                                             onSelect={(k) => {
-                                                this.props.changeParam("highlightNodeLabel", k);
+                                                changeParam("highlightNodeLabel", k);
                                             }}
                                         >
                                             <Dropdown.Toggle
@@ -334,26 +351,26 @@ export class SettingsView extends Component {
 
                                                 {lodashRange(numNodeClasses)
                                                     .map((labelId) => `pred-${labelId}`)
-                                                    .map((k) => (
+                                                    .map((k, i) => (
                                                         <Dropdown.Item
                                                             key={k}
                                                             eventKey={k}
                                                             active={highlightNodeLabel === k}
                                                         >
-                                                            {nodeLabelNaming[k]}
+                                                            {`predicted: ${i}`}
                                                         </Dropdown.Item>
                                                     ))}
                                                 <Dropdown.Divider />
 
                                                 {lodashRange(numNodeClasses)
                                                     .map((labelId) => `true-${labelId}`)
-                                                    .map((k) => (
+                                                    .map((k, i) => (
                                                         <Dropdown.Item
                                                             key={k}
                                                             eventKey={k}
                                                             active={highlightNodeLabel === k}
                                                         >
-                                                            {nodeLabelNaming[k]}
+                                                            {`truth: ${i}`}
                                                         </Dropdown.Item>
                                                     ))}
                                             </Dropdown.Menu>
@@ -368,7 +385,7 @@ export class SettingsView extends Component {
                             <div style={{ display: "inline-block" }}>
                                 <Dropdown
                                     onSelect={(h) => {
-                                        this.props.changeParam("hopsHover", parseInt(h), false);
+                                        changeParam("hopsHover", parseInt(h), false);
                                     }}
                                 >
                                     <Dropdown.Toggle id="hops-hover" size="xxs" variant="primary">
@@ -391,7 +408,7 @@ export class SettingsView extends Component {
                             <div style={{ display: "inline-block" }}>
                                 <Dropdown
                                     onSelect={(h) => {
-                                        this.props.changeParam("hopsHighlight", parseInt(h), false);
+                                        changeParam("hopsHighlight", parseInt(h), false);
                                     }}
                                 >
                                     <Dropdown.Toggle id="hops-highlight" size="xxs" variant="primary">
@@ -400,13 +417,62 @@ export class SettingsView extends Component {
 
                                     <Dropdown.Menu>
                                         {new Array(hops + 1).fill(0).map((_, i) => (
-                                            <Dropdown.Item key={i} eventKey={i} active={hopsHighlight=== i}>
+                                            <Dropdown.Item key={i} eventKey={i} active={hopsHighlight === i}>
                                                 {i}
                                             </Dropdown.Item>
                                         ))}
                                     </Dropdown.Menu>
                                 </Dropdown>
                             </div>
+                        </div>
+
+                        <div className="setting-item">
+                            <div>
+                                <span
+                                    style={{ cursor: "pointer" }}
+                                    onClick={changeParam.bind(
+                                        null,
+                                        "nodeFilter.searchShown",
+                                        null,
+                                        true,
+                                        null
+                                    )}
+                                >
+                                    <FontAwesomeIcon icon={searchShown ? faCaretDown: faCaretRight} />
+                                </span>
+                                <span style={{ marginLeft: "5px" }}>Search nodes by</span>
+                            </div>
+                            {searchShown && (
+                                <Form
+                                    inline
+                                    onSubmit={this.callSearch.bind(this)}
+                                    style={{ marginLeft: "9px" }}
+                                >
+                                    <Form.Control
+                                        className="search-text-box"
+                                        id="search-node-label"
+                                        placeholder="label"
+                                        name="searchLabel"
+                                        size="sm"
+                                    ></Form.Control>
+                                    <span style={{ margin: "0 5px" }}>or</span>
+                                    <Form.Control
+                                        className="search-text-box"
+                                        id="search-node-id"
+                                        placeholder="id"
+                                        name="searchId"
+                                        size="sm"
+                                    ></Form.Control>
+                                    <Button
+                                        variant="outline-secondary"
+                                        size="xs"
+                                        style={{ marginLeft: "5px" }}
+                                        type="submit"
+                                    >
+                                        search
+                                    </Button>
+                                </Form>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -436,6 +502,7 @@ const mapDispatchToProps = (dispatch) =>
             hoverNode,
             changeHops,
             changeParam,
+            searchNodes,
         },
         dispatch
     );
