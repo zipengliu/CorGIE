@@ -82,6 +82,8 @@ export default {
         highlightNodeType: "all", // "all" or integer for a specific node type
         highlightNodeLabel: "all", // "all", "correct", "wrong", "pred-${k}", "true-${k}" where k is the label ID
 
+        hideHighlightView: false,
+
         graph: {
             layout: "force-directed-d3",
             // layout: "random",
@@ -138,11 +140,11 @@ export default {
 
     spec: {
         graph: {
-            paddingTop: 20, // Padding of focal graph to fit in the group label
+            paddingTop: 18, // Padding of focal graph to fit in the group label
             paddingBottom: 2,
             padding: 10, // padding within group
-            gapBetweenHop: 8,
-            gapBetweenFocal: 18,
+            gapBetweenHop: 10,
+            gapBetweenFocal: 16,
 
             edgeType: "line",
             neighborMarkerMaxHeight: 30,

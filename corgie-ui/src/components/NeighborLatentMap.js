@@ -84,7 +84,7 @@ export class NeighborLatentMap extends Component {
                                     height={cellSize}
                                     strokeEnabled={i === x && j === y}
                                     stroke="red"
-                                    strokeWidth={0.5}
+                                    strokeWidth={1}
                                     fill={cntScale(val)}
                                 />
                             ))}

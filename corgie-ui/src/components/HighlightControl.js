@@ -2,13 +2,15 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCaretUp, faCaretDown } from "@fortawesome/free-solid-svg-icons";
 import { selectNodes, highlightNodes, selectNodePair, changeParam, highlightNodePairs } from "../actions";
 
 export class HighlightControl extends Component {
     render() {
-        const { selectedNodes, highlightedNodes, numHighlightsAndFocus } = this.props;
+        const { selectedNodes, highlightedNodes, numHighlightsAndFocus, hideHighlightView } = this.props;
         const { unseenTopK, hasLinkPredictions } = this.props;
-        const { selectNodes, selectNodePair, highlightNodes, highlightNodePairs } = this.props;
+        const { selectNodes, selectNodePair, highlightNodes, highlightNodePairs, changeParam } = this.props;
         const areHighlightsAlsoFocus =
             highlightedNodes.length && numHighlightsAndFocus === highlightedNodes.length;
 
@@ -131,12 +133,38 @@ export class HighlightControl extends Component {
         const r = n < 5 ? 110 : 120;
 
         return (
-            <div className={`view ${highlightedNodes.length ? "" : "hide"}`} id="highlight-view">
+            <div
+                className={`view ${highlightedNodes.length && !hideHighlightView ? "" : "hide"}`}
+                id="highlight-view"
+            >
                 <div className="paw"></div>
                 <h5 className="view-title center-pad">
                     {highlightedNodes.length} nodes <br />
                     highlighted
                 </h5>
+
+                <div
+                    style={{
+                        position: "absolute",
+                        top: hideHighlightView && highlightedNodes.length ? "170px" : "-5px",
+                        right: hideHighlightView ? "65px" : "-50px",
+                        color: "black",
+                        cursor: "pointer",
+                        zIndex: 250,
+                    }}
+                    onClick={changeParam.bind(null, "hideHighlightView", null, true, null)}
+                >
+                    <OverlayTrigger
+                        placement="bottom"
+                        overlay={
+                            <Tooltip id="action-tooltip-remove-from">
+                                {hideHighlightView ? "Show" : "Hide"} menu
+                            </Tooltip>
+                        }
+                    >
+                        <FontAwesomeIcon icon={hideHighlightView ? faCaretDown : faCaretUp} />
+                    </OverlayTrigger>
+                </div>
 
                 {btns.map((b, i) => (
                     <div
@@ -154,6 +182,7 @@ export class HighlightControl extends Component {
 }
 
 const mapStateToProps = (state) => ({
+    hideHighlightView: state.param.hideHighlightView,
     selectedNodes: state.selectedNodes,
     highlightedNodes: state.highlightedNodes,
     unseenTopK: state.param.unseenTopK,

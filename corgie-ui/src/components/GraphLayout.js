@@ -302,7 +302,7 @@ function BaseLayerUnconnected({
                             <Rect
                                 x={g.bounds.x}
                                 y={g.bounds.y - 16}
-                                width={100}
+                                width={70 + Math.floor(Math.log10(g.num)) * 6}
                                 height={16}
                                 opacity={0.8}
                                 fill="rgb(231, 215, 164)"
@@ -325,7 +325,7 @@ function BaseLayerUnconnected({
                                 text={`${g.name} (#=${g.num})`}
                                 x={g.bounds.x + 4}
                                 y={g.bounds.y - 14}
-                                fontSize={14}
+                                fontSize={12}
                             />
                         </Group>
                     ))}

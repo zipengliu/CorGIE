@@ -9,7 +9,7 @@ export default function AppNav({ datasetId, stats }) {
                 <img alt="" src="logo192.png" width="25" height="25" className="d-inline-block align-top" />{" "}
                 CorGIE: <span className="text-underline">Cor</span>responding{" "}
                 <span className="text-underline">G</span>raph and <span className="text-underline">I</span>ts{" "}
-                <span className="text-underline">E</span>mbeddings
+                <span className="text-underline">E</span>mbedding
             </Navbar.Brand>
             <Navbar.Toggle aria-controls="responsive-navbar-nav" />
             <Navbar.Collapse id="responsive-navbar-nav">

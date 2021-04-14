@@ -726,7 +726,7 @@ rect.highlight-strip {
     transition: top 1s ease;
 }
 #highlight-view.hide {
-    top: -200px;
+    top: -170px;
 }
 
 #highlight-view .view-title {
