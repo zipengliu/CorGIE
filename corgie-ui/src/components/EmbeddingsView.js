@@ -83,7 +83,7 @@ class EmbeddingsView extends Component {
                     >
                         <FontAwesomeIcon icon={faExpandAlt} />
                     </span>
-                    Latent space <small>(UMAP, #dim={numDim})</small>
+                    Latent Space <small>(UMAP, #dim={numDim})</small>
                 </h5>
 
                 <div className="view-body">

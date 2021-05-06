@@ -68,7 +68,7 @@ function FocalLayoutView({ focalLayout, hasFocalNodes, hops, params, changeFocal
     return (
         <div className={`view ${hasFocalNodes ? "" : "no-layout"}`} id="focal-graph-view">
             <h5 className="view-title text-center">
-                Focal graph layout
+                K-hop Topology
                 <span style={{ marginLeft: "5px", cursor: "pointer" }}>
                     <OverlayTrigger
                         placement="right"
@@ -119,8 +119,8 @@ function FocalLayoutView({ focalLayout, hasFocalNodes, hops, params, changeFocal
             </div>
             {hasFocalNodes && (
                 <div className="view-footer">
-                    #nodes: {focalLayout.numNodes}, #edges: {focalLayout.numEdges}, Layout algorithm:{" "}
-                    {focalLayout.name}
+                    #nodes: {focalLayout.numNodes}, #edges: {focalLayout.numEdges} 
+                    {/* , Layout algorithm:{" "} {focalLayout.name} */}
                 </div>
             )}
 

@@ -15,7 +15,7 @@ export const ComputingSpinner = () => (
 function GraphView({ initialLayout }) {
     return (
         <div className="view" id="initial-graph-view">
-            <h5 className="view-title text-center">Initial graph layout</h5>
+            <h5 className="view-title text-center">Global Topology</h5>
             <div className="view-body">
                 {initialLayout.running ? (
                     <ComputingSpinner />

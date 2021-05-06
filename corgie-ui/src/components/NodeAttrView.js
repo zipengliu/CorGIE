@@ -328,7 +328,7 @@ class NodeAttrView extends Component {
         return (
             <div id="node-attr-view" className="view">
                 <h5 className="view-title text-center">
-                    Node features (#={featureAgg.active ? featureAgg.numFeatures : nodeAttrs.numAttrs})
+                    Node Features (#={featureAgg.active ? featureAgg.numFeatures : nodeAttrs.numAttrs})
                     <span style={{ marginLeft: "5px", cursor: "pointer" }}>
                         <OverlayTrigger
                             placement="bottom"

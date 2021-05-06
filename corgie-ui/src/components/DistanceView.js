@@ -314,7 +314,8 @@ export class DistanceView extends Component {
                 }}
             >
                 <h5 className="view-title text-center">
-                    Distances in latent, topology, and feature spaces
+                    {/* Distances in latent, topology, and feature spaces */}
+                    Distance Comparison
                     <span style={{ marginLeft: "5px", cursor: "pointer" }}>
                         <OverlayTrigger
                             placement="right"

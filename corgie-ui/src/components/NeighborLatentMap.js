@@ -103,7 +103,7 @@ export class NeighborLatentMap extends Component {
                     >
                         <FontAwesomeIcon icon={isOpen ? faCompressAlt : faExpandAlt} />
                     </span>
-                    Latent neighbor blocks
+                    Latent Neighbor Blocks
                     <span style={{ marginLeft: "5px", cursor: "pointer" }}>
                         <OverlayTrigger
                             placement="right"
