@@ -1,4 +1,4 @@
-# CoFeGrEm: Corresponding features in Graph and Embeddings
+# Visualizing Graph Neural Networks with CorGIE: Corresponding a Graph to its Embedding
 
 ### Repo structure
 
